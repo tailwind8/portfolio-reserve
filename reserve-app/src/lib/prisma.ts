@@ -15,7 +15,12 @@ function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
-    throw new Error('DATABASE_URL environment variable is not set');
+    // During build time, DATABASE_URL may not be available
+    // Return a client without adapter for build compatibility
+    console.warn('DATABASE_URL is not set. Using PrismaClient without adapter.');
+    return new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    });
   }
 
   const pool = new Pool({ connectionString });
