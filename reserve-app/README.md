@@ -33,10 +33,10 @@ npm install
 ### 2. 環境変数の設定
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-`.env`ファイルを編集して、Supabase接続情報を設定してください。
+`.env.local`ファイルを編集して、Supabase接続情報を設定してください。
 詳細は[SETUP.md](./SETUP.md)を参照。
 
 ### 3. データベースのセットアップ

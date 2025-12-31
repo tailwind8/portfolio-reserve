@@ -83,15 +83,17 @@ postgresql://postgres.xxxxxxxxxxxxx:[YOUR-PASSWORD]@aws-0-ap-northeast-1.pooler.
 
 ---
 
-### ステップ4: .envファイルを作成
+### ステップ4: .env.localファイルを作成
 
 プロジェクトルートで以下を実行：
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-`.env` ファイルを編集して、取得した情報を設定：
+> **Important**: Next.jsでは`.env.local`の使用が推奨されています。このファイルは自動的にGitで管理されません。
+
+`.env.local` ファイルを編集して、取得した情報を設定：
 
 ```env
 # Database
@@ -147,11 +149,12 @@ curl http://localhost:3000/api/health
 
 ### エラー: "Missing Supabase environment variables"
 
-`.env` ファイルが正しく読み込まれていません。
+`.env.local` ファイルが正しく読み込まれていません。
 
 **解決方法**:
-1. `.env` ファイルがプロジェクトルート（`reserve-app/`）にあることを確認
-2. 開発サーバーを再起動
+1. `.env.local` ファイルがプロジェクトルート（`reserve-app/`）にあることを確認
+2. 環境変数名が正しいか確認（`NEXT_PUBLIC_SUPABASE_URL` など）
+3. 開発サーバーを再起動
 
 ### エラー: "Database connection failed"
 
@@ -167,7 +170,7 @@ curl http://localhost:3000/api/health
 古いプロジェクトの場合、`anon` と `service_role` キー（`eyJhbGci...`形式）のみが表示されます。
 
 **対応方法**:
-`.env` ファイルでレガシーキーを使用：
+`.env.local` ファイルでレガシーキーを使用：
 ```env
 # レガシーキーを使用する場合
 NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."

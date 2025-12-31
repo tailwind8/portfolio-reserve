@@ -15,8 +15,10 @@
 ### ステップ1: `.env.example`をコピー
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
+
+> **Note**: Next.jsでは、ローカル環境の秘密情報は`.env.local`に保存することが推奨されています。このファイルはGitで管理されません。
 
 ### ステップ2: Supabaseプロジェクトを作成
 
@@ -27,7 +29,7 @@ cp .env.example .env
 
 ### ステップ3: 環境変数を設定
 
-Supabaseダッシュボードから必要な情報を取得し、`.env`ファイルを編集：
+Supabaseダッシュボードから必要な情報を取得し、`.env.local`ファイルを編集：
 
 **Settings > Database > Connection String** から取得:
 ```env
