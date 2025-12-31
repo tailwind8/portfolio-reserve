@@ -240,8 +240,8 @@ export class MyPage {
    */
   async expectEditModalVisible() {
     await expect(this.page.getByRole('heading', { name: '予約変更' })).toBeVisible();
-    await expect(this.page.getByText('日')).toBeVisible();
-    await expect(this.page.getByText('月')).toBeVisible();
+    await expect(this.page.getByText('日付を選択')).toBeVisible();
+    await expect(this.page.getByText('月', { exact: true }).first()).toBeVisible();
     await expect(this.page.locator(this.selectors.menuSelect)).toBeVisible();
     await expect(this.page.locator(this.selectors.staffSelect)).toBeVisible();
     await expect(this.page.locator(this.selectors.notesTextarea)).toBeVisible();
@@ -322,6 +322,79 @@ export class MyPage {
     await notesTextarea.fill(newNotes);
     const value = await notesTextarea.inputValue();
     expect(value).toBe(newNotes);
+  }
+
+  /**
+   * カレンダーで日付を選択
+   * @param dayText - 日付のテキスト（例: "20"）
+   */
+  async selectDate(dayText: string) {
+    const dayButton = this.page.getByRole('button', { name: dayText }).filter({ hasNotText: '月' });
+    await dayButton.click();
+  }
+
+  /**
+   * 時間帯を選択
+   * @param time - 時間（例: "14:00"）
+   */
+  async selectTimeSlot(time: string) {
+    const timeButton = this.page.getByRole('button', { name: time });
+    await timeButton.click();
+  }
+
+  /**
+   * 特定のメニューを選択
+   * @param menuName - メニュー名（例: "カット", "カラー"）
+   */
+  async selectMenuByName(menuName: string) {
+    const menuSelect = this.page.locator(this.selectors.menuSelect);
+    await menuSelect.selectOption({ label: menuName });
+  }
+
+  /**
+   * 特定のスタッフを選択
+   * @param staffName - スタッフ名（例: "田中", "佐藤"）
+   */
+  async selectStaffByName(staffName: string) {
+    const staffSelect = this.page.locator(this.selectors.staffSelect);
+    await staffSelect.selectOption({ label: staffName });
+  }
+
+  /**
+   * 「変更を保存」ボタンをクリック
+   */
+  async clickSaveChangesButton() {
+    await this.page.getByRole('button', { name: '予約を更新する' }).click();
+  }
+
+  /**
+   * 変更確認メッセージが表示されることを検証
+   */
+  async expectUpdateSuccessMessage() {
+    await expect(this.page.getByText('予約を更新しました')).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * エラーメッセージが表示されることを検証（予約変更失敗時）
+   * @param message - エラーメッセージの内容
+   */
+  async expectErrorMessage(message: string) {
+    await expect(this.page.getByText(message)).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * 指定秒数待つ
+   * @param seconds - 待機秒数
+   */
+  async waitForSeconds(seconds: number) {
+    await this.page.waitForTimeout(seconds * 1000);
+  }
+
+  /**
+   * 「キャンセル」ボタンをクリック（変更モーダル内）
+   */
+  async clickCancelButtonInModal() {
+    await this.page.getByRole('button', { name: 'キャンセル' }).first().click();
   }
 
   // ===========================================
