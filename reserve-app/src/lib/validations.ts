@@ -133,3 +133,48 @@ export const cancelReservationSchema = z.object({
 });
 
 export type CancelReservationInput = z.infer<typeof cancelReservationSchema>;
+
+/**
+ * 管理者用の予約作成スキーマ
+ */
+export const adminCreateReservationSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+  menuId: z.string().uuid('Invalid menu ID'),
+  staffId: z.string().uuid('Invalid staff ID'),
+  reservedDate: z
+    .string()
+    .regex(dateRegex, 'Date must be in YYYY-MM-DD format'),
+  reservedTime: z.string().regex(timeRegex, 'Time must be in HH:mm format'),
+  notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
+});
+
+export type AdminCreateReservationInput = z.infer<typeof adminCreateReservationSchema>;
+
+/**
+ * 管理者用の予約更新スキーマ
+ */
+export const adminUpdateReservationSchema = z.object({
+  menuId: z.string().uuid('Invalid menu ID').optional(),
+  staffId: z.string().uuid('Invalid staff ID').optional(),
+  reservedDate: z
+    .string()
+    .regex(dateRegex, 'Date must be in YYYY-MM-DD format')
+    .optional(),
+  reservedTime: z.string().regex(timeRegex, 'Time must be in HH:mm format').optional(),
+  status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW']).optional(),
+  notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
+});
+
+export type AdminUpdateReservationInput = z.infer<typeof adminUpdateReservationSchema>;
+
+/**
+ * 管理者用の予約一覧取得クエリパラメータ
+ */
+export const adminReservationsQuerySchema = z.object({
+  status: z.enum(['all', 'PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW']).optional(),
+  dateRange: z.enum(['all', 'this-week', 'this-month']).optional(),
+  search: z.string().optional(),
+  tenantId: z.string().optional(),
+});
+
+export type AdminReservationsQuery = z.infer<typeof adminReservationsQuerySchema>;
