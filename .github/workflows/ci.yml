@@ -35,6 +35,8 @@ jobs:
         run: npm run lint
 
       - name: Type check and build
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npm run build:ci
 
       - name: Run unit tests
