@@ -123,7 +123,6 @@ export async function PATCH(
 
     // 変更後のmenuとstaffの存在確認
     let newMenu = existingReservation.menu;
-    let newStaff = existingReservation.staff;
 
     if (menuId && menuId !== existingReservation.menuId) {
       const menu = await prisma.restaurantMenu.findUnique({
@@ -146,7 +145,6 @@ export async function PATCH(
       if (!staff || !staff.isActive) {
         return errorResponse('Staff not found or inactive', 404, 'STAFF_NOT_FOUND');
       }
-      newStaff = staff;
     }
 
     // 時間スロット競合チェック（日時またはスタッフが変更される場合）
