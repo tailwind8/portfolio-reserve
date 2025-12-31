@@ -63,7 +63,7 @@ export default function AdminDashboard() {
         <AdminSidebar />
         <main className="ml-64 flex-1 p-8">
           <div className="flex h-96 items-center justify-center">
-            <div className="text-gray-500">読み込み中...</div>
+            <div data-testid="loading-message" className="text-gray-500">読み込み中...</div>
           </div>
         </main>
       </div>
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
       <div className="flex min-h-screen bg-gray-50">
         <AdminSidebar />
         <main className="ml-64 flex-1 p-8">
-          <div className="rounded-lg bg-red-50 p-4 text-red-800">
+          <div data-testid="error-message" className="rounded-lg bg-red-50 p-4 text-red-800">
             {error || 'データの取得に失敗しました'}
           </div>
         </main>
@@ -84,10 +84,10 @@ export default function AdminDashboard() {
   }
 
   const statsCards = [
-    { label: '本日の予約', value: `${stats.todayReservations}件`, change: '+3', trend: 'up', color: 'blue' },
-    { label: '今月の予約', value: `${stats.monthlyReservations}件`, change: '+15%', trend: 'up', color: 'green' },
-    { label: '今月の売上', value: `¥${stats.monthlyRevenue.toLocaleString()}`, change: '+8%', trend: 'up', color: 'orange' },
-    { label: 'リピート率', value: `${stats.repeatRate}%`, change: '+2%', trend: 'up', color: 'purple' },
+    { label: '本日の予約', value: `${stats.todayReservations}件`, change: '+3', trend: 'up', color: 'blue', testId: 'stat-today-reservations' },
+    { label: '今月の予約', value: `${stats.monthlyReservations}件`, change: '+15%', trend: 'up', color: 'green', testId: 'stat-monthly-reservations' },
+    { label: '今月の売上', value: `¥${stats.monthlyRevenue.toLocaleString()}`, change: '+8%', trend: 'up', color: 'orange', testId: 'stat-monthly-revenue' },
+    { label: 'リピート率', value: `${stats.repeatRate}%`, change: '+2%', trend: 'up', color: 'purple', testId: 'stat-repeat-rate' },
   ];
 
   const statusBadge = (status: string) => {
@@ -122,16 +122,16 @@ export default function AdminDashboard() {
         {/* Stats Grid */}
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {statsCards.map((stat, index) => (
-            <Card key={index} className="relative overflow-hidden">
+            <Card key={index} data-testid={stat.testId} className="relative overflow-hidden">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="mb-1 text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p data-testid="stat-label" className="mb-1 text-sm font-medium text-gray-600">{stat.label}</p>
+                  <p data-testid="stat-value" className="text-2xl font-bold text-gray-900">{stat.value}</p>
                   <div className="mt-2 flex items-center text-sm">
                     <svg className="mr-1 h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                     </svg>
-                    <span className="font-medium text-green-600">{stat.change}</span>
+                    <span data-testid="stat-change" className="font-medium text-green-600">{stat.change}</span>
                     <span className="ml-1 text-gray-500">前週比</span>
                   </div>
                 </div>
@@ -144,10 +144,10 @@ export default function AdminDashboard() {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Today's Reservations */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card data-testid="today-reservations-section">
               <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">本日の予約</h2>
-                <Button variant="outline" size="sm">
+                <h2 data-testid="today-reservations-title" className="text-xl font-semibold text-gray-900">本日の予約</h2>
+                <Button data-testid="view-all-reservations" variant="outline" size="sm">
                   すべて表示
                 </Button>
               </div>
@@ -161,18 +161,18 @@ export default function AdminDashboard() {
                       className="flex items-center justify-between rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-sm font-semibold text-blue-600">
+                        <div data-testid="reservation-time" className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-sm font-semibold text-blue-600">
                           {reservation.time}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{reservation.customer}</p>
+                          <p data-testid="reservation-customer" className="font-medium text-gray-900">{reservation.customer}</p>
                           <p className="text-sm text-gray-600">
-                            {reservation.menu} / {reservation.staff}
+                            <span data-testid="reservation-menu">{reservation.menu}</span> / <span data-testid="reservation-staff">{reservation.staff}</span>
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {statusBadge(reservation.status)}
+                        <span data-testid="reservation-status">{statusBadge(reservation.status)}</span>
                         <button className="text-gray-400 hover:text-gray-600">
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -183,15 +183,15 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
-                    <p className="text-gray-500">本日の予約はありません</p>
+                    <p data-testid="no-reservations-message" className="text-gray-500">本日の予約はありません</p>
                   </div>
                 )}
               </div>
             </Card>
 
             {/* Weekly Chart */}
-            <Card className="mt-6">
-              <h2 className="mb-6 text-xl font-semibold text-gray-900">週間予約状況</h2>
+            <Card data-testid="weekly-stats-section" className="mt-6">
+              <h2 data-testid="weekly-stats-title" className="mb-6 text-xl font-semibold text-gray-900">週間予約状況</h2>
               <div className="flex items-end justify-between gap-4" style={{ height: '200px' }}>
                 {stats.weeklyStats.map((dayStat, index) => {
                   const maxCount = Math.max(...stats.weeklyStats.map(s => s.count));
@@ -199,11 +199,12 @@ export default function AdminDashboard() {
                   return (
                     <div key={index} className="flex flex-1 flex-col items-center gap-2">
                       <div
+                        data-testid="weekly-bar"
                         className="w-full rounded-t-lg bg-blue-500 transition-all hover:bg-blue-600"
                         style={{ height: `${height}%`, minHeight: dayStat.count > 0 ? '10px' : '0' }}
                         title={`${dayStat.count}件`}
                       ></div>
-                      <span className="text-sm font-medium text-gray-600">{dayStat.day}</span>
+                      <span data-testid="weekly-day-label" className="text-sm font-medium text-gray-600">{dayStat.day}</span>
                     </div>
                   );
                 })}
@@ -214,16 +215,16 @@ export default function AdminDashboard() {
           {/* Right Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <Card>
+            <Card data-testid="quick-actions-section">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">クイックアクション</h3>
               <div className="space-y-3">
-                <Button fullWidth variant="primary" size="md">
+                <Button data-testid="add-reservation-button" fullWidth variant="primary" size="md">
                   <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   新規予約を追加
                 </Button>
-                <Button fullWidth variant="outline" size="md">
+                <Button data-testid="add-customer-button" fullWidth variant="outline" size="md">
                   <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
@@ -233,44 +234,44 @@ export default function AdminDashboard() {
             </Card>
 
             {/* Staff Status */}
-            <Card>
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">スタッフ出勤状況</h3>
+            <Card data-testid="staff-status-section">
+              <h3 data-testid="staff-status-title" className="mb-4 text-lg font-semibold text-gray-900">スタッフ出勤状況</h3>
               <div className="space-y-3">
                 {[
                   { name: '田中 太郎', status: '勤務中', available: true },
                   { name: '佐藤 花子', status: '勤務中', available: true },
                   { name: '鈴木 一郎', status: '休憩中', available: false },
                 ].map((staff) => (
-                  <div key={staff.name} className="flex items-center justify-between">
+                  <div key={staff.name} data-testid="staff-item" className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
                         {staff.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{staff.name}</p>
-                        <p className="text-xs text-gray-500">{staff.status}</p>
+                        <p data-testid="staff-name" className="text-sm font-medium text-gray-900">{staff.name}</p>
+                        <p data-testid="staff-status-text" className="text-xs text-gray-500">{staff.status}</p>
                       </div>
                     </div>
-                    <div className={`h-2 w-2 rounded-full ${staff.available ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                    <div data-testid="staff-indicator" className={`h-2 w-2 rounded-full ${staff.available ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                   </div>
                 ))}
               </div>
             </Card>
 
             {/* Recent Activity */}
-            <Card>
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">最近の活動</h3>
+            <Card data-testid="recent-activity-section">
+              <h3 data-testid="recent-activity-title" className="mb-4 text-lg font-semibold text-gray-900">最近の活動</h3>
               <div className="space-y-3">
                 {[
                   { action: '新規予約', time: '5分前', icon: '📅' },
                   { action: '予約変更', time: '15分前', icon: '✏️' },
                   { action: '新規顧客登録', time: '1時間前', icon: '👤' },
                 ].map((activity, index) => (
-                  <div key={index} className="flex items-start gap-3 text-sm">
-                    <span className="text-lg">{activity.icon}</span>
+                  <div key={index} data-testid="activity-item" className="flex items-start gap-3 text-sm">
+                    <span data-testid="activity-icon" className="text-lg">{activity.icon}</span>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{activity.action}</p>
-                      <p className="text-xs text-gray-500">{activity.time}</p>
+                      <p data-testid="activity-action" className="font-medium text-gray-900">{activity.action}</p>
+                      <p data-testid="activity-time" className="text-xs text-gray-500">{activity.time}</p>
                     </div>
                   </div>
                 ))}
