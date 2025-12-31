@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Jest configuration files (CommonJS)
     "jest.config.js",
     "jest.setup.js",
+    // Test coverage reports
+    "coverage/**",
   ]),
 ]);
 

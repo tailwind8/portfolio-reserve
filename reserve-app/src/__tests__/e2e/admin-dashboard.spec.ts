@@ -146,7 +146,6 @@ test.describe('管理者ダッシュボード (#15)', () => {
    */
   test.skip('リアルタイム更新（将来実装）', async () => {
     // このテストは将来のリアルタイム機能実装時に有効化
-    void page; // Suppress unused variable warning
   });
 
   /**

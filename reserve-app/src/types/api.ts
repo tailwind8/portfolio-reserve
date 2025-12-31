@@ -52,6 +52,17 @@ export interface CreateReservationRequest {
 }
 
 /**
+ * Reservation update request
+ */
+export interface UpdateReservationRequest {
+  menuId?: string;
+  staffId?: string;
+  reservedDate?: string; // "2025-01-20" format
+  reservedTime?: string; // "14:00" format
+  notes?: string;
+}
+
+/**
  * Reservation API types
  */
 export interface Reservation {
@@ -81,3 +92,15 @@ export interface Reservation {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Reservation filter status types
+ * Used for filtering reservations by status on mypage
+ */
+export type ReservationFilterStatus =
+  | 'ALL'
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CANCELLED'
+  | 'COMPLETED'
+  | 'NO_SHOW';
