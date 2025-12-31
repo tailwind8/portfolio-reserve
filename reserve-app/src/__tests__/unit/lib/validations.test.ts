@@ -125,9 +125,9 @@ describe('validations', () => {
   });
 
   describe('updateReservationSchema', () => {
-    it('should validate partial update', () => {
+    it('should validate partial update with menuId', () => {
       const validData = {
-        status: 'CONFIRMED' as const,
+        menuId: '123e4567-e89b-12d3-a456-426614174000',
       };
 
       const result = updateReservationSchema.safeParse(validData);
@@ -145,22 +145,18 @@ describe('validations', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should reject invalid status value', () => {
+    it('should reject past dates', () => {
       const invalidData = {
-        status: 'INVALID_STATUS',
+        reservedDate: '2020-01-01',
       };
 
       const result = updateReservationSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
     });
 
-    it('should accept all valid status values', () => {
-      const statuses = ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'];
-
-      for (const status of statuses) {
-        const result = updateReservationSchema.safeParse({ status });
-        expect(result.success).toBe(true);
-      }
+    it('should accept empty update (all fields optional)', () => {
+      const result = updateReservationSchema.safeParse({});
+      expect(result.success).toBe(true);
     });
   });
 });

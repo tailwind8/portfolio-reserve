@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -8,7 +8,7 @@ import Card from '@/components/Card';
 import Button from '@/components/Button';
 import type { Menu, Staff, TimeSlot } from '@/types/api';
 
-export default function BookingPage() {
+function BookingContent() {
   const searchParams = useSearchParams();
   const preselectedMenuId = searchParams.get('menuId');
 
@@ -71,6 +71,7 @@ export default function BookingPage() {
     }
 
     async function fetchSlots() {
+      if (!selectedDate) return;
       setLoadingSlots(true);
       try {
         const dateStr = selectedDate.toISOString().split('T')[0];
@@ -549,5 +550,24 @@ export default function BookingPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col bg-gray-50">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <p className="mt-4 text-gray-600">読み込み中...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    }>
+      <BookingContent />
+    </Suspense>
   );
 }
