@@ -1,5 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { setupMSW } from './msw-setup';
+import { HomePage } from './pages/HomePage';
 
 test.describe('@smoke トップページ', () => {
   test.beforeEach(async ({ page }) => {
@@ -7,79 +8,77 @@ test.describe('@smoke トップページ', () => {
   });
 
   test('正しくレンダリングされる', async ({ page }) => {
-    await page.goto('/');
+    const homePage = new HomePage(page);
+    await homePage.goto();
 
     // ページタイトルを確認
-    await expect(page).toHaveTitle(/予約システム/);
+    await homePage.expectTitle('予約システム');
 
     // ヘッダーが表示されている
-    await expect(page.locator('header')).toBeVisible();
+    await homePage.expectHeaderVisible();
 
     // Hero Sectionが表示されている
-    await expect(page.getByRole('heading', { name: /店舗専用の予約管理システムで/ })).toBeVisible();
+    await homePage.expectHeroHeadingVisible();
 
     // CTAボタンが表示されている
-    await expect(page.getByRole('link', { name: /今すぐ予約する/ }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /無料で始める/ }).first()).toBeVisible();
+    await homePage.expectBookNowButtonVisible();
+    await homePage.expectStartFreeButtonVisible();
   });
 
   test('主な機能セクションが表示される', async ({ page }) => {
-    await page.goto('/');
+    const homePage = new HomePage(page);
+    await homePage.goto();
 
     // 主な機能の見出し
-    await expect(page.getByRole('heading', { name: '主な機能' })).toBeVisible();
+    await homePage.expectMainFeaturesHeadingVisible();
 
     // 6つの機能カードが表示されている
-    await expect(page.getByText('24時間予約受付')).toBeVisible();
-    await expect(page.getByText('顧客管理')).toBeVisible();
-    await expect(page.getByText('自動メール送信')).toBeVisible();
-    await expect(page.getByText('スタッフ管理')).toBeVisible();
-    await expect(page.getByText('分析レポート')).toBeVisible();
-    await expect(page.getByText('スマホ完全対応')).toBeVisible();
+    await homePage.expectAllFeatureCardsVisible();
   });
 
   test('ナビゲーションリンクが機能する', async ({ page }) => {
-    await page.goto('/');
+    const homePage = new HomePage(page);
+    await homePage.goto();
 
     // 予約ボタンをクリック
-    await page.getByRole('link', { name: /今すぐ予約する/ }).first().click();
-    await expect(page).toHaveURL('/booking');
+    await homePage.clickBookNowButton();
+    await homePage.expectRedirectTo('/booking');
 
     // トップページに戻る
-    await page.goto('/');
+    await homePage.goto();
 
     // ログインリンクをクリック（ヘッダーのログインボタン）
     // モバイルではログインボタンが非表示のため、新規登録ボタンで代替テスト
-    const loginLink = page.getByRole('link', { name: 'ログイン', exact: true });
-    const isLoginVisible = await loginLink.isVisible().catch(() => false);
+    const isLoginVisible = await homePage.isLoginLinkVisible();
 
     if (isLoginVisible) {
-      await loginLink.click();
-      await expect(page).toHaveURL('/login');
+      await homePage.clickLoginLink();
+      await homePage.expectRedirectTo('/login');
     } else {
       // モバイルの場合は新規登録ボタンで遷移テスト
-      await page.getByRole('link', { name: '新規登録' }).click();
-      await expect(page).toHaveURL('/register');
+      await homePage.clickRegisterLink();
+      await homePage.expectRedirectTo('/register');
     }
   });
 
   test('デモ表示の注意書きが表示される', async ({ page }) => {
-    await page.goto('/');
+    const homePage = new HomePage(page);
+    await homePage.goto();
 
-    await expect(page.getByText(/これはデモサイトです/)).toBeVisible();
+    await homePage.expectDemoNoticeVisible();
   });
 
   test('レスポンシブデザインが機能する', async ({ page }) => {
-    // モバイルビュー
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
+    const homePage = new HomePage(page);
 
-    await expect(page.getByRole('heading', { name: /店舗専用の予約管理システムで/ })).toBeVisible();
+    // モバイルビュー
+    await homePage.setMobileViewport();
+    await homePage.goto();
+    await homePage.expectHeroHeadingVisible();
 
     // デスクトップビュー
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto('/');
-
-    await expect(page.getByRole('heading', { name: /店舗専用の予約管理システムで/ })).toBeVisible();
+    await homePage.setDesktopViewport();
+    await homePage.goto();
+    await homePage.expectHeroHeadingVisible();
   });
 });
