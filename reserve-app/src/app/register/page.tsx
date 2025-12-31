@@ -135,13 +135,19 @@ export default function RegisterPage() {
           </div>
 
           {errors.general && (
-            <div data-testid="error-message" className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+            <div
+              data-testid="error-message"
+              className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600"
+            >
               {errors.general}
             </div>
           )}
 
           {successMessage && (
-            <div data-testid="success-message" className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-600">
+            <div
+              data-testid="success-message"
+              className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-600"
+            >
               {successMessage}
             </div>
           )}
@@ -164,7 +170,11 @@ export default function RegisterPage() {
                 } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
                 disabled={isLoading}
               />
-              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+              {errors.name && (
+                <p data-testid="error-name" className="mt-1 text-xs text-red-500">
+                  {errors.name}
+                </p>
+              )}
             </div>
 
             <div>
@@ -184,7 +194,11 @@ export default function RegisterPage() {
                 } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
                 disabled={isLoading}
               />
-              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+              {errors.email && (
+                <p data-testid="error-email" className="mt-1 text-xs text-red-500">
+                  {errors.email}
+                </p>
+              )}
             </div>
 
             <div>
@@ -193,8 +207,8 @@ export default function RegisterPage() {
               </label>
               <input
                 id="phone"
-                name="phone"
                 data-testid="register-phone"
+                name="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={handleChange}
@@ -204,7 +218,11 @@ export default function RegisterPage() {
                 } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
                 disabled={isLoading}
               />
-              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
+              {errors.phone && (
+                <p data-testid="error-phone" className="mt-1 text-xs text-red-500">
+                  {errors.phone}
+                </p>
+              )}
             </div>
 
             <div>
@@ -227,7 +245,11 @@ export default function RegisterPage() {
               <p className="mt-1 text-xs text-gray-500">
                 8文字以上の英数字を含めてください
               </p>
-              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
+              {errors.password && (
+                <p data-testid="error-password" className="mt-1 text-xs text-red-500">
+                  {errors.password}
+                </p>
+              )}
             </div>
 
             <div>
@@ -251,7 +273,9 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
               {errors.passwordConfirm && (
-                <p className="mt-1 text-xs text-red-500">{errors.passwordConfirm}</p>
+                <p data-testid="error-passwordConfirm" className="mt-1 text-xs text-red-500">
+                  {errors.passwordConfirm}
+                </p>
               )}
             </div>
 
@@ -260,7 +284,7 @@ export default function RegisterPage() {
                 <input
                   id="termsAccepted"
                   name="termsAccepted"
-                  data-testid="register-terms"
+                data-testid="register-terms"
                   type="checkbox"
                   checked={formData.termsAccepted}
                   onChange={handleChange}
@@ -279,7 +303,9 @@ export default function RegisterPage() {
                 </label>
               </div>
               {errors.termsAccepted && (
-                <p className="mt-1 text-xs text-red-500">{errors.termsAccepted}</p>
+                <p data-testid="error-termsAccepted" className="mt-1 text-xs text-red-500">
+                  {errors.termsAccepted}
+                </p>
               )}
             </div>
 

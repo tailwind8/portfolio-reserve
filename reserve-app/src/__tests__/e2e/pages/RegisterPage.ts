@@ -126,8 +126,8 @@ export class RegisterPage {
    * エラーメッセージが表示されることを検証
    */
   async expectError(message: string) {
-    const element = this.page.locator(`text=${message}`);
-    await expect(element).toBeVisible();
+    const element = this.page.locator(this.selectors.errorMessage);
+    await expect(element).toContainText(message);
   }
 
   /**

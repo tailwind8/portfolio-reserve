@@ -1,4 +1,4 @@
-import { supabase, getSupabaseAdmin } from './supabase';
+import { supabase } from './supabase';
 import { prisma } from './prisma';
 import type { User } from '@supabase/supabase-js';
 
