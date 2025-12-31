@@ -148,6 +148,13 @@ export class BookingPage {
   }
 
   /**
+   * 予約を確定（別名）
+   */
+  async submitBooking() {
+    await this.submit();
+  }
+
+  /**
    * 予約確定ボタンが有効であることを検証
    */
   async expectSubmitButtonEnabled() {

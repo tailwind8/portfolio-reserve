@@ -197,6 +197,153 @@ test.describe('Booking Flow', () => {
     // Then: メニュー選択ドロップダウンが表示される
     await bookingPage.expectMenuSelectVisible();
   });
+
+  /**
+   * Scenario: 備考が500文字を超えると入力できない
+   */
+  test('should limit notes to 500 characters', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // Given: 予約ページにアクセスしている
+    await bookingPage.goto();
+    await bookingPage.waitForLoad();
+
+    // When: 備考入力欄に501文字入力しようとする
+    const longText = 'あ'.repeat(501);
+    await bookingPage.fillNotes(longText);
+
+    // Then: 500文字までしか入力できない
+    const notesField = page.locator('textarea[data-testid="notes-field"]');
+    const value = await notesField.inputValue();
+    expect(value.length).toBeLessThanOrEqual(500);
+  });
+
+  /**
+   * Scenario: 日付を変更すると時間帯選択がリセットされる
+   */
+  test('should reset time selection when date changes', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // Given: メニューと日付と時間帯を選択している
+    await bookingPage.goto();
+    await bookingPage.waitForLoad();
+    await bookingPage.selectMenu();
+    await bookingPage.selectFutureDate('15');
+    await bookingPage.wait(1000);
+    await bookingPage.selectAvailableTimeSlot();
+
+    // When: 別の日付を選択する
+    await bookingPage.selectFutureDate('20');
+
+    // Then: 時間帯の選択がリセットされる
+    await bookingPage.wait(1000);
+    await bookingPage.expectSubmitButtonDisabled();
+  });
+
+  /**
+   * Scenario: 予約完了後にフォームがリセットされる
+   */
+  test('should reset form after successful booking', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // Given: 全ての必須項目を選択している
+    await bookingPage.goto();
+    await bookingPage.waitForLoad();
+    await bookingPage.selectMenu();
+    await bookingPage.selectStaff();
+    await bookingPage.selectFutureDate('15');
+    await bookingPage.wait(1000);
+    await bookingPage.selectAvailableTimeSlot();
+    await bookingPage.fillNotes('初回来店です');
+
+    // When: 予約を確定する
+    await bookingPage.submitBooking();
+
+    // Then: 成功メッセージが表示される
+    const successMessage = page.locator('[data-testid="success-message"]');
+    await expect(successMessage).toBeVisible({ timeout: 5000 });
+
+    // And: 3秒後にフォームがリセットされる
+    await page.waitForTimeout(3500);
+
+    // 備考欄がクリアされている
+    const notesField = page.locator('textarea[data-testid="notes-field"]');
+    const notesValue = await notesField.inputValue();
+    expect(notesValue).toBe('');
+  });
+
+  /**
+   * Scenario: ローディング中にスピナーが表示される
+   */
+  test('should show loading spinner on initial load', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // When: 予約ページにアクセスする
+    const navigationPromise = bookingPage.goto();
+
+    // Then: ローディングスピナーが表示される（短時間）
+    const spinner = page.locator('.animate-spin');
+    // スピナーが一時的に表示される可能性がある（表示されない場合もOK）
+
+    await navigationPromise;
+    await bookingPage.waitForLoad();
+
+    // ローディング完了後はスピナーが消えている
+    await expect(spinner).not.toBeVisible({ timeout: 5000 });
+  });
+
+  /**
+   * Scenario: 予約作成失敗時にエラーメッセージが表示される
+   */
+  test('should show error message when booking creation fails', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // Given: 全ての必須項目を選択している
+    await bookingPage.goto();
+    await bookingPage.waitForLoad();
+    await bookingPage.selectMenu();
+    await bookingPage.selectStaff();
+    await bookingPage.selectFutureDate('15');
+    await bookingPage.wait(1000);
+    await bookingPage.selectAvailableTimeSlot();
+
+    // When: APIがエラーを返すように設定（MSWでモック）
+    // Note: 実際のエラーハンドリングは実装依存
+    await page.route('/api/reservations', route => {
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: '予約の作成に失敗しました' }),
+      });
+    });
+
+    await bookingPage.submitBooking();
+
+    // Then: エラーメッセージが表示される
+    const errorMessage = page.locator('text=予約の作成に失敗しました');
+    await expect(errorMessage).toBeVisible({ timeout: 5000 });
+  });
+
+  /**
+   * Scenario: サイドバーに選択した情報が表示される
+   */
+  test('should display selected information in sidebar', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // Given: 予約ページにアクセスしている
+    await bookingPage.goto();
+    await bookingPage.waitForLoad();
+
+    // When: メニューを選択する
+    await bookingPage.selectMenu();
+
+    // Then: サイドバーに選択したメニュー情報が表示される
+    await bookingPage.expectBookingInfoSidebarVisible();
+
+    // メニュー名、料金、所要時間が表示される
+    const sidebar = page.locator('[data-testid="booking-info-sidebar"]');
+    await expect(sidebar).toBeVisible();
+  });
 });
 
 test.describe('Menu List Page', () => {

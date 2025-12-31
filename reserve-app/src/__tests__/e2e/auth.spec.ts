@@ -241,4 +241,187 @@ test.describe('User Authentication', () => {
       await expect(page).toHaveURL('/', { timeout: 5000 });
     });
   });
+
+  test.describe('Additional Registration Scenarios', () => {
+    /**
+     * Scenario: メールアドレス形式バリデーション
+     */
+    test('should show error for invalid email format', async ({ page }) => {
+      const registerPage = new RegisterPage(page);
+
+      // Given: 新規登録ページにアクセスしている
+      await registerPage.goto();
+
+      // When: 無効なメールアドレス形式で送信する
+      await registerPage.fillName('Test User');
+      await registerPage.fillEmail('invalid-email');
+      await registerPage.fillPassword('password123');
+      await registerPage.fillPasswordConfirm('password123');
+      await registerPage.acceptTerms();
+      await registerPage.submit();
+
+      // Then: エラーメッセージが表示される
+      await registerPage.expectError('有効なメールアドレスを入力してください');
+    });
+
+    /**
+     * Scenario: 電話番号なしでも登録できる（オプション項目）
+     */
+    test('should register successfully without phone number', async ({ page }) => {
+      const registerPage = new RegisterPage(page);
+      const uniqueEmail = `test-no-phone-${Date.now()}@example.com`;
+
+      // Given: 新規登録ページにアクセスしている
+      await registerPage.goto();
+
+      // When: 電話番号なしでフォームを送信する
+      await registerPage.fillForm({
+        name: 'Test User',
+        email: uniqueEmail,
+        password: 'password123',
+        passwordConfirm: 'password123',
+      });
+      await registerPage.acceptTerms();
+      await registerPage.submit();
+
+      // Then: 成功メッセージが表示される
+      await registerPage.expectSuccess('Registration successful');
+      await registerPage.expectRedirectTo('/login');
+    });
+
+    /**
+     * Scenario: リアルタイムバリデーション - 入力開始時のエラー消去
+     */
+    test('should clear field error when user starts typing', async ({ page }) => {
+      const registerPage = new RegisterPage(page);
+
+      // Given: 何も入力せずに送信してエラーが表示されている
+      await registerPage.goto();
+      await registerPage.submit();
+      await registerPage.expectError('名前を入力してください');
+
+      // When: 名前に入力を始める
+      await registerPage.fillName('Test');
+
+      // Then: 名前のエラーメッセージが消える
+      await page.waitForTimeout(500); // リアルタイムバリデーションの待機
+      const nameError = page.locator('text=名前を入力してください');
+      await expect(nameError).not.toBeVisible({ timeout: 1000 });
+    });
+
+    /**
+     * Scenario: ローディング状態の確認
+     */
+    test('should show loading state when submitting registration', async ({ page }) => {
+      const registerPage = new RegisterPage(page);
+
+      // Given: 全ての必須項目を入力している
+      await registerPage.goto();
+      await registerPage.fillForm({
+        name: 'Test User',
+        email: `loading-test-${Date.now()}@example.com`,
+        password: 'password123',
+        passwordConfirm: 'password123',
+      });
+      await registerPage.acceptTerms();
+
+      // When: フォームを送信する
+      const submitButton = page.getByRole('button', { name: 'アカウントを作成' });
+      await submitButton.click();
+
+      // Then: ボタンがローディング状態になる（一時的に無効化される）
+      await expect(submitButton).toBeDisabled();
+    });
+  });
+
+  test.describe('Additional Login Scenarios', () => {
+    /**
+     * Scenario: メールアドレス形式バリデーション
+     */
+    test('should show error for invalid email format in login', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+
+      // Given: ログインページにアクセスしている
+      await loginPage.goto();
+
+      // When: 無効なメールアドレス形式で送信する
+      await loginPage.fillEmail('invalid-email');
+      await loginPage.fillPassword('password123');
+      await loginPage.submit();
+
+      // Then: エラーメッセージが表示される
+      await loginPage.expectError('有効なメールアドレスを入力してください');
+    });
+
+    /**
+     * Scenario: リアルタイムバリデーション
+     */
+    test('should clear field error when user starts typing in login', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+
+      // Given: 何も入力せずに送信してエラーが表示されている
+      await loginPage.goto();
+      await loginPage.submit();
+      await loginPage.expectError('有効なメールアドレスを入力してください');
+
+      // When: メールアドレスに入力を始める
+      await loginPage.fillEmail('test@example.com');
+
+      // Then: メールアドレスのエラーメッセージが消える
+      await page.waitForTimeout(500);
+      const emailError = page.locator('text=有効なメールアドレスを入力してください');
+      await expect(emailError).not.toBeVisible({ timeout: 1000 });
+    });
+
+    /**
+     * Scenario: ローディング状態の確認
+     */
+    test('should show loading state when submitting login', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+
+      // Given: メールアドレスとパスワードを入力している
+      await loginPage.goto();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('password123');
+
+      // When: フォームを送信する
+      const submitButton = page.getByRole('button', { name: 'ログイン' });
+      await submitButton.click();
+
+      // Then: ボタンがローディング状態になる
+      await expect(submitButton).toBeDisabled();
+    });
+
+    /**
+     * Scenario: キーボード操作 - Enterキーで送信
+     */
+    test('should submit form when pressing Enter in password field', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+
+      // Given: ログインページにアクセスしている
+      await loginPage.goto();
+
+      // When: メールアドレスとパスワードを入力し、パスワードフィールドでEnterキーを押す
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('password123');
+      await page.locator('input[name="password"]').press('Enter');
+
+      // Then: フォームが送信される（エラーメッセージが表示される = 送信された証拠）
+      await loginPage.expectError('メールアドレスまたはパスワードが正しくありません');
+    });
+
+    /**
+     * Scenario: パスワードフィールドがマスクされている
+     */
+    test('should mask password field', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+
+      // Given: ログインページにアクセスしている
+      await loginPage.goto();
+
+      // Then: パスワード入力欄がpasswordタイプである
+      const passwordField = page.locator('input[name="password"]');
+      await expect(passwordField).toHaveAttribute('type', 'password');
+    });
+  });
 });
