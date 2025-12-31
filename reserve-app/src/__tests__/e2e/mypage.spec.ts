@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { setupMSW } from './msw-setup';
 
 test.describe('MyPage - 予約一覧', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
     // Navigate to mypage
     await page.goto('/mypage');
   });
@@ -65,6 +67,7 @@ test.describe('MyPage - 予約一覧', () => {
 
 test.describe('MyPage - ステータスフィルタリング', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
     await page.goto('/mypage');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 10000 });
@@ -107,6 +110,7 @@ test.describe('MyPage - ステータスフィルタリング', () => {
 
 test.describe('MyPage - 予約変更フロー', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
     await page.goto('/mypage');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 10000 });
@@ -188,10 +192,84 @@ test.describe('MyPage - 予約変更フロー', () => {
       expect(count).toBeGreaterThanOrEqual(0);
     }
   });
+
+  /**
+   * Scenario: ユーザーが予約のメニューを変更できる
+   *   Given 予約編集モーダルを開いている
+   *   When 別のメニューを選択する
+   *   Then 新しいメニューが選択される
+   */
+  test('should change menu in edit modal', async ({ page }) => {
+    const editButton = page.getByRole('button', { name: '予約を変更' }).first();
+
+    if (await editButton.isVisible()) {
+      await editButton.click();
+      await page.waitForSelector('select#menu');
+
+      const menuSelect = page.locator('select#menu');
+      const initialValue = await menuSelect.inputValue();
+
+      // Change menu selection (select second option)
+      await menuSelect.selectOption({ index: 1 });
+
+      const newValue = await menuSelect.inputValue();
+      expect(newValue).not.toBe(initialValue);
+    }
+  });
+
+  /**
+   * Scenario: ユーザーが予約のスタッフを変更できる
+   *   Given 予約編集モーダルを開いている
+   *   When 別のスタッフを選択する
+   *   Then 新しいスタッフが選択される
+   */
+  test('should change staff in edit modal', async ({ page }) => {
+    const editButton = page.getByRole('button', { name: '予約を変更' }).first();
+
+    if (await editButton.isVisible()) {
+      await editButton.click();
+      await page.waitForSelector('select#staff');
+
+      const staffSelect = page.locator('select#staff');
+      const initialValue = await staffSelect.inputValue();
+
+      // Change staff selection (select second option)
+      await staffSelect.selectOption({ index: 1 });
+
+      const newValue = await staffSelect.inputValue();
+      expect(newValue).not.toBe(initialValue);
+    }
+  });
+
+  /**
+   * Scenario: ユーザーが備考を編集できる
+   *   Given 予約編集モーダルを開いている
+   *   When 備考欄を編集する
+   *   Then 新しい備考が入力される
+   */
+  test('should edit notes in edit modal', async ({ page }) => {
+    const editButton = page.getByRole('button', { name: '予約を変更' }).first();
+
+    if (await editButton.isVisible()) {
+      await editButton.click();
+      await page.waitForSelector('textarea#notes');
+
+      const notesTextarea = page.locator('textarea#notes');
+
+      // Clear and enter new notes
+      await notesTextarea.fill('');
+      const newNotes = '新しい要望を追加しました';
+      await notesTextarea.fill(newNotes);
+
+      const value = await notesTextarea.inputValue();
+      expect(value).toBe(newNotes);
+    }
+  });
 });
 
 test.describe('MyPage - 予約キャンセルフロー', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
     await page.goto('/mypage');
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 10000 });
@@ -273,6 +351,7 @@ test.describe('MyPage - 予約キャンセルフロー', () => {
 
 test.describe('MyPage - エラーハンドリング', () => {
   test('should display error message when API fails', async ({ page }) => {
+    await setupMSW(page);
     // Intercept API call and return error
     await page.route('**/api/reservations', (route) => {
       route.fulfill({
@@ -299,6 +378,7 @@ test.describe('MyPage - エラーハンドリング', () => {
   });
 
   test('should retry fetching reservations when clicking retry button', async ({ page }) => {
+    await setupMSW(page);
     let requestCount = 0;
 
     // Intercept API calls
@@ -349,6 +429,7 @@ test.describe('MyPage - エラーハンドリング', () => {
 
 test.describe('MyPage - レスポンシブデザイン', () => {
   test('should display correctly on mobile', async ({ page }) => {
+    await setupMSW(page);
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -365,6 +446,7 @@ test.describe('MyPage - レスポンシブデザイン', () => {
   });
 
   test('should display correctly on tablet', async ({ page }) => {
+    await setupMSW(page);
     // Set tablet viewport
     await page.setViewportSize({ width: 768, height: 1024 });
 
@@ -378,6 +460,7 @@ test.describe('MyPage - レスポンシブデザイン', () => {
   });
 
   test('should display correctly on desktop', async ({ page }) => {
+    await setupMSW(page);
     // Set desktop viewport
     await page.setViewportSize({ width: 1920, height: 1080 });
 

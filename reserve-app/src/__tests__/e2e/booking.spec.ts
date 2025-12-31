@@ -154,6 +154,7 @@ test.describe('Booking Flow', () => {
 
 test.describe('Menu List Page', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
     await page.goto('/menus');
   });
 
