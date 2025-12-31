@@ -1,22 +1,93 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 
-export default function AdminDashboard() {
-  // Mock data
-  const todayReservations = [
-    { id: 1, time: '10:00', customer: '山田 太郎', menu: 'カット', staff: '田中', status: 'confirmed' },
-    { id: 2, time: '11:30', customer: '佐藤 花子', menu: 'カラー', staff: '佐藤', status: 'confirmed' },
-    { id: 3, time: '13:00', customer: '鈴木 一郎', menu: 'パーマ', staff: '鈴木', status: 'pending' },
-    { id: 4, time: '14:30', customer: '田中 美咲', menu: 'トリートメント', staff: '田中', status: 'confirmed' },
-    { id: 5, time: '16:00', customer: '高橋 健太', menu: 'カット', staff: '佐藤', status: 'confirmed' },
-  ];
+interface Reservation {
+  id: string;
+  time: string;
+  customer: string;
+  menu: string;
+  staff: string;
+  status: string;
+}
 
-  const stats = [
-    { label: '本日の予約', value: '12件', change: '+3', trend: 'up', color: 'blue' },
-    { label: '今月の予約', value: '145件', change: '+15%', trend: 'up', color: 'green' },
-    { label: '今月の売上', value: '¥580,000', change: '+8%', trend: 'up', color: 'orange' },
-    { label: 'リピート率', value: '68%', change: '+2%', trend: 'up', color: 'purple' },
+interface WeeklyStat {
+  date: string;
+  day: string;
+  count: number;
+}
+
+interface DashboardStats {
+  todayReservations: number;
+  monthlyReservations: number;
+  monthlyRevenue: number;
+  repeatRate: number;
+  todayReservationsList: Reservation[];
+  weeklyStats: WeeklyStat[];
+}
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/stats');
+      const result = await response.json();
+
+      if (result.success) {
+        setStats(result.data);
+      } else {
+        setError(result.error || 'データの取得に失敗しました');
+      }
+    } catch (err) {
+      setError('ネットワークエラーが発生しました');
+      console.error('Dashboard stats error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <AdminSidebar />
+        <main className="ml-64 flex-1 p-8">
+          <div className="flex h-96 items-center justify-center">
+            <div className="text-gray-500">読み込み中...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <AdminSidebar />
+        <main className="ml-64 flex-1 p-8">
+          <div className="rounded-lg bg-red-50 p-4 text-red-800">
+            {error || 'データの取得に失敗しました'}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const statsCards = [
+    { label: '本日の予約', value: `${stats.todayReservations}件`, change: '+3', trend: 'up', color: 'blue' },
+    { label: '今月の予約', value: `${stats.monthlyReservations}件`, change: '+15%', trend: 'up', color: 'green' },
+    { label: '今月の売上', value: `¥${stats.monthlyRevenue.toLocaleString()}`, change: '+8%', trend: 'up', color: 'orange' },
+    { label: 'リピート率', value: `${stats.repeatRate}%`, change: '+2%', trend: 'up', color: 'purple' },
   ];
 
   const statusBadge = (status: string) => {
@@ -50,7 +121,7 @@ export default function AdminDashboard() {
 
         {/* Stats Grid */}
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => (
+          {statsCards.map((stat, index) => (
             <Card key={index} className="relative overflow-hidden">
               <div className="flex items-start justify-between">
                 <div>
@@ -82,32 +153,39 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-3">
-                {todayReservations.map((reservation) => (
-                  <div
-                    key={reservation.id}
-                    className="flex items-center justify-between rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-sm font-semibold text-blue-600">
-                        {reservation.time}
+                {stats.todayReservationsList.length > 0 ? (
+                  stats.todayReservationsList.map((reservation) => (
+                    <div
+                      key={reservation.id}
+                      data-testid="reservation-item"
+                      className="flex items-center justify-between rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-sm font-semibold text-blue-600">
+                          {reservation.time}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{reservation.customer}</p>
+                          <p className="text-sm text-gray-600">
+                            {reservation.menu} / {reservation.staff}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{reservation.customer}</p>
-                        <p className="text-sm text-gray-600">
-                          {reservation.menu} / {reservation.staff}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {statusBadge(reservation.status)}
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {statusBadge(reservation.status)}
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                      </button>
-                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
+                    <p className="text-gray-500">本日の予約はありません</p>
                   </div>
-                ))}
+                )}
               </div>
             </Card>
 
@@ -115,15 +193,17 @@ export default function AdminDashboard() {
             <Card className="mt-6">
               <h2 className="mb-6 text-xl font-semibold text-gray-900">週間予約状況</h2>
               <div className="flex items-end justify-between gap-4" style={{ height: '200px' }}>
-                {['月', '火', '水', '木', '金', '土', '日'].map((day, index) => {
-                  const heights = [60, 75, 90, 65, 80, 85, 70];
+                {stats.weeklyStats.map((dayStat, index) => {
+                  const maxCount = Math.max(...stats.weeklyStats.map(s => s.count));
+                  const height = maxCount > 0 ? (dayStat.count / maxCount) * 100 : 0;
                   return (
-                    <div key={day} className="flex flex-1 flex-col items-center gap-2">
+                    <div key={index} className="flex flex-1 flex-col items-center gap-2">
                       <div
                         className="w-full rounded-t-lg bg-blue-500 transition-all hover:bg-blue-600"
-                        style={{ height: `${heights[index]}%` }}
+                        style={{ height: `${height}%`, minHeight: dayStat.count > 0 ? '10px' : '0' }}
+                        title={`${dayStat.count}件`}
                       ></div>
-                      <span className="text-sm font-medium text-gray-600">{day}</span>
+                      <span className="text-sm font-medium text-gray-600">{dayStat.day}</span>
                     </div>
                   );
                 })}
