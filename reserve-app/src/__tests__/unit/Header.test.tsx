@@ -24,7 +24,7 @@ describe('Header', () => {
 
     expect(screen.getByRole('link', { name: 'メニュー' })).toHaveAttribute('href', '/menus');
     expect(screen.getByRole('link', { name: '予約' })).toHaveAttribute('href', '/booking');
-    expect(screen.getByRole('link', { name: 'マイページ' })).toHaveAttribute('href', '/mypage');
+    expect(screen.getByRole('link', { name: 'マイページ' })).toHaveAttribute('href', '/my-reservations');
   });
 
   it('should render authentication links', () => {

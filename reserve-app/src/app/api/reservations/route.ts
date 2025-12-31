@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-response';
 import { createReservationSchema } from '@/lib/validations';
+import { sendReservationConfirmationEmail } from '@/lib/email';
 import type { Reservation } from '@/types/api';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
@@ -267,6 +268,25 @@ export async function POST(request: NextRequest) {
       createdAt: reservation.createdAt.toISOString(),
       updatedAt: reservation.updatedAt.toISOString(),
     };
+
+    // Send confirmation email (non-blocking)
+    // Email sending failure should not fail the reservation
+    try {
+      await sendReservationConfirmationEmail({
+        to: reservation.user.email,
+        userName: reservation.user.name || 'お客様',
+        menuName: reservation.menu.name,
+        staffName: reservation.staff.name,
+        reservedDate: formattedReservation.reservedDate,
+        reservedTime: reservation.reservedTime,
+        price: reservation.menu.price,
+        duration: reservation.menu.duration,
+        notes: reservation.notes || undefined,
+      });
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError);
+      // Continue anyway - reservation is created successfully
+    }
 
     return successResponse<Reservation>(formattedReservation, 201);
   });

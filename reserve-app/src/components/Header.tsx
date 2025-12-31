@@ -18,7 +18,7 @@ export default function Header() {
           <Link href="/booking" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">
             予約
           </Link>
-          <Link href="/mypage" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">
+          <Link href="/my-reservations" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">
             マイページ
           </Link>
         </nav>

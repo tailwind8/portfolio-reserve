@@ -51,11 +51,15 @@ export const updateReservationSchema = z.object({
   reservedDate: z
     .string()
     .regex(dateRegex, 'Date must be in YYYY-MM-DD format')
+    .refine((date) => {
+      if (!date) return true; // Skip validation if not provided
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate >= today;
+    }, 'Reservation date must be today or in the future')
     .optional(),
   reservedTime: z.string().regex(timeRegex, 'Time must be in HH:mm format').optional(),
-  status: z
-    .enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'])
-    .optional(),
   notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
 });
 
@@ -107,3 +111,12 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * Request body for cancelling a reservation
+ */
+export const cancelReservationSchema = z.object({
+  cancellationReason: z.string().max(500, 'Reason must be 500 characters or less').optional(),
+});
+
+export type CancelReservationInput = z.infer<typeof cancelReservationSchema>;

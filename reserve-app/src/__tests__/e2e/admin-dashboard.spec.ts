@@ -97,8 +97,9 @@ test.describe('管理者ダッシュボード', () => {
    *   When 新しい予約が追加される
    *   Then ダッシュボードの統計が自動的に更新される
    */
-  test.skip('リアルタイム更新（将来実装）', async () => {
+  test.skip('リアルタイム更新（将来実装）', async ({ page }) => {
     // このテストは将来のリアルタイム機能実装時に有効化
+    void page; // Suppress unused variable warning
   });
 
   /**
