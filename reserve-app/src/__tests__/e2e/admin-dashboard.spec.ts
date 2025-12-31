@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * So that I can understand business performance
  */
 
-test.describe('@smoke 管理者ダッシュボード', () => {
+test.describe('管理者ダッシュボード', () => {
   test.beforeEach(async ({ page }) => {
     // TODO: 管理者ログイン処理を実装後に追加
     // 現在はログイン不要でダッシュボードに直接アクセス
