@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { loginSchema } from '@/lib/validations';
 import { supabase } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';

@@ -43,7 +43,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Name is required');
+        expect(result.error.issues[0].message).toBe('Name is required');
       }
     });
 
@@ -60,7 +60,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Invalid email address');
+        expect(result.error.issues[0].message).toBe('Invalid email address');
       }
     });
 
@@ -77,7 +77,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe(
+        expect(result.error.issues[0].message).toBe(
           'Password must be at least 8 characters'
         );
       }
@@ -96,7 +96,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe(
+        expect(result.error.issues[0].message).toBe(
           'Password must contain at least one letter'
         );
       }
@@ -115,7 +115,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe(
+        expect(result.error.issues[0].message).toBe(
           'Password must contain at least one number'
         );
       }
@@ -134,7 +134,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Passwords do not match');
+        expect(result.error.issues[0].message).toBe('Passwords do not match');
       }
     });
 
@@ -151,7 +151,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe(
+        expect(result.error.issues[0].message).toBe(
           'You must accept the terms and conditions'
         );
       }
@@ -193,7 +193,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Invalid phone number format');
+        expect(result.error.issues[0].message).toBe('Invalid phone number format');
       }
     });
   });
@@ -240,7 +240,7 @@ describe('Authentication Validations', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Invalid email address');
+        expect(result.error.issues[0].message).toBe('Invalid email address');
       }
     });
 
@@ -253,7 +253,7 @@ describe('Authentication Validations', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Password is required');
+        expect(result.error.issues[0].message).toBe('Password is required');
       }
     });
 
