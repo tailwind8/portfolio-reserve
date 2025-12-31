@@ -254,10 +254,10 @@ test.describe('MyPage - 予約キャンセルフロー', () => {
    *   Then ダイアログが閉じる
    */
   test('should close cancel dialog when clicking back button', async ({ page }) => {
-    const cancelButton = page.getByRole('button', { name: 'キャンセル' }).first();
+    const cancelButton = myPage['getFirstCancelButton']();
     if (await cancelButton.isVisible() && (await cancelButton.isEnabled())) {
       await myPage.openCancelDialog();
-      await expect(page.getByRole('heading', { name: '予約をキャンセルしますか？' })).toBeVisible();
+      await expect(page.getByText('予約をキャンセルしますか?')).toBeVisible();
       await myPage.closeCancelDialog();
       await myPage.expectCancelDialogClosed();
     }

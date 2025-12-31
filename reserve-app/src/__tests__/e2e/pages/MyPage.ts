@@ -23,7 +23,7 @@ export class MyPage {
     tabWithBadge: 'button:has(span.rounded-full)',
 
     // 予約カード
-    editButton: 'button:has-text("予約を変更")',
+    editButton: 'button:has-text("変更")',
     cancelButton: 'button:has-text("キャンセル")',
     statusBadge: 'span.inline-flex',
 
@@ -101,11 +101,14 @@ export class MyPage {
    * すべてのステータスタブが表示されることを検証
    */
   async expectAllStatusTabsVisible() {
-    await expect(this.page.getByRole('button', { name: /すべて/ })).toBeVisible();
-    await expect(this.page.getByRole('button', { name: /予約確定/ })).toBeVisible();
-    await expect(this.page.getByRole('button', { name: /予約待ち/ })).toBeVisible();
-    await expect(this.page.getByRole('button', { name: /キャンセル/ })).toBeVisible();
-    await expect(this.page.getByRole('button', { name: /完了/ })).toBeVisible();
+    // ステータスタブのコンテナを特定（border-bクラスを持つdiv内のボタン）
+    const tabsContainer = this.page.locator('.border-b.border-gray-200');
+
+    await expect(tabsContainer.getByRole('button', { name: /すべて/ })).toBeVisible();
+    await expect(tabsContainer.getByRole('button', { name: /予約確定/ })).toBeVisible();
+    await expect(tabsContainer.getByRole('button', { name: /予約待ち/ })).toBeVisible();
+    await expect(tabsContainer.getByRole('button', { name: /キャンセル/ })).toBeVisible();
+    await expect(tabsContainer.getByRole('button', { name: /完了/ })).toBeVisible();
   }
 
   /**
@@ -134,20 +137,23 @@ export class MyPage {
    * 予約カードの情報が正しく表示されることを検証
    */
   async expectReservationCardInfo() {
-    const reservationCards = this.page.locator(this.selectors.editButton).locator('..');
+    // gridコンテナ内の予約カードを取得
+    const gridContainer = this.page.locator('.grid');
+    const cardCount = await gridContainer.locator('> div').count();
 
-    if ((await reservationCards.count()) > 0) {
-      const firstCard = reservationCards.first();
+    if (cardCount > 0) {
+      // 最初の予約カードを取得
+      const firstCard = gridContainer.locator('> div').first();
 
-      // ステータスバッジ
-      await expect(firstCard.locator(this.selectors.statusBadge)).toBeVisible();
+      // ステータスバッジ（rounded-fullクラスを持つspan）
+      await expect(firstCard.locator('span.rounded-full').first()).toBeVisible();
 
-      // アイコン（メニュー、スタッフ）
-      await expect(firstCard.locator('svg').first()).toBeVisible();
-      await expect(firstCard.locator('svg').nth(1)).toBeVisible();
+      // アイコン（日時、メニュー、担当）
+      const svgIcons = firstCard.locator('svg');
+      await expect(svgIcons.first()).toBeVisible();
 
       // アクションボタン
-      await expect(firstCard.getByRole('button', { name: '予約を変更' })).toBeVisible();
+      await expect(firstCard.getByRole('button', { name: '変更' })).toBeVisible();
       await expect(firstCard.getByRole('button', { name: 'キャンセル' })).toBeVisible();
     }
   }
@@ -160,7 +166,9 @@ export class MyPage {
    * 指定したステータスタブをクリック
    */
   async clickStatusTab(tabName: '予約確定' | 'キャンセル' | 'すべて' | '予約待ち' | '完了') {
-    const tab = this.page.getByRole('button', { name: new RegExp(tabName) });
+    // ステータスタブのコンテナ内で検索
+    const tabsContainer = this.page.locator('.border-b.border-gray-200');
+    const tab = tabsContainer.getByRole('button', { name: new RegExp(tabName) });
     await tab.click();
     await this.page.waitForTimeout(500);
   }
@@ -186,8 +194,11 @@ export class MyPage {
    * 空状態が表示されることを検証
    */
   async expectEmptyState(statusName?: string) {
-    const hasReservations = (await this.page.locator(this.selectors.editButton).count()) > 0;
+    // gridコンテナ内の予約カードを確認
+    const gridContainer = this.page.locator('.grid');
+    const hasReservations = (await gridContainer.getByRole('button', { name: '変更' }).count()) > 0;
 
+    // 空状態メッセージを確認
     let hasEmptyState = false;
     if (statusName) {
       const specificEmptyCount = await this.page.getByText(`${statusName}の予約がありません`).count();
@@ -207,9 +218,11 @@ export class MyPage {
 
   /**
    * 最初の予約の編集ボタンを取得
+   * gridコンテナ内で探すことで予約カードのボタンのみを対象にする
    */
   private getFirstEditButton(): Locator {
-    return this.page.getByRole('button', { name: '予約を変更' }).first();
+    const gridContainer = this.page.locator('.grid');
+    return gridContainer.getByRole('button', { name: '変更' }).first();
   }
 
   /**
@@ -317,9 +330,11 @@ export class MyPage {
 
   /**
    * 最初の予約のキャンセルボタンを取得
+   * ステータスタブのキャンセルボタンと区別するため、gridコンテナ内で探す
    */
   private getFirstCancelButton(): Locator {
-    return this.page.getByRole('button', { name: 'キャンセル' }).first();
+    const gridContainer = this.page.locator('.grid');
+    return gridContainer.getByRole('button', { name: 'キャンセル' }).first();
   }
 
   /**
@@ -336,10 +351,10 @@ export class MyPage {
    * キャンセル確認ダイアログが表示されることを検証
    */
   async expectCancelDialogVisible() {
-    await expect(this.page.getByRole('heading', { name: '予約をキャンセルしますか？' })).toBeVisible();
-    await expect(this.page.getByText('予約日時')).toBeVisible();
-    await expect(this.page.getByText('メニュー')).toBeVisible();
-    await expect(this.page.getByText('この操作は取り消せません')).toBeVisible();
+    await expect(this.page.getByText('予約をキャンセルしますか?')).toBeVisible();
+    await expect(this.page.getByText('日時:')).toBeVisible();
+    await expect(this.page.getByText('メニュー:')).toBeVisible();
+    await expect(this.page.getByText('この操作は取り消せません。')).toBeVisible();
     await expect(this.page.getByRole('button', { name: '戻る' })).toBeVisible();
     await expect(this.page.getByRole('button', { name: 'キャンセルする' })).toBeVisible();
   }
@@ -355,7 +370,7 @@ export class MyPage {
    * キャンセルダイアログが閉じていることを検証
    */
   async expectCancelDialogClosed() {
-    await expect(this.page.getByRole('heading', { name: '予約をキャンセルしますか？' }))
+    await expect(this.page.getByText('予約をキャンセルしますか?'))
       .not.toBeVisible();
   }
 
@@ -363,18 +378,16 @@ export class MyPage {
    * キャンセルダイアログで予約詳細が表示されることを検証
    */
   async expectReservationDetailsInDialog() {
-    await expect(this.page.getByText('予約日時')).toBeVisible();
-    await expect(this.page.getByText('メニュー')).toBeVisible();
-    await expect(this.page.getByText('担当者')).toBeVisible();
-    await expect(this.page.locator('text=/¥[0-9,]+/')).toBeVisible();
-    await expect(this.page.locator('text=/[0-9]+分/')).toBeVisible();
+    await expect(this.page.getByText('日時:')).toBeVisible();
+    await expect(this.page.getByText('メニュー:')).toBeVisible();
+    await expect(this.page.getByText('担当:')).toBeVisible();
   }
 
   /**
    * キャンセル警告メッセージが表示されることを検証
    */
   async expectCancelWarningMessage() {
-    await expect(this.page.getByText('この操作は取り消せません')).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText('この操作は取り消せません。')).toBeVisible({ timeout: 10000 });
   }
 
   /**

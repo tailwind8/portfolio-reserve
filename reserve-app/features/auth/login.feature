@@ -7,6 +7,20 @@ Feature: ユーザーログイン
   Background:
     Given ログインページにアクセスしている
 
+  Scenario: ログイン成功（ハッピーパス）
+    Given 登録済みユーザー"yamada@example.com"が存在する
+    When メールアドレスに"yamada@example.com"を入力する
+    And パスワードに"password123"を入力する
+    And "ログイン"ボタンをクリックする
+    Then ホームページ"/"にリダイレクトされる
+    And ユーザー名が表示される
+
+  Scenario: ログアウト機能
+    Given ユーザーがログインしている
+    When "ログアウト"ボタンをクリックする
+    Then ログインページ"/login"にリダイレクトされる
+    And ログイン状態が解除される
+
   Scenario: バリデーションエラー（空フィールド）
     When 何も入力せずに"ログイン"ボタンをクリックする
     Then エラーメッセージ"Invalid email address"が表示される
