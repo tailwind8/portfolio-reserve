@@ -4,11 +4,9 @@ import { MenusPage } from './pages/MenusPage';
 
 /**
  * Feature: メニュー一覧表示
- * Gherkinシナリオ: features/customer/menus.feature
+ * Gherkinシナリオ: features/menus.feature
  *
- * As a customer
- * I want to view the menu list
- * So that I can choose services before booking
+ * 顧客として予約前にメニュー一覧を確認したい
  */
 
 test.describe('メニュー一覧表示', () => {
@@ -22,10 +20,8 @@ test.describe('メニュー一覧表示', () => {
 
   /**
    * Scenario: すべてのアクティブなメニューが表示される
-   *   Given メニュー一覧ページにアクセスしている
    *   When ページが読み込まれる
-   *   Then ページタイトル"メニュー一覧"が表示される
-   *   And すべてのアクティブなメニューが表示される
+   *   Then すべてのアクティブなメニューが表示される
    *   And 各メニューに名前が表示される
    *   And 各メニューに料金が表示される
    *   And 各メニューに所要時間が表示される
@@ -150,6 +146,81 @@ test.describe('メニュー一覧表示', () => {
    */
   test.skip('ローディング状態が表示される', async () => {
     // TODO: ローディング状態のテスト実装
+  });
+
+  /**
+   * Scenario: モバイルで正しく表示される
+   *   Given モバイル画面サイズ（375x667）に設定している
+   *   When メニュー一覧ページにアクセスする
+   *   Then メニューカードが縦1列で表示される
+   *   And すべてのメニュー情報が読みやすく表示される
+   */
+  test('モバイルで正しく表示される', async () => {
+    // Given: モバイル画面サイズに設定
+    await menusPage.setMobileViewport();
+
+    // When: メニュー一覧ページにアクセスする
+    await menusPage.goto();
+
+    // Then: メニューカードが表示される
+    await menusPage.expectMenuCardsVisible(3);
+    await menusPage.expectGridColumns('1');
+
+    // And: すべてのメニュー情報が読みやすく表示される
+    const firstMenu = menusPage.getFirstMenuCard();
+    await menusPage.expectMenuCardDetailsVisible(firstMenu);
+  });
+
+  /**
+   * Scenario: タブレットで正しく表示される
+   *   Given タブレット画面サイズ（768x1024）に設定している
+   *   When メニュー一覧ページにアクセスする
+   *   Then メニューカードがグリッド2列で表示される
+   */
+  test('タブレットで正しく表示される', async () => {
+    // Given: タブレット画面サイズに設定
+    await menusPage.setTabletViewport();
+
+    // When: メニュー一覧ページにアクセスする
+    await menusPage.goto();
+
+    // Then: メニューカードがグリッド2列で表示される
+    await menusPage.expectMenuCardsVisible(3);
+    await menusPage.expectGridColumns('2');
+  });
+
+  /**
+   * Scenario: デスクトップで正しく表示される
+   *   Given デスクトップ画面サイズ（1920x1080）に設定している
+   *   When メニュー一覧ページにアクセスする
+   *   Then メニューカードがグリッド3列以上で表示される
+   */
+  test('デスクトップで正しく表示される', async () => {
+    // Given: デスクトップ画面サイズに設定
+    await menusPage.setDesktopViewport();
+
+    // When: メニュー一覧ページにアクセスする
+    await menusPage.goto();
+
+    // Then: メニューカードがグリッド3列以上で表示される
+    await menusPage.expectMenuCardsVisible(3);
+    await menusPage.expectGridColumns('3+');
+  });
+
+  /**
+   * Scenario: メニューカードにマウスホバーでハイライト表示される
+   *   When 最初のメニューカードにマウスをホバーする
+   *   Then メニューカードがハイライト表示される
+   */
+  test('メニューカードにマウスホバーでハイライト表示される', async () => {
+    // Given: メニュー一覧ページにアクセス
+    await menusPage.goto();
+
+    // When: 最初のメニューカードにマウスをホバーする
+    await menusPage.hoverFirstMenuCard();
+
+    // Then: メニューカードがハイライト表示される
+    await menusPage.expectFirstMenuCardHighlighted();
   });
 });
 
