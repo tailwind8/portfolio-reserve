@@ -6,11 +6,20 @@ import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import { registerSchema } from '@/lib/validations';
-import type { RegisterInput } from '@/lib/validations';
+
+// Form state type (different from validation input type)
+type RegisterFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  passwordConfirm: string;
+  termsAccepted: boolean;
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<RegisterInput>({
+  const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
     phone: '',

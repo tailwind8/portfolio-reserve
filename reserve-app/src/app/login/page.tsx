@@ -6,11 +6,17 @@ import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import { loginSchema } from '@/lib/validations';
-import type { LoginInput } from '@/lib/validations';
+
+// Form state type (different from validation input type)
+type LoginFormData = {
+  email: string;
+  password: string;
+  remember: boolean;
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<LoginInput>({
+  const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
     remember: false,
