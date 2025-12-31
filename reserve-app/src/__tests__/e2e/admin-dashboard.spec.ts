@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupMSW } from './msw-setup';
 
 /**
  * Feature: 管理者ダッシュボード（統計表示）
@@ -12,6 +13,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('管理者ダッシュボード', () => {
   test.beforeEach(async ({ page }) => {
+    // MSW API モックをセットアップ
+    await setupMSW(page);
+
     // TODO: 管理者ログイン処理を実装後に追加
     // 現在はログイン不要でダッシュボードに直接アクセス
     await page.goto('/admin/dashboard');
@@ -93,7 +97,7 @@ test.describe('管理者ダッシュボード', () => {
    *   When 新しい予約が追加される
    *   Then ダッシュボードの統計が自動的に更新される
    */
-  test.skip('リアルタイム更新（将来実装）', async ({ page }) => {
+  test.skip('リアルタイム更新（将来実装）', async () => {
     // このテストは将来のリアルタイム機能実装時に有効化
   });
 

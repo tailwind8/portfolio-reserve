@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { RegisterPage } from './pages/RegisterPage';
 import { LoginPage } from './pages/LoginPage';
+import { setupMSW } from './msw-setup';
 
 test.describe('User Authentication', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
+  });
   const testUser = {
     name: '山田太郎',
     email: `test-${Date.now()}@example.com`, // Unique email for each test run

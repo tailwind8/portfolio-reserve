@@ -105,7 +105,8 @@ export async function GET(request: Request) {
     });
 
     const monthlyRevenue = monthlyReservationsWithPrice.reduce(
-      (sum, reservation) => sum + (reservation.menu?.price || 0),
+      (sum: number, reservation: { menu: { price: number } | null }) =>
+        sum + (reservation.menu?.price || 0),
       0
     );
 
@@ -173,17 +174,19 @@ export async function GET(request: Request) {
     }
 
     // レスポンス整形
-    const formattedReservations = todayReservationsList.map((reservation) => ({
-      id: reservation.id,
-      time: reservation.reservedTime, // "14:00" format
-      customer: reservation.user?.name || '名前未設定',
-      email: reservation.user?.email || '',
-      menu: reservation.menu?.name || 'メニュー未設定',
-      staff: reservation.staff?.name || 'スタッフ未設定',
-      status: reservation.status,
-      price: reservation.menu?.price || 0,
-      duration: reservation.menu?.duration || 0,
-    }));
+    const formattedReservations = todayReservationsList.map(
+      (reservation: (typeof todayReservationsList)[0]) => ({
+        id: reservation.id,
+        time: reservation.reservedTime, // "14:00" format
+        customer: reservation.user?.name || '名前未設定',
+        email: reservation.user?.email || '',
+        menu: reservation.menu?.name || 'メニュー未設定',
+        staff: reservation.staff?.name || 'スタッフ未設定',
+        status: reservation.status,
+        price: reservation.menu?.price || 0,
+        duration: reservation.menu?.duration || 0,
+      })
+    );
 
     return NextResponse.json({
       success: true,

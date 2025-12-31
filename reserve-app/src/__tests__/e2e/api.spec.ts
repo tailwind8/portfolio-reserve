@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { setupMSW } from './msw-setup';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 test.describe('API Endpoints', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupMSW(page);
+  });
   test.describe('GET /api/health', () => {
     test('should return health check status', async ({ request }) => {
       const response = await request.get(`${BASE_URL}/api/health`);
