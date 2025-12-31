@@ -43,7 +43,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Name is required');
+        expect(result.error.issues[0].message).toBe('名前を入力してください');
       }
     });
 
@@ -60,7 +60,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Invalid email address');
+        expect(result.error.issues[0].message).toBe('有効なメールアドレスを入力してください');
       }
     });
 
@@ -78,7 +78,7 @@ describe('Authentication Validations', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe(
-          'Password must be at least 8 characters'
+          'パスワードは8文字以上で入力してください'
         );
       }
     });
@@ -97,7 +97,7 @@ describe('Authentication Validations', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe(
-          'Password must contain at least one letter'
+          'パスワードには少なくとも1つの英字を含めてください'
         );
       }
     });
@@ -116,7 +116,7 @@ describe('Authentication Validations', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe(
-          'Password must contain at least one number'
+          'パスワードには少なくとも1つの数字を含めてください'
         );
       }
     });
@@ -134,7 +134,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Passwords do not match');
+        expect(result.error.issues[0].message).toBe('パスワードが一致しません');
       }
     });
 
@@ -152,7 +152,7 @@ describe('Authentication Validations', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe(
-          'You must accept the terms and conditions'
+          '利用規約に同意してください'
         );
       }
     });
@@ -193,7 +193,7 @@ describe('Authentication Validations', () => {
       const result = registerSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Invalid phone number format');
+        expect(result.error.issues[0].message).toBe('有効な電話番号を入力してください（例: 090-1234-5678）');
       }
     });
   });
@@ -240,7 +240,7 @@ describe('Authentication Validations', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Invalid email address');
+        expect(result.error.issues[0].message).toBe('有効なメールアドレスを入力してください');
       }
     });
 
@@ -253,7 +253,7 @@ describe('Authentication Validations', () => {
       const result = loginSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Password is required');
+        expect(result.error.issues[0].message).toBe('パスワードを入力してください');
       }
     });
 
