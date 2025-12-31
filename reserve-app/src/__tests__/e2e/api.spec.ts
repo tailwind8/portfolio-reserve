@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 test.describe('API Endpoints', () => {
-  test.describe('@smoke GET /api/health', () => {
+  test.describe('GET /api/health', () => {
     test('should return health check status', async ({ request }) => {
       const response = await request.get(`${BASE_URL}/api/health`);
       const data = await response.json();
