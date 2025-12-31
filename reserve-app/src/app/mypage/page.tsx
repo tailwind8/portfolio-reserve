@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ReservationCard from '@/components/ReservationCard';
-import ReservationEditModal from '@/components/ReservationEditModal';
-import CancelConfirmDialog from '@/components/CancelConfirmDialog';
 import type { Reservation, ReservationFilterStatus } from '@/types/api';
 
 /**
@@ -22,10 +20,6 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ReservationFilterStatus>('ALL');
-
-  // モーダル/ダイアログの状態
-  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
-  const [cancelingReservation, setCancelingReservation] = useState<Reservation | null>(null);
 
   // 予約一覧を取得
   useEffect(() => {
@@ -75,49 +69,10 @@ export default function MyPage() {
     }
   };
 
-  const handleEdit = (reservation: Reservation) => {
-    setEditingReservation(reservation);
-  };
-
-  const handleEditSuccess = () => {
-    // 予約一覧を再取得
-    fetchReservations();
-  };
-
-  const handleCancelClick = (reservation: Reservation) => {
-    setCancelingReservation(reservation);
-  };
-
-  const handleCancelConfirm = async () => {
-    if (!cancelingReservation) return;
-
-    try {
-      const userId = 'mock-user-id'; // 仮のユーザーID
-
-      const response = await fetch(`/api/reservations/${cancelingReservation.id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': userId,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('予約のキャンセルに失敗しました');
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        // 予約一覧を再取得
-        await fetchReservations();
-        setCancelingReservation(null);
-        alert('予約をキャンセルしました');
-      } else {
-        throw new Error(data.error?.message || '予約のキャンセルに失敗しました');
-      }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : '予約のキャンセルに失敗しました');
-    }
+  // 予約が過去かどうかを判定
+  const isReservationPast = (reservation: Reservation): boolean => {
+    const reservationDate = new Date(`${reservation.reservedDate}T${reservation.reservedTime}`);
+    return reservationDate < new Date();
   };
 
   // ステータスタブの定義
@@ -266,31 +221,13 @@ export default function MyPage() {
                   <ReservationCard
                     key={reservation.id}
                     reservation={reservation}
-                    onEdit={handleEdit}
-                    onCancel={handleCancelClick}
+                    type={isReservationPast(reservation) ? 'past' : 'upcoming'}
+                    onUpdate={fetchReservations}
                   />
                 ))}
               </div>
             )}
           </>
-        )}
-
-        {/* 予約変更モーダル */}
-        {editingReservation && (
-          <ReservationEditModal
-            reservation={editingReservation}
-            onClose={() => setEditingReservation(null)}
-            onSuccess={handleEditSuccess}
-          />
-        )}
-
-        {/* キャンセル確認ダイアログ */}
-        {cancelingReservation && (
-          <CancelConfirmDialog
-            reservation={cancelingReservation}
-            onConfirm={handleCancelConfirm}
-            onCancel={() => setCancelingReservation(null)}
-          />
         )}
       </main>
 
