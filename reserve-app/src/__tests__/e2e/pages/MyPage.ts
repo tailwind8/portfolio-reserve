@@ -405,6 +405,61 @@ export class MyPage {
     }
   }
 
+  /**
+   * キャンセル確定ボタンをクリック
+   */
+  async confirmCancel() {
+    await this.page.getByRole('button', { name: 'キャンセルする' }).click();
+  }
+
+  /**
+   * キャンセル成功メッセージが表示されることを検証
+   */
+  async expectCancelSuccessMessage() {
+    await expect(this.page.getByText('予約をキャンセルしました')).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * キャンセルボタンが無効化されていることを検証
+   */
+  async expectCancelButtonDisabled() {
+    const cancelButton = this.getFirstCancelButton();
+    await expect(cancelButton).toBeDisabled();
+  }
+
+  /**
+   * 特定のエラーメッセージが表示されることを検証
+   */
+  async expectSpecificErrorMessage(message: string) {
+    await expect(this.page.getByText(message)).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * 予約のステータスバッジが指定したステータスになることを検証
+   */
+  async expectReservationStatus(status: string) {
+    const gridContainer = this.page.locator('.grid');
+    const statusBadge = gridContainer.locator('span.rounded-full').first();
+    await expect(statusBadge).toContainText(status);
+  }
+
+  /**
+   * 予約カードの件数を取得
+   */
+  async getReservationCount(): Promise<number> {
+    const gridContainer = this.page.locator('.grid');
+    return await gridContainer.locator('> div').count();
+  }
+
+  /**
+   * 特定のインデックスの予約のキャンセルボタンをクリック
+   */
+  async clickCancelButtonAt(index: number) {
+    const gridContainer = this.page.locator('.grid');
+    const cancelButton = gridContainer.getByRole('button', { name: 'キャンセル' }).nth(index);
+    await cancelButton.click();
+  }
+
   // ===========================================
   // エラーハンドリング
   // ===========================================
