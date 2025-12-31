@@ -1,8 +1,103 @@
+'use client';
+
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import { loginSchema } from '@/lib/validations';
+
+// Form state type (different from validation input type)
+type LoginFormData = {
+  email: string;
+  password: string;
+  remember: boolean;
+};
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState<LoginFormData>({
+    email: '',
+    password: '',
+    remember: false,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrors({});
+    setIsLoading(true);
+
+    // Validate form data
+    const validationResult = loginSchema.safeParse(formData);
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string> = {};
+      validationResult.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        fieldErrors[field] = issue.message;
+      });
+      setErrors(fieldErrors);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors && Array.isArray(data.errors)) {
+          const fieldErrors: Record<string, string> = {};
+          data.errors.forEach((error: { path?: string[]; message: string }) => {
+            if (error.path && error.path.length > 0) {
+              fieldErrors[error.path[0]] = error.message;
+            }
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ general: data.message || 'Login failed' });
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Login successful - redirect to dashboard/home
+      router.push('/');
+      router.refresh(); // Refresh to update auth state
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4">
       <div className="w-full max-w-md">
@@ -21,17 +116,30 @@ export default function LoginPage() {
             <p className="text-sm text-gray-600">アカウントにログインしてください</p>
           </div>
 
-          <form className="space-y-4">
+          {errors.general && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+              {errors.general}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
                 メールアドレス
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="example@email.com"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
 
             <div>
@@ -45,25 +153,36 @@ export default function LoginPage() {
               </div>
               <input
                 id="password"
+                name="password"
                 type="password"
+                value={formData.password}
+                onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
 
             <div className="flex items-center">
               <input
                 id="remember"
+                name="remember"
                 type="checkbox"
+                checked={formData.remember}
+                onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                disabled={isLoading}
               />
               <label htmlFor="remember" className="ml-2 text-sm text-gray-700">
                 ログイン状態を保持する
               </label>
             </div>
 
-            <Button fullWidth size="lg">
-              ログイン
+            <Button fullWidth size="lg" disabled={isLoading}>
+              {isLoading ? 'ログイン中...' : 'ログイン'}
             </Button>
           </form>
 
@@ -74,7 +193,11 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-3">
-            <button className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button
+              type="button"
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -109,10 +232,7 @@ export default function LoginPage() {
         {/* Admin Login Link */}
         <div className="mt-8 rounded-lg border border-gray-200 bg-white p-4 text-center">
           <p className="mb-2 text-sm font-medium text-gray-700">店舗管理者の方</p>
-          <Link
-            href="/admin/login"
-            className="text-sm text-blue-500 hover:text-blue-600"
-          >
+          <Link href="/admin/login" className="text-sm text-blue-500 hover:text-blue-600">
             管理者ログインはこちら →
           </Link>
         </div>

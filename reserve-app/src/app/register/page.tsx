@@ -1,8 +1,121 @@
+'use client';
+
+import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import { registerSchema } from '@/lib/validations';
+
+// Form state type (different from validation input type)
+type RegisterFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  passwordConfirm: string;
+  termsAccepted: boolean;
+};
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState<RegisterFormData>({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    passwordConfirm: '',
+    termsAccepted: false,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrors({});
+    setSuccessMessage('');
+    setIsLoading(true);
+
+    // Validate form data
+    const validationResult = registerSchema.safeParse(formData);
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string> = {};
+      validationResult.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        fieldErrors[field] = issue.message;
+      });
+      setErrors(fieldErrors);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          password: formData.password,
+          passwordConfirm: formData.passwordConfirm,
+          termsAccepted: formData.termsAccepted,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors && Array.isArray(data.errors)) {
+          const fieldErrors: Record<string, string> = {};
+          data.errors.forEach((error: { path?: string[]; message: string }) => {
+            if (error.path && error.path.length > 0) {
+              fieldErrors[error.path[0]] = error.message;
+            }
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ general: data.message || 'Registration failed' });
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Registration successful
+      setSuccessMessage(
+        data.data.message || 'Registration successful! Redirecting to login...'
+      );
+
+      // Redirect to login page after 2 seconds
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } catch (error) {
+      console.error('Registration error:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-12">
       <div className="w-full max-w-md">
@@ -21,29 +134,55 @@ export default function RegisterPage() {
             <p className="text-sm text-gray-600">アカウントを作成して予約を始めましょう</p>
           </div>
 
-          <form className="space-y-4">
+          {errors.general && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+              {errors.general}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-600">
+              {successMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
-                お名前
+                お名前 <span className="text-red-500">*</span>
               </label>
               <input
                 id="name"
+                name="name"
                 type="text"
+                value={formData.name}
+                onChange={handleChange}
                 placeholder="山田 太郎"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.name ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
 
             <div>
               <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-                メールアドレス
+                メールアドレス <span className="text-red-500">*</span>
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="example@email.com"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
 
             <div>
@@ -52,57 +191,94 @@ export default function RegisterPage() {
               </label>
               <input
                 id="phone"
+                name="phone"
                 type="tel"
+                value={formData.phone}
+                onChange={handleChange}
                 placeholder="090-1234-5678"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
+              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
             </div>
 
             <div>
               <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-                パスワード
+                パスワード <span className="text-red-500">*</span>
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
+                value={formData.password}
+                onChange={handleChange}
                 placeholder="8文字以上"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
-              <p className="mt-1 text-xs text-gray-500">8文字以上の英数字を含めてください</p>
+              <p className="mt-1 text-xs text-gray-500">
+                8文字以上の英数字を含めてください
+              </p>
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
 
             <div>
-              <label htmlFor="password-confirm" className="mb-1 block text-sm font-medium text-gray-700">
-                パスワード（確認）
+              <label
+                htmlFor="passwordConfirm"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                パスワード（確認） <span className="text-red-500">*</span>
               </label>
               <input
-                id="password-confirm"
+                id="passwordConfirm"
+                name="passwordConfirm"
                 type="password"
+                value={formData.passwordConfirm}
+                onChange={handleChange}
                 placeholder="パスワードを再入力"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full rounded-lg border ${
+                  errors.passwordConfirm ? 'border-red-500' : 'border-gray-300'
+                } px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                disabled={isLoading}
               />
+              {errors.passwordConfirm && (
+                <p className="mt-1 text-xs text-red-500">{errors.passwordConfirm}</p>
+              )}
             </div>
 
-            <div className="flex items-start">
-              <input
-                id="terms"
-                type="checkbox"
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
-              <label htmlFor="terms" className="ml-2 text-sm text-gray-700">
-                <Link href="/terms" className="text-blue-500 hover:text-blue-600">
-                  利用規約
-                </Link>
-                と
-                <Link href="/privacy" className="text-blue-500 hover:text-blue-600">
-                  プライバシーポリシー
-                </Link>
-                に同意します
-              </label>
+            <div>
+              <div className="flex items-start">
+                <input
+                  id="termsAccepted"
+                  name="termsAccepted"
+                  type="checkbox"
+                  checked={formData.termsAccepted}
+                  onChange={handleChange}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  disabled={isLoading}
+                />
+                <label htmlFor="termsAccepted" className="ml-2 text-sm text-gray-700">
+                  <Link href="/terms" className="text-blue-500 hover:text-blue-600">
+                    利用規約
+                  </Link>
+                  と
+                  <Link href="/privacy" className="text-blue-500 hover:text-blue-600">
+                    プライバシーポリシー
+                  </Link>
+                  に同意します <span className="text-red-500">*</span>
+                </label>
+              </div>
+              {errors.termsAccepted && (
+                <p className="mt-1 text-xs text-red-500">{errors.termsAccepted}</p>
+              )}
             </div>
 
-            <Button fullWidth size="lg">
-              アカウントを作成
+            <Button fullWidth size="lg" disabled={isLoading}>
+              {isLoading ? '登録中...' : 'アカウントを作成'}
             </Button>
           </form>
 
@@ -113,7 +289,11 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-3">
-            <button className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button
+              type="button"
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"

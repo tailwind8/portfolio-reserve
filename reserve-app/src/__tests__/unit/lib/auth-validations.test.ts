@@ -1,0 +1,278 @@
+import { registerSchema, loginSchema } from '@/lib/validations';
+
+describe('Authentication Validations', () => {
+  describe('registerSchema', () => {
+    it('should validate valid registration data', () => {
+      const validData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'password123',
+        passwordConfirm: 'password123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate registration without phone (optional field)', () => {
+      const validData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '',
+        password: 'password123',
+        passwordConfirm: 'password123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject empty name', () => {
+      const invalidData = {
+        name: '',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'password123',
+        passwordConfirm: 'password123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Name is required');
+      }
+    });
+
+    it('should reject invalid email', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'invalid-email',
+        phone: '090-1234-5678',
+        password: 'password123',
+        passwordConfirm: 'password123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid email address');
+      }
+    });
+
+    it('should reject password shorter than 8 characters', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'pass123',
+        passwordConfirm: 'pass123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          'Password must be at least 8 characters'
+        );
+      }
+    });
+
+    it('should reject password without letters', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: '12345678',
+        passwordConfirm: '12345678',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          'Password must contain at least one letter'
+        );
+      }
+    });
+
+    it('should reject password without numbers', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'password',
+        passwordConfirm: 'password',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          'Password must contain at least one number'
+        );
+      }
+    });
+
+    it('should reject mismatched passwords', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'password123',
+        passwordConfirm: 'password456',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Passwords do not match');
+      }
+    });
+
+    it('should reject when terms not accepted', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'password123',
+        passwordConfirm: 'password123',
+        termsAccepted: false,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          'You must accept the terms and conditions'
+        );
+      }
+    });
+
+    it('should accept valid Japanese phone numbers', () => {
+      const validPhoneNumbers = [
+        '090-1234-5678',
+        '09012345678',
+        '03-1234-5678',
+        '0312345678',
+      ];
+
+      validPhoneNumbers.forEach((phone) => {
+        const data = {
+          name: '山田太郎',
+          email: 'yamada@example.com',
+          phone,
+          password: 'password123',
+          passwordConfirm: 'password123',
+          termsAccepted: true,
+        };
+
+        const result = registerSchema.safeParse(data);
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should reject invalid phone numbers', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '123-456', // Too short
+        password: 'password123',
+        passwordConfirm: 'password123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid phone number format');
+      }
+    });
+  });
+
+  describe('loginSchema', () => {
+    it('should validate valid login data', () => {
+      const validData = {
+        email: 'yamada@example.com',
+        password: 'password123',
+        remember: false,
+      };
+
+      const result = loginSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate login data with remember flag', () => {
+      const validData = {
+        email: 'yamada@example.com',
+        password: 'password123',
+        remember: true,
+      };
+
+      const result = loginSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate login data without remember field (optional)', () => {
+      const validData = {
+        email: 'yamada@example.com',
+        password: 'password123',
+      };
+
+      const result = loginSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid email', () => {
+      const invalidData = {
+        email: 'invalid-email',
+        password: 'password123',
+      };
+
+      const result = loginSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid email address');
+      }
+    });
+
+    it('should reject empty password', () => {
+      const invalidData = {
+        email: 'yamada@example.com',
+        password: '',
+      };
+
+      const result = loginSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Password is required');
+      }
+    });
+
+    it('should reject missing email', () => {
+      const invalidData = {
+        password: 'password123',
+      };
+
+      const result = loginSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject missing password', () => {
+      const invalidData = {
+        email: 'yamada@example.com',
+      };
+
+      const result = loginSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+    });
+  });
+});

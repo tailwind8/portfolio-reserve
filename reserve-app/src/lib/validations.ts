@@ -60,3 +60,50 @@ export const updateReservationSchema = z.object({
 });
 
 export type UpdateReservationInput = z.infer<typeof updateReservationSchema>;
+
+/**
+ * Japanese phone number format validation
+ * Accepts: 090-1234-5678, 09012345678, 03-1234-5678, etc.
+ */
+const phoneRegex = /^(0\d{1,4}-?\d{1,4}-?\d{4}|0\d{9,10})$/;
+
+/**
+ * User registration schema
+ */
+export const registerSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+    email: z.string().email('Invalid email address'),
+    phone: z
+      .string()
+      .regex(phoneRegex, 'Invalid phone number format')
+      .optional()
+      .or(z.literal('')),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(100, 'Password must be 100 characters or less')
+      .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+    passwordConfirm: z.string(),
+    termsAccepted: z.boolean().refine((val) => val === true, {
+      message: 'You must accept the terms and conditions',
+    }),
+  })
+  .refine((data) => data.password === data.passwordConfirm, {
+    message: 'Passwords do not match',
+    path: ['passwordConfirm'],
+  });
+
+export type RegisterInput = z.infer<typeof registerSchema>;
+
+/**
+ * User login schema
+ */
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+  remember: z.boolean().optional(),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
