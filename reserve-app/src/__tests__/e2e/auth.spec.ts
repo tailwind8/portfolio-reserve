@@ -10,7 +10,7 @@ test.describe('User Authentication', () => {
     password: 'password123',
   };
 
-  test.describe('@smoke User Registration (#5)', () => {
+  test.describe('User Registration (#5)', () => {
     test('should successfully register a new user', async ({ page }) => {
       const registerPage = new RegisterPage(page);
 
@@ -198,7 +198,7 @@ test.describe('User Authentication', () => {
     });
   });
 
-  test.describe('@smoke Full Registration and Login Flow', () => {
+  test.describe('Full Registration and Login Flow', () => {
     test('should register and then login successfully', async ({ page }) => {
       const uniqueUser = {
         name: '田中花子',
