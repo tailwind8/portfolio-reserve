@@ -215,7 +215,7 @@ function BookingContent() {
         <div className="container mx-auto px-4">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="mb-2 text-3xl font-bold text-gray-900">予約カレンダー</h1>
+            <h1 className="mb-2 text-3xl font-bold text-gray-900" data-testid="booking-title">予約カレンダー</h1>
             <p className="text-gray-600">ご希望の日時を選択してください</p>
           </div>
 
@@ -275,9 +275,9 @@ function BookingContent() {
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="grid grid-cols-7 gap-2">
+                    <div className="grid grid-cols-7 gap-2" data-testid="calendar-grid">
                       {['日', '月', '火', '水', '木', '金', '土'].map((day) => (
-                        <div key={day} className="p-2 text-center text-sm font-semibold text-gray-600">
+                        <div key={day} className="p-2 text-center text-sm font-semibold text-gray-600" data-testid="calendar-weekday">
                           {day}
                         </div>
                       ))}
@@ -317,7 +317,7 @@ function BookingContent() {
 
                   {/* Time Slots */}
                   {selectedDate && selectedMenuId && (
-                    <div className="border-t pt-6">
+                    <div className="border-t pt-6" data-testid="time-slots-section">
                       <h3 className="mb-4 text-lg font-semibold text-gray-900">
                         時間帯を選択（{selectedDateStr}）
                       </h3>
@@ -376,7 +376,7 @@ function BookingContent() {
 
               {/* Booking Info Sidebar */}
               <div className="lg:col-span-1">
-                <Card className="sticky top-24">
+                <Card className="sticky top-24" data-testid="booking-info-sidebar">
                   <h3 className="mb-4 text-lg font-semibold text-gray-900">予約情報</h3>
 
                   <div className="space-y-4">
@@ -473,6 +473,7 @@ function BookingContent() {
                       size="lg"
                       disabled={!isFormValid || submitting}
                       onClick={handleSubmit}
+                      data-testid="submit-button"
                     >
                       {submitting ? '予約中...' : '予約を確定する'}
                     </Button>

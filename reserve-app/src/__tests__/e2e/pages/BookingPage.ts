@@ -9,15 +9,18 @@ export class BookingPage {
 
   // セレクタを一箇所で管理
   private selectors = {
-    heading: 'h1',
+    heading: '[data-testid="booking-title"]',
+    calendarGrid: '[data-testid="calendar-grid"]',
+    calendarWeekday: '[data-testid="calendar-weekday"]',
+    bookingInfoSidebar: '[data-testid="booking-info-sidebar"]',
+    timeSlotsSection: '[data-testid="time-slots-section"]',
+    submitButton: '[data-testid="submit-button"]',
     menuSelect: 'select#menu',
     staffSelect: 'select#staff',
     notesField: 'textarea#notes',
-    submitButton: 'button:has-text("予約を確定する")',
     previousMonthButton: 'button:has-text("← 前月")',
     nextMonthButton: 'button:has-text("次月 →")',
     monthHeader: 'h2.text-xl',
-    timeSlotsSection: 'text=時間帯を選択',
     feature24Hours: 'text=24時間予約OK',
     featureEmail: 'text=確認メール送信',
     featureReminder: 'text=リマインダー',
@@ -49,24 +52,25 @@ export class BookingPage {
    * ページタイトルを検証
    */
   async expectHeading(headingText: string) {
-    await expect(this.page.getByRole('heading', { name: headingText })).toBeVisible();
+    await expect(this.page.locator(this.selectors.heading)).toBeVisible();
+    await expect(this.page.locator(this.selectors.heading)).toContainText(headingText);
   }
 
   /**
    * カレンダーが表示されることを検証
    */
   async expectCalendarVisible() {
-    // Check calendar is displayed
-    await expect(this.page.getByText('日')).toBeVisible();
-    await expect(this.page.getByText('月')).toBeVisible();
-    await expect(this.page.getByText('火')).toBeVisible();
+    // Check calendar grid is displayed
+    await expect(this.page.locator(this.selectors.calendarGrid)).toBeVisible();
+    // Check at least one weekday header is visible
+    await expect(this.page.locator(this.selectors.calendarWeekday).first()).toBeVisible();
   }
 
   /**
    * 予約情報サイドバーが表示されることを検証
    */
   async expectBookingInfoSidebarVisible() {
-    await expect(this.page.getByRole('heading', { name: '予約情報' })).toBeVisible();
+    await expect(this.page.locator(this.selectors.bookingInfoSidebar)).toBeVisible();
   }
 
   /**
