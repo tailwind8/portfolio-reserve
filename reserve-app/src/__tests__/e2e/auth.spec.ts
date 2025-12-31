@@ -53,8 +53,8 @@ test.describe('User Authentication', () => {
       await registerPage.submit();
 
       // Then: バリデーションエラーが表示される
-      await registerPage.expectError('Name is required');
-      await registerPage.expectError('Invalid email address');
+      await registerPage.expectError('名前を入力してください');
+      await registerPage.expectError('有効なメールアドレスを入力してください');
     });
 
     test('should show error for password mismatch', async ({ page }) => {
@@ -72,7 +72,7 @@ test.describe('User Authentication', () => {
       await registerPage.submit();
 
       // Then: エラーメッセージが表示される
-      await registerPage.expectError('Passwords do not match');
+      await registerPage.expectError('パスワードが一致しません');
     });
 
     test('should show error for weak password', async ({ page }) => {
@@ -81,16 +81,16 @@ test.describe('User Authentication', () => {
       // Given: 新規登録ページにアクセスしている
       await registerPage.goto();
 
-      // When: 弱いパスワードでフォームを送信する
+      // When: 弱いパスワードでフォームを送信する（8文字未満）
       await registerPage.fillName('Test User');
       await registerPage.fillEmail('test@example.com');
-      await registerPage.fillPassword('weak');
-      await registerPage.fillPasswordConfirm('weak');
+      await registerPage.fillPassword('weak12'); // 6文字（8文字未満）
+      await registerPage.fillPasswordConfirm('weak12');
       await registerPage.acceptTerms();
       await registerPage.submit();
 
       // Then: エラーメッセージが表示される
-      await registerPage.expectError('Password must be at least 8 characters');
+      await registerPage.expectError('パスワードは8文字以上で入力してください');
     });
 
     test('should require terms acceptance', async ({ page }) => {
@@ -108,7 +108,7 @@ test.describe('User Authentication', () => {
       await registerPage.submit();
 
       // Then: エラーメッセージが表示される
-      await registerPage.expectError('You must accept the terms and conditions');
+      await registerPage.expectError('利用規約に同意してください');
     });
   });
 
@@ -124,8 +124,8 @@ test.describe('User Authentication', () => {
       await loginPage.submit();
 
       // Then: バリデーションエラーが表示される
-      await loginPage.expectError('Invalid email address');
-      await loginPage.expectError('Password is required');
+      await loginPage.expectError('有効なメールアドレスを入力してください');
+      await loginPage.expectError('パスワードを入力してください');
     });
 
     test('should show error for invalid credentials', async ({ page }) => {
@@ -140,7 +140,7 @@ test.describe('User Authentication', () => {
       await loginPage.submit();
 
       // Then: エラーメッセージが表示される
-      await loginPage.expectError('Invalid email or password');
+      await loginPage.expectError('メールアドレスまたはパスワードが正しくありません');
     });
 
     test('should have link to registration page', async ({ page }) => {

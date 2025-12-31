@@ -94,7 +94,9 @@ export default function RegisterPage() {
           });
           setErrors(fieldErrors);
         } else {
-          setErrors({ general: data.message || 'Registration failed' });
+          setErrors({
+            general: data.error?.message || data.message || '登録に失敗しました'
+          });
         }
         setIsLoading(false);
         return;
@@ -111,7 +113,7 @@ export default function RegisterPage() {
       }, 2000);
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setErrors({ general: '予期しないエラーが発生しました。もう一度お試しください。' });
       setIsLoading(false);
     }
   };

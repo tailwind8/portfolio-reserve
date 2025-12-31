@@ -82,7 +82,9 @@ export default function LoginPage() {
           });
           setErrors(fieldErrors);
         } else {
-          setErrors({ general: data.message || 'Login failed' });
+          setErrors({
+            general: data.error?.message || data.message || 'ログインに失敗しました'
+          });
         }
         setIsLoading(false);
         return;
@@ -93,7 +95,7 @@ export default function LoginPage() {
       router.refresh(); // Refresh to update auth state
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setErrors({ general: '予期しないエラーが発生しました。もう一度お試しください。' });
       setIsLoading(false);
     }
   };

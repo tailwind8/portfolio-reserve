@@ -1,0 +1,402 @@
+---
+alwaysApply: true
+---
+## 📝 Gherkinシナリオの書き方
+
+### ファイル配置
+
+```
+features/
+├── auth/
+│   ├── register.feature
+│   └── login.feature
+├── booking/
+│   ├── booking.feature
+│   ├── calendar.feature
+│   └── my-reservations.feature
+└── admin/
+    ├── dashboard.feature
+    └── reservations.feature
+```
+
+### テンプレート
+
+```gherkin
+Feature: [機能名]
+  As a [ユーザー種別]
+  I want to [やりたいこと]
+  So that [目的・価値]
+
+  Scenario: [シナリオ名]（ハッピーパス）
+    Given [前提条件]
+    And [追加の前提条件]
+    When [アクション]
+    And [追加のアクション]
+    Then [期待結果]
+    And [追加の期待結果]
+
+  Scenario: [失敗シナリオ名]
+    Given [前提条件]
+    When [不正なアクション]
+    Then [エラーメッセージ]
+    And [システムの状態]
+```
+
+### 具体例
+
+```gherkin
+Feature: 予約機能
+  As a customer
+  I want to book a reservation
+  So that I can visit the store at my preferred time
+
+  Scenario: 予約成功（ハッピーパス）
+    Given ユーザー"山田太郎"がログインしている
+    And 予約カレンダーページにアクセスしている
+    When "2025年1月20日"を選択する
+    And "14:00"の時間帯を選択する
+    And "カット"メニューを選択する
+    And "田中"スタッフを選択する
+    And "予約を確定する"ボタンをクリックする
+    Then 予約完了画面が表示される
+    And 確認メールが"yamada@example.com"に送信される
+
+  Scenario: 予約失敗（時間帯が埋まっている）
+    Given ユーザーがログインしている
+    And "2025年1月20日 14:00"の時間帯が埋まっている
+    When 同じ時間帯で予約を試みる
+    Then エラーメッセージ"この時間は既に予約済みです"が表示される
+```
+
+---
+
+## 🧪 E2Eテストの書き方
+
+### Page Objectパターン必須
+
+**❌ 悪い例（テキストに依存）:**
+
+```typescript
+await page.click('button:has-text("アカウントを作成")');
+await page.fill('input[name="email"]', 'test@example.com');
+```
+
+**✅ 良い例（Page Object + data-testid）:**
+
+```typescript
+// src/__tests__/e2e/pages/RegisterPage.ts
+export class RegisterPage {
+  constructor(private page: Page) {}
+
+  private selectors = {
+    nameInput: '[data-testid="register-name"]',
+    emailInput: '[data-testid="register-email"]',
+    phoneInput: '[data-testid="register-phone"]',
+    passwordInput: '[data-testid="register-password"]',
+    passwordConfirmInput: '[data-testid="register-password-confirm"]',
+    termsCheckbox: '[data-testid="register-terms"]',
+    submitButton: '[data-testid="register-submit"]',
+    successMessage: '[data-testid="success-message"]',
+    errorMessage: '[data-testid="error-message"]',
+  };
+
+  async goto() {
+    await this.page.goto('/register');
+  }
+
+  async fillForm(data: RegisterFormData) {
+    await this.page.fill(this.selectors.nameInput, data.name);
+    await this.page.fill(this.selectors.emailInput, data.email);
+    if (data.phone) {
+      await this.page.fill(this.selectors.phoneInput, data.phone);
+    }
+    await this.page.fill(this.selectors.passwordInput, data.password);
+    await this.page.fill(this.selectors.passwordConfirmInput, data.passwordConfirm);
+  }
+
+  async acceptTerms() {
+    await this.page.check(this.selectors.termsCheckbox);
+  }
+
+  async submit() {
+    await this.page.click(this.selectors.submitButton);
+  }
+
+  async expectSuccess(message: string) {
+    const element = this.page.locator(this.selectors.successMessage);
+    await expect(element).toContainText(message);
+  }
+
+  async expectError(message: string) {
+    const element = this.page.locator(this.selectors.errorMessage);
+    await expect(element).toContainText(message);
+  }
+}
+```
+
+```typescript
+// src/__tests__/e2e/auth.spec.ts
+import { test, expect } from '@playwright/test';
+import { RegisterPage } from './pages/RegisterPage';
+
+test.describe('User Registration (#5)', () => {
+  test('should successfully register a new user', async ({ page }) => {
+    const registerPage = new RegisterPage(page);
+
+    // Given: 新規登録ページにアクセスしている
+    await registerPage.goto();
+
+    // When: 必要な情報を入力する
+    await registerPage.fillForm({
+      name: '山田太郎',
+      email: 'test@example.com',
+      phone: '090-1234-5678',
+      password: 'password123',
+      passwordConfirm: 'password123',
+    });
+    await registerPage.acceptTerms();
+
+    // And: "アカウントを作成"ボタンをクリックする
+    await registerPage.submit();
+
+    // Then: 成功メッセージが表示される
+    await registerPage.expectSuccess('Registration successful');
+
+    // And: ログインページにリダイレクトされる
+    await expect(page).toHaveURL('/login');
+  });
+});
+```
+
+---
+
+## 🎯 実装時のルール
+
+### 1. data-testid属性を必ず追加
+
+**✅ 全てのインタラクティブ要素に追加:**
+
+```tsx
+// ✅ GOOD
+<button
+  data-testid="submit-booking"
+  onClick={handleSubmit}
+  className="bg-blue-500 text-white px-4 py-2 rounded"
+>
+  予約を確定する
+</button>
+
+<input
+  data-testid="booking-date"
+  type="date"
+  name="date"
+  value={date}
+  onChange={handleDateChange}
+/>
+
+<div data-testid="success-message">
+  予約が完了しました
+</div>
+
+<div data-testid="error-message">
+  {error}
+</div>
+```
+
+**命名規則:**
+- `{page}-{element}`: 基本形式
+- `{action}-{page}`: ボタン等のアクション
+- `{type}-message`: メッセージ系
+
+**例:**
+- `register-email`: 登録ページのメールフィールド
+- `submit-booking`: 予約送信ボタン
+- `success-message`: 成功メッセージ
+- `error-message`: エラーメッセージ
+
+---
+
+## 🔄 リファクタリングのルール
+
+### 重要原則
+
+**リファクタリング = 外部振る舞いを変えずに内部構造を改善**
+
+**✅ 正しいリファクタリング:**
+```
+1. テストがGreen（全て通過）
+2. コードの内部構造を改善
+3. テストは1行も変更しない
+4. テストがGreen（全て通過）
+```
+
+**❌ 間違ったリファクタリング:**
+```
+1. テストを修正する
+2. 外部振る舞いを変える
+3. 機能を追加する（これは新機能開発）
+```
+
+### テスト修正が必要になる場合
+
+**以下の場合のみテスト修正OK:**
+
+1. **テストが実装詳細に依存していた（テストの問題）**
+   ```typescript
+   // ❌ 悪いテスト（内部実装に依存）
+   expect(component.state.count).toBe(5);
+
+   // ✅ 良いテスト（外部振る舞いのみ）
+   expect(screen.getByText('Count: 5')).toBeInTheDocument();
+   ```
+
+2. **実際に外部振る舞いを変更する場合（機能変更）**
+   - この場合は「リファクタリング」ではなく「機能変更」
+   - 新しいGherkinシナリオを書く
+
+---
+
+## 📊 品質チェック
+
+### PR作成前に必ず実行
+
+```bash
+# 1. Lintチェック
+npm run lint
+
+# 2. 型チェック＋ビルド
+DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npm run build:ci
+
+# 3. 単体テスト
+npm test
+
+# 4. E2Eテスト
+npm run test:e2e
+
+# 5. カバレッジ確認
+npm run test:coverage
+```
+
+### カバレッジ目標
+
+| 指標 | 最低ライン | 目標 |
+|------|----------|------|
+| Lines | 70% | 80% |
+| Branches | 60% | 70% |
+| Functions | 70% | 80% |
+| Statements | 70% | 80% |
+
+---
+
+## 🚀 AIエージェント向けプロンプト例
+
+### ステップ1: Gherkinシナリオ生成
+
+```
+【依頼】
+以下のIssueに対するGherkinシナリオを作成してください。
+
+【Issue】
+#XX: [Issue内容]
+
+【要件】
+- Feature/Scenario形式で記述
+- ハッピーパスと失敗ケースの両方を含める
+- Given/When/Then形式を厳守
+- 日本語で記述
+```
+
+### ステップ2: E2Eテスト生成
+
+```
+【依頼】
+以下のGherkinシナリオに対応するPlaywright E2Eテストを生成してください。
+
+【Gherkinシナリオ】
+[シナリオを貼り付け]
+
+【要件】
+- Page Objectパターンを使用
+- data-testid属性でセレクタを指定
+- Given/When/Thenコメントを含める
+- 型安全性を保つ（TypeScript strict mode）
+```
+
+### ステップ3: 実装生成
+
+```
+【依頼】
+以下のE2Eテストをパスする最小実装を生成してください。
+
+【E2Eテスト】
+[テストコードを貼り付け]
+
+【要件】
+- Next.js 16 App Router使用
+- TypeScript strict mode
+- Zodバリデーション使用
+- data-testid属性を全要素に追加
+- エラーハンドリング実装
+```
+
+### ステップ4: リファクタリング
+
+```
+【依頼】
+以下のコードをリファクタリングしてください。
+
+【現在のコード】
+[コードを貼り付け]
+
+【リファクタリング観点】
+- DRY原則（重複排除）
+- 単一責任の原則
+- 関数は小さく（10行以内）
+- 可読性向上
+
+【重要な制約】
+- E2Eテストは1行も変更しないこと
+- 外部振る舞いを変えないこと
+- テストが全て通過することを確認
+```
+
+---
+
+## 🎯 チェックリスト
+
+### 新機能開発時
+
+- [ ] Issueを確認
+- [ ] Gherkinシナリオを作成（features/ディレクトリ）
+- [ ] Page Objectクラスを作成
+- [ ] E2Eテストを実装
+- [ ] E2Eテストを実行（Red確認）
+- [ ] 最小実装
+- [ ] E2Eテストを実行（Green確認）
+- [ ] 単体テストを追加
+- [ ] リファクタリング（テストは変更しない）
+- [ ] 全テスト実行（Green確認）
+- [ ] カバレッジ確認（80%以上）
+- [ ] PR作成
+
+### リファクタリング時
+
+- [ ] テストが全てGreen
+- [ ] 外部振る舞いを変更しない
+- [ ] テストは1行も変更しない
+- [ ] リファクタリング実施
+- [ ] テストが全てGreen（確認）
+
+---
+
+## 📚 関連ドキュメント
+
+- `documents/開発プロセス改善提案.md` - 詳細説明
+- `documents/開発プロセス設計.md` - 元の設計
+- `documents/コード品質チェックリスト.md` - 品質基準
+- `CLAUDE.md` - プロジェクト全体ガイド
+
+---
+
+**このルールを厳守することで、高品質なコードと保守性を担保します。**
+**疑問がある場合は、必ず上記ドキュメントを参照してください。**

@@ -1,0 +1,467 @@
+# Reserve System - Claude AIガイド
+
+**最終更新**: 2025-12-31
+**対象**: Claude Code、Cursor AI、その他AIエージェント
+
+---
+
+## 🎯 プロジェクト概要
+
+### システム名
+**Reserve System（予約管理システム）**
+
+### コンセプト
+美容室・歯科医院・整体院など、多業種対応の店舗専用予約管理システム。
+ホットペッパーなどに依存せず、自社専用の予約システムを低コストで運用できる。
+
+### 技術スタック
+- **フロントエンド**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4
+- **バックエンド**: Next.js API Routes + Supabase (PostgreSQL) + Prisma 7
+- **認証**: Supabase Auth
+- **テスト**: Jest + React Testing Library + Playwright
+- **デプロイ**: Vercel
+- **開発プロセス**: ATDD/BDD駆動開発（スペックファースト）
+
+---
+
+## 📚 重要なドキュメント
+
+### 🔴 最優先で読むべきドキュメント
+
+1. **[開発プロセスルール](.cursor/rules/開発プロセスルール.md)** ⭐⭐⭐ 最重要
+   - スペックファースト開発（必ずGherkin → E2E → 実装の順）
+   - テストファーストの厳守
+   - Page Objectパターン
+   - data-testid属性の必須化
+
+2. **[プロジェクト概要](documents/basic/プロジェクト概要.md)**
+   - システムの目的と概要
+   - 技術スタック
+   - 開発方針
+
+3. **[ドキュメント索引](documents/README.md)**
+   - 全ドキュメントのナビゲーション
+   - 役割別推奨ドキュメント
+
+### 📋 設計・仕様書
+
+| ドキュメント | 内容 | パス |
+|------------|------|------|
+| **機能一覧** | 全機能、ページ設計、デザインガイドライン | `documents/basic/機能一覧とページ設計.md` |
+| **DB設計書** | ER図、テーブル定義、マルチテナント設計 | `documents/spec/データベース設計書.md` |
+| **API設計書** | RESTful API仕様、エンドポイント一覧 | `documents/api/API設計書.md` |
+| **アーキテクチャ** | システム構成、レイヤー設計、セキュリティ | `documents/architecture/システムアーキテクチャ.md` |
+
+### 🔧 開発プロセス
+
+| ドキュメント | 内容 | パス |
+|------------|------|------|
+| **開発プロセス設計** | ATDD/BDD開発フロー全体 | `documents/development/開発プロセス設計.md` |
+| **開発プロセス改善** | プロセス改善提案、ベストプラクティス | `documents/development/開発プロセス改善提案.md` |
+| **開発開始ガイド** | 環境構築、最初にやること | `documents/runbook/開発開始ガイド.md` |
+
+### 🚀 運用・デプロイ
+
+| ドキュメント | 内容 | パス |
+|------------|------|------|
+| **CI/CD運用ガイド** | GitHub Actions、デプロイフロー | `documents/deployment/CI-CD運用ガイド.md` |
+| **Vercel設定** | 環境変数、デプロイ設定 | `documents/deployment/Vercel環境変数設定.md` |
+
+---
+
+## 🚨 AIエージェント向け重要ルール
+
+### 1. 開発プロセスの厳守（最重要）
+
+**✅ 必ず以下の順序で開発:**
+```
+1. Gherkinシナリオ作成（features/ディレクトリ）
+   ↓
+2. E2Eテスト実装（Playwright + Page Object）
+   ↓ [Red確認]
+3. 最小実装
+   ↓ [Green確認]
+4. リファクタリング（テストは変更しない）
+   ↓
+5. PR作成
+```
+
+**❌ 禁止事項:**
+- いきなり実装コードを書く
+- 実装後にテストを追加する
+- テキストセレクタを使う（必ずdata-testidを使用）
+- リファクタ時にテストを修正する（振る舞いが変わらないなら）
+
+### 2. テストの書き方
+
+**Page Objectパターン必須:**
+```typescript
+// ✅ GOOD
+export class BookingPage {
+  private selectors = {
+    dateInput: '[data-testid="booking-date"]',
+    submitButton: '[data-testid="submit-booking"]',
+  };
+
+  async selectDate(date: string) {
+    await this.page.fill(this.selectors.dateInput, date);
+  }
+}
+
+// ❌ BAD
+await page.click('button:has-text("予約する")'); // テキストに依存
+```
+
+**data-testid属性を必ず追加:**
+```tsx
+// ✅ GOOD
+<button data-testid="submit-booking" onClick={handleSubmit}>
+  予約を確定する
+</button>
+
+// ❌ BAD
+<button onClick={handleSubmit}>
+  予約を確定する
+</button>
+```
+
+### 3. コード実装時の注意
+
+**TypeScript strict mode:**
+- 型エラー0件が必須
+- any型の使用禁止（unknown使用）
+
+**バリデーション:**
+- Zodスキーマでバリデーション必須
+- クライアント・サーバー両方で実装
+
+**セキュリティ:**
+- 環境変数は`.env.local`で管理（gitignore）
+- SQLインジェクション対策（Prismaのパラメータ化クエリ）
+- XSS対策（Reactの自動エスケープ）
+
+### 4. マルチテナント設計
+
+**全テーブルに`tenant_id`カラムが必須:**
+```typescript
+// ✅ GOOD
+const users = await prisma.restaurantUser.findMany({
+  where: {
+    tenantId: TENANT_ID, // 必須
+    email: 'user@example.com',
+  },
+});
+
+// ❌ BAD
+const users = await prisma.restaurantUser.findMany({
+  where: {
+    email: 'user@example.com', // tenant_idフィルタなし
+  },
+});
+```
+
+---
+
+## 📁 プロジェクト構成
+
+```
+reserve-system/
+├── reserve-app/              # Next.jsアプリケーション
+│   ├── src/
+│   │   ├── app/             # App Router（ページ・API Routes）
+│   │   ├── components/      # UIコンポーネント
+│   │   │   ├── ui/         # 汎用コンポーネント
+│   │   │   └── features/   # 機能別コンポーネント
+│   │   ├── lib/             # ユーティリティ
+│   │   │   ├── prisma.ts   # Prisma Clientシングルトン
+│   │   │   └── validations/# Zodスキーマ
+│   │   ├── types/           # TypeScript型定義
+│   │   └── __tests__/       # テスト
+│   │       ├── unit/        # 単体テスト
+│   │       ├── integration/ # 統合テスト
+│   │       └── e2e/         # E2Eテスト + Page Objects
+│   ├── prisma/
+│   │   ├── schema.prisma    # DBスキーマ
+│   │   └── migrations/      # マイグレーション
+│   ├── features/             # Gherkinシナリオ（BDD）
+│   ├── playwright.config.ts
+│   ├── jest.config.js
+│   └── package.json
+├── documents/               # ドキュメント
+│   ├── README.md           # ドキュメント索引
+│   ├── basic/              # 基本仕様書
+│   ├── spec/               # 詳細仕様書
+│   ├── architecture/       # アーキテクチャ
+│   ├── development/        # 開発プロセス
+│   ├── deployment/         # デプロイ
+│   ├── api/                # API設計
+│   └── runbook/            # 手順書
+├── features/                # Gherkinシナリオ（プロジェクトルート）
+├── .cursor/rules/          # Cursor AI向けルール
+├── .claude/rules/          # Claude Code向けルール（symlink）
+├── .github/
+│   ├── ISSUE_TEMPLATE/     # Issueテンプレート
+│   └── workflows/          # CI/CD
+└── CLAUDE.md               # このファイル
+```
+
+---
+
+## 🔄 典型的な開発フロー
+
+### 新機能開発の場合
+
+**1. GitHub Issue確認**
+```bash
+# Issue番号を確認（例: #15）
+```
+
+**2. Gherkinシナリオ作成**
+```gherkin
+# features/booking/booking.feature
+Feature: 予約機能
+  As a customer
+  I want to book a reservation
+  So that I can visit the store at my preferred time
+
+  Scenario: 予約成功（ハッピーパス）
+    Given ユーザー"山田太郎"がログインしている
+    And 予約カレンダーページにアクセスしている
+    When "2025年1月20日"を選択する
+    And "14:00"の時間帯を選択する
+    And "カット"メニューを選択する
+    And "予約を確定する"ボタンをクリックする
+    Then 予約完了画面が表示される
+    And 確認メールが送信される
+```
+
+**3. Page Objectクラス作成**
+```typescript
+// src/__tests__/e2e/pages/BookingPage.ts
+export class BookingPage {
+  constructor(private page: Page) {}
+
+  private selectors = {
+    dateInput: '[data-testid="booking-date"]',
+    timeSlot: (time: string) => `[data-testid="time-${time}"]`,
+    menuSelect: '[data-testid="menu-select"]',
+    submitButton: '[data-testid="submit-booking"]',
+    successMessage: '[data-testid="success-message"]',
+  };
+
+  async goto() {
+    await this.page.goto('/booking');
+  }
+
+  async selectDate(date: string) {
+    await this.page.fill(this.selectors.dateInput, date);
+  }
+
+  async selectTime(time: string) {
+    await this.page.click(this.selectors.timeSlot(time));
+  }
+
+  async selectMenu(menuName: string) {
+    await this.page.selectOption(this.selectors.menuSelect, menuName);
+  }
+
+  async submit() {
+    await this.page.click(this.selectors.submitButton);
+  }
+
+  async expectSuccess(message: string) {
+    const element = this.page.locator(this.selectors.successMessage);
+    await expect(element).toContainText(message);
+  }
+}
+```
+
+**4. E2Eテスト実装**
+```typescript
+// src/__tests__/e2e/booking.spec.ts
+import { test, expect } from '@playwright/test';
+import { BookingPage } from './pages/BookingPage';
+
+test.describe('Booking Feature (#15)', () => {
+  test('should successfully book a reservation', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    // Given: ユーザー"山田太郎"がログインしている
+    // （認証処理）
+
+    // And: 予約カレンダーページにアクセスしている
+    await bookingPage.goto();
+
+    // When: "2025年1月20日"を選択する
+    await bookingPage.selectDate('2025-01-20');
+
+    // And: "14:00"の時間帯を選択する
+    await bookingPage.selectTime('14:00');
+
+    // And: "カット"メニューを選択する
+    await bookingPage.selectMenu('カット');
+
+    // And: "予約を確定する"ボタンをクリックする
+    await bookingPage.submit();
+
+    // Then: 予約完了画面が表示される
+    await bookingPage.expectSuccess('予約が完了しました');
+  });
+});
+```
+
+**5. テスト実行（Red確認）**
+```bash
+npm run test:e2e
+# → 失敗することを確認
+```
+
+**6. 最小実装**
+```tsx
+// src/app/booking/page.tsx
+export default function BookingPage() {
+  return (
+    <form>
+      <input data-testid="booking-date" type="date" />
+      <input data-testid="time-14:00" type="radio" />
+      <select data-testid="menu-select">
+        <option value="カット">カット</option>
+      </select>
+      <button data-testid="submit-booking">予約を確定する</button>
+    </form>
+  );
+}
+```
+
+**7. テスト実行（Green確認）**
+```bash
+npm run test:e2e
+# → 成功することを確認
+```
+
+**8. リファクタリング**
+```tsx
+// コンポーネント分割、ロジック整理
+// ⚠️ テストは変更しない
+```
+
+**9. 品質チェック**
+```bash
+npm run lint                                              # ESLint
+DATABASE_URL="postgresql://dummy" npm run build:ci        # ビルド
+npm test                                                  # 単体テスト
+npm run test:e2e                                          # E2Eテスト
+```
+
+**10. PR作成**
+```bash
+git add .
+git commit -m "feat: 予約機能を実装 (#15)"
+git push origin feature/booking
+gh pr create --title "[FEATURE] 予約機能を実装 (#15)"
+```
+
+---
+
+## 🧪 テスト戦略
+
+### テストピラミッド
+
+```
+        /\
+       /E2E\         E2Eテスト（10%） - Playwright
+      /------\
+     /Integration\   統合テスト（30%） - React Testing Library
+    /------------\
+   /  Unit Tests  \  単体テスト（60%） - Jest
+  /----------------\
+```
+
+### カバレッジ目標
+
+| 指標 | 目標 |
+|------|------|
+| Lines | 80%以上 |
+| Branches | 70%以上 |
+| Functions | 80%以上 |
+| Statements | 80%以上 |
+
+---
+
+## 🔍 よくあるタスク
+
+### データベース操作
+```bash
+# Prisma Client生成
+npm run prisma:generate
+
+# マイグレーション実行
+npm run prisma:migrate
+
+# Prisma Studio起動
+npm run prisma:studio
+```
+
+### テスト実行
+```bash
+# 単体テスト
+npm test
+
+# E2Eテスト（全て）
+npm run test:e2e
+
+# E2Eテスト（スモーク）
+npm run test:e2e:smoke
+
+# カバレッジ
+npm run test:coverage
+```
+
+### 開発サーバー
+```bash
+npm run dev
+# → http://localhost:3000
+```
+
+---
+
+## 🚀 環境変数
+
+### 必須の環境変数（`.env.local`）
+```bash
+DATABASE_URL="postgresql://..."
+NEXT_PUBLIC_SUPABASE_URL="..."
+NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
+SUPABASE_SERVICE_ROLE_KEY="..."
+NEXT_PUBLIC_TENANT_ID="demo-restaurant"
+```
+
+---
+
+## 📞 困ったときは
+
+1. **[ドキュメント索引](documents/README.md)** で関連ドキュメントを探す
+2. **[開発プロセスルール](.cursor/rules/開発プロセスルール.md)** を再確認
+3. 既存のテストコード（`src/__tests__/e2e/`）を参考にする
+4. GitHub Issueで質問
+
+---
+
+## ⚡ クイックリファレンス
+
+| タスク | コマンド |
+|-------|---------|
+| 開発サーバー起動 | `npm run dev` |
+| Lint実行 | `npm run lint` |
+| ビルド | `DATABASE_URL="postgresql://dummy" npm run build:ci` |
+| 単体テスト | `npm test` |
+| E2Eテスト | `npm run test:e2e` |
+| カバレッジ | `npm run test:coverage` |
+| Prisma Client生成 | `npm run prisma:generate` |
+| マイグレーション | `npm run prisma:migrate` |
+| Prisma Studio | `npm run prisma:studio` |
+
+---
+
+**このガイドは、AIエージェントがプロジェクトを正しく理解し、品質の高いコードを生成するために最適化されています。**
+**必ず開発プロセスルールを厳守してください。**

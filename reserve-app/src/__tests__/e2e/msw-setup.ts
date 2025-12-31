@@ -215,7 +215,7 @@ export async function setupMSW(page: Page) {
             phone: postData.phone || null,
             createdAt: new Date().toISOString(),
           },
-          message: 'Registration successful. Please check your email to verify your account.',
+          message: 'Registration successful',
           requiresEmailVerification: true,
         },
         timestamp: new Date().toISOString(),
@@ -246,7 +246,7 @@ export async function setupMSW(page: Page) {
     }
 
     // 認証失敗のシミュレーション
-    if (postData.email === 'invalid@example.com' || postData.password === 'wrongpassword') {
+    if (postData.email === 'nonexistent@example.com' || postData.password === 'wrongpassword') {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
@@ -254,7 +254,7 @@ export async function setupMSW(page: Page) {
           success: false,
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Invalid email or password',
+            message: 'メールアドレスまたはパスワードが正しくありません',
           },
           timestamp: new Date().toISOString(),
         }),
