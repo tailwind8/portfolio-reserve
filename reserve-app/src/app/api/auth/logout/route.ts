@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Supabase logout error:', error);
-      return errorResponse('Failed to logout', null, 500);
+      return errorResponse('Failed to logout', 500);
     }
 
     return successResponse({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
-    return errorResponse('Internal server error', null, 500);
+    return errorResponse('Internal server error', 500);
   }
 }

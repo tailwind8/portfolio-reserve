@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validationResult = loginSchema.safeParse(body);
     if (!validationResult.success) {
-      return errorResponse('Validation failed', validationResult.error.issues, 400);
+      return errorResponse('Validation failed', 400, 'VALIDATION_ERROR', validationResult.error.issues);
     }
 
     const { email, password } = validationResult.data;
@@ -30,13 +30,12 @@ export async function POST(request: NextRequest) {
       console.error('Supabase Auth error:', authError);
       return errorResponse(
         'Invalid email or password',
-        null,
         401
       );
     }
 
     if (!authData.user || !authData.session) {
-      return errorResponse('Authentication failed', null, 401);
+      return errorResponse('Authentication failed', 401);
     }
 
     // Get tenant ID from environment
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
         });
       } catch (dbError) {
         console.error('Failed to create user profile:', dbError);
-        return errorResponse('Failed to create user profile', null, 500);
+        return errorResponse('Failed to create user profile', 500);
       }
     }
 
@@ -102,6 +101,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return errorResponse('Internal server error', null, 500);
+    return errorResponse('Internal server error', 500);
   }
 }

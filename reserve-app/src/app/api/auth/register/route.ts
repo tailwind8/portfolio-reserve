@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validationResult = registerSchema.safeParse(body);
     if (!validationResult.success) {
-      return errorResponse('Validation failed', validationResult.error.issues, 400);
+      return errorResponse('Validation failed', 400, 'VALIDATION_ERROR', validationResult.error.issues);
     }
 
     const { name, email, phone, password } = validationResult.data;
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return errorResponse('User with this email already exists', null, 409);
+      return errorResponse('User with this email already exists', 409);
     }
 
     // Create user in Supabase Auth
@@ -52,13 +52,12 @@ export async function POST(request: NextRequest) {
       console.error('Supabase Auth error:', authError);
       return errorResponse(
         authError.message || 'Failed to create authentication account',
-        null,
         400
       );
     }
 
     if (!authData.user) {
-      return errorResponse('Failed to create user', null, 500);
+      return errorResponse('Failed to create user', 500);
     }
 
     // Create user profile in database
@@ -103,12 +102,11 @@ export async function POST(request: NextRequest) {
 
       return errorResponse(
         'Failed to create user profile. Please try again.',
-        null,
         500
       );
     }
   } catch (error) {
     console.error('Registration error:', error);
-    return errorResponse('Internal server error', null, 500);
+    return errorResponse('Internal server error', 500);
   }
 }
