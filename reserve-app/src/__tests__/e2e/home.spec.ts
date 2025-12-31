@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('トップページ', () => {
+test.describe('@smoke トップページ', () => {
   test('正しくレンダリングされる', async ({ page }) => {
     await page.goto('/');
 

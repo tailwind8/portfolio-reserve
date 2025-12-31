@@ -117,7 +117,7 @@ export default function LoginPage() {
           </div>
 
           {errors.general && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+            <div data-testid="error-message" className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
               {errors.general}
             </div>
           )}
@@ -130,6 +130,7 @@ export default function LoginPage() {
               <input
                 id="email"
                 name="email"
+                data-testid="login-email"
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
@@ -154,6 +155,7 @@ export default function LoginPage() {
               <input
                 id="password"
                 name="password"
+                data-testid="login-password"
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -170,6 +172,7 @@ export default function LoginPage() {
               <input
                 id="remember"
                 name="remember"
+                data-testid="login-remember"
                 type="checkbox"
                 checked={formData.remember}
                 onChange={handleChange}
@@ -181,7 +184,7 @@ export default function LoginPage() {
               </label>
             </div>
 
-            <Button fullWidth size="lg" disabled={isLoading}>
+            <Button fullWidth size="lg" disabled={isLoading} data-testid="login-submit">
               {isLoading ? 'ログイン中...' : 'ログイン'}
             </Button>
           </form>

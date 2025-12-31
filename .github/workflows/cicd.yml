@@ -53,8 +53,15 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E smoke tests (PR only)
+        if: github.event_name == 'pull_request'
+        run: npm run test:e2e:smoke
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+
+      - name: Run full E2E tests (main branch only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm run test:e2e:full
         env:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
@@ -74,39 +81,45 @@ jobs:
           path: ./reserve-app/coverage/
           retention-days: 30
 
-  deploy-preview:
-    runs-on: ubuntu-latest
-    needs: lint-and-test
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel Preview
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./reserve-app
-          scope: ${{ secrets.VERCEL_ORG_ID }}
-
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: lint-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel Production
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./reserve-app
-          scope: ${{ secrets.VERCEL_ORG_ID }}
+  # Vercelデプロイは後回し（GitHub Secretsの設定が必要）
+  # TODO: 以下のSecretsをGitHub Settingsで設定後に有効化:
+  #   - VERCEL_TOKEN
+  #   - VERCEL_ORG_ID
+  #   - VERCEL_PROJECT_ID
+  #
+  # deploy-preview:
+  #   runs-on: ubuntu-latest
+  #   needs: lint-and-test
+  #   if: github.event_name == 'pull_request'
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Deploy to Vercel Preview
+  #       uses: amondnet/vercel-action@v25
+  #       with:
+  #         vercel-token: ${{ secrets.VERCEL_TOKEN }}
+  #         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+  #         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+  #         working-directory: ./reserve-app
+  #         scope: ${{ secrets.VERCEL_ORG_ID }}
+  #
+  # deploy-production:
+  #   runs-on: ubuntu-latest
+  #   needs: lint-and-test
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Deploy to Vercel Production
+  #       uses: amondnet/vercel-action@v25
+  #       with:
+  #         vercel-token: ${{ secrets.VERCEL_TOKEN }}
+  #         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+  #         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+  #         vercel-args: '--prod'
+  #         working-directory: ./reserve-app
+  #         scope: ${{ secrets.VERCEL_ORG_ID }}

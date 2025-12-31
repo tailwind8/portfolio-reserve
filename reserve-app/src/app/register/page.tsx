@@ -135,13 +135,13 @@ export default function RegisterPage() {
           </div>
 
           {errors.general && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+            <div data-testid="error-message" className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
               {errors.general}
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-600">
+            <div data-testid="success-message" className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-600">
               {successMessage}
             </div>
           )}
@@ -154,6 +154,7 @@ export default function RegisterPage() {
               <input
                 id="name"
                 name="name"
+                data-testid="register-name"
                 type="text"
                 value={formData.name}
                 onChange={handleChange}
@@ -173,6 +174,7 @@ export default function RegisterPage() {
               <input
                 id="email"
                 name="email"
+                data-testid="register-email"
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
@@ -192,6 +194,7 @@ export default function RegisterPage() {
               <input
                 id="phone"
                 name="phone"
+                data-testid="register-phone"
                 type="tel"
                 value={formData.phone}
                 onChange={handleChange}
@@ -211,6 +214,7 @@ export default function RegisterPage() {
               <input
                 id="password"
                 name="password"
+                data-testid="register-password"
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -236,6 +240,7 @@ export default function RegisterPage() {
               <input
                 id="passwordConfirm"
                 name="passwordConfirm"
+                data-testid="register-password-confirm"
                 type="password"
                 value={formData.passwordConfirm}
                 onChange={handleChange}
@@ -255,6 +260,7 @@ export default function RegisterPage() {
                 <input
                   id="termsAccepted"
                   name="termsAccepted"
+                  data-testid="register-terms"
                   type="checkbox"
                   checked={formData.termsAccepted}
                   onChange={handleChange}
@@ -277,7 +283,7 @@ export default function RegisterPage() {
               )}
             </div>
 
-            <Button fullWidth size="lg" disabled={isLoading}>
+            <Button fullWidth size="lg" disabled={isLoading} data-testid="register-submit">
               {isLoading ? '登録中...' : 'アカウントを作成'}
             </Button>
           </form>
