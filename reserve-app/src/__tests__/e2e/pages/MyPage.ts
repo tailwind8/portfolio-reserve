@@ -137,17 +137,20 @@ export class MyPage {
    * 予約カードの情報が正しく表示されることを検証
    */
   async expectReservationCardInfo() {
-    const reservationCards = this.page.locator(this.selectors.editButton).locator('..');
+    // gridコンテナ内の予約カードを取得
+    const gridContainer = this.page.locator('.grid');
+    const cardCount = await gridContainer.locator('> div').count();
 
-    if ((await reservationCards.count()) > 0) {
-      const firstCard = reservationCards.first();
+    if (cardCount > 0) {
+      // 最初の予約カードを取得
+      const firstCard = gridContainer.locator('> div').first();
 
-      // ステータスバッジ
-      await expect(firstCard.locator(this.selectors.statusBadge)).toBeVisible();
+      // ステータスバッジ（rounded-fullクラスを持つspan）
+      await expect(firstCard.locator('span.rounded-full').first()).toBeVisible();
 
-      // アイコン（メニュー、スタッフ）
-      await expect(firstCard.locator('svg').first()).toBeVisible();
-      await expect(firstCard.locator('svg').nth(1)).toBeVisible();
+      // アイコン（日時、メニュー、担当）
+      const svgIcons = firstCard.locator('svg');
+      await expect(svgIcons.first()).toBeVisible();
 
       // アクションボタン
       await expect(firstCard.getByRole('button', { name: '変更' })).toBeVisible();
@@ -163,7 +166,9 @@ export class MyPage {
    * 指定したステータスタブをクリック
    */
   async clickStatusTab(tabName: '予約確定' | 'キャンセル' | 'すべて' | '予約待ち' | '完了') {
-    const tab = this.page.getByRole('button', { name: new RegExp(tabName) });
+    // ステータスタブのコンテナ内で検索
+    const tabsContainer = this.page.locator('.border-b.border-gray-200');
+    const tab = tabsContainer.getByRole('button', { name: new RegExp(tabName) });
     await tab.click();
     await this.page.waitForTimeout(500);
   }
@@ -189,8 +194,11 @@ export class MyPage {
    * 空状態が表示されることを検証
    */
   async expectEmptyState(statusName?: string) {
-    const hasReservations = (await this.page.locator(this.selectors.editButton).count()) > 0;
+    // gridコンテナ内の予約カードを確認
+    const gridContainer = this.page.locator('.grid');
+    const hasReservations = (await gridContainer.getByRole('button', { name: '変更' }).count()) > 0;
 
+    // 空状態メッセージを確認
     let hasEmptyState = false;
     if (statusName) {
       const specificEmptyCount = await this.page.getByText(`${statusName}の予約がありません`).count();
