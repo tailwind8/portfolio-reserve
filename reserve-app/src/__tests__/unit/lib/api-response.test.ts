@@ -2,6 +2,14 @@ import { successResponse, errorResponse, handleApiError } from '@/lib/api-respon
 import { z } from 'zod';
 
 describe('api-response utilities', () => {
+  // Mock console.error to avoid cluttering test output
+  beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
   describe('successResponse', () => {
     it('should create a successful response with data', async () => {
       const data = { id: '1', name: 'Test' };

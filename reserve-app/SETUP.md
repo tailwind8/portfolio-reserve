@@ -2,11 +2,44 @@
 
 このドキュメントでは、予約システムの開発環境セットアップ手順を説明します。
 
+## 📋 目次
+
+- [クイックスタート](#クイックスタート)
+- [詳細セットアップ](#詳細セットアップ)
+- [CI/CD設定](#cicd設定)
+- [トラブルシューティング](#トラブルシューティング)
+
 ## 前提条件
 
 - Node.js 20.x 以上
 - npm または yarn
 - Supabaseアカウント
+
+---
+
+## 🚀 クイックスタート
+
+自動セットアップスクリプトを使用する場合：
+
+```bash
+# 1. リポジトリをクローン
+git clone <repository-url>
+cd reserve-system/reserve-app
+
+# 2. 開発環境を自動セットアップ
+./scripts/setup-dev.sh
+
+# 3. .env.local を編集してSupabase認証情報を追加
+# vim .env.local
+
+# 4. マイグレーションを再実行
+npm run prisma:migrate
+
+# 5. 開発サーバーを起動
+npm run dev
+```
+
+詳細な手動セットアップ手順は以下をご覧ください。
 
 ---
 
@@ -67,18 +100,36 @@ NEXT_PUBLIC_TENANT_ID="demo-restaurant"
 ### Prisma Clientの生成
 
 ```bash
+npm run prisma:generate
+# または
 npx prisma generate
 ```
 
 ### マイグレーションの実行
 
 ```bash
+npm run prisma:migrate
+# または
 npx prisma migrate dev --name init
+```
+
+### データベースのリセット（必要な場合）
+
+```bash
+# スクリプトを使用
+./scripts/db-reset.sh
+
+# または手動で
+npx prisma migrate reset --force
 ```
 
 ### 初期データの投入（オプション）
 
 ```bash
+# スクリプトを使用
+./scripts/db-seed.sh
+
+# または手動で
 npx prisma db seed
 ```
 
@@ -144,6 +195,56 @@ vercel --prod
 - 各テーブルに`tenant_id`を含める
 - テーブル名にプレフィックス（`restaurant_*`, `hotel_*`など）を使用
 - クエリ時に必ず`tenant_id`でフィルタリング
+
+---
+
+## 6. CI/CD設定
+
+このプロジェクトはGitHub ActionsとVercelを使用した自動CI/CDパイプラインを備えています。
+
+### GitHub Actions
+
+- ✅ 自動lint、型チェック、ビルド
+- ✅ 単体テスト（カバレッジ付き）
+- ✅ E2Eテスト（Playwright）
+- ✅ PRでの自動プレビューデプロイ
+- ✅ mainマージで本番デプロイ
+
+詳細は [docs/CICD_SETUP.md](./docs/CICD_SETUP.md) を参照してください。
+
+### 必要なGitHub Secrets
+
+| Secret名 | 説明 |
+|---------|------|
+| `VERCEL_TOKEN` | Vercel APIトークン |
+| `VERCEL_ORG_ID` | Vercel組織ID |
+| `VERCEL_PROJECT_ID` | VercelプロジェクトID |
+
+### Vercel設定ファイル
+
+`vercel.json` でビルド設定、環境変数、ヘッダー、関数の設定を管理しています。
+
+---
+
+## 7. 便利なスクリプト
+
+### 開発環境セットアップ
+
+```bash
+./scripts/setup-dev.sh
+```
+
+### データベースリセット
+
+```bash
+./scripts/db-reset.sh
+```
+
+### データベースシード
+
+```bash
+./scripts/db-seed.sh
+```
 
 ---
 
