@@ -327,7 +327,50 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
     });
   });
 
-  // /api/reservations GET のモック
+  // /api/reservations/:id PATCH/DELETE のモック
+  await page.route('**/api/reservations/*', async (route) => {
+    const request = route.request();
+    const url = request.url();
+    const reservationId = url.split('/').pop()?.split('?')[0];
+
+    if (request.method() === 'PATCH') {
+      const postData = request.postDataJSON();
+
+      // 成功レスポンス
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: reservationId,
+            ...postData,
+            updatedAt: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } else if (request.method() === 'DELETE') {
+      // 成功レスポンス
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: reservationId,
+            status: 'CANCELLED',
+            cancelledAt: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // /api/reservations GET/POST のモック
   await page.route('**/api/reservations', async (route) => {
     const request = route.request();
 
