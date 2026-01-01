@@ -1,6 +1,8 @@
+import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { adminCreateReservationSchema, adminReservationsQuerySchema } from '@/lib/validations';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { checkAdminAuthHeader } from '@/lib/auth';
 
 /**
  * GET /api/admin/reservations
@@ -12,7 +14,13 @@ import { successResponse, errorResponse } from '@/lib/api-response';
  * - search: 顧客名で検索
  * - tenantId: テナントID (デフォルト: 環境変数)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // 管理者権限チェック
+  const authResult = checkAdminAuthHeader(request);
+  if (typeof authResult !== 'string') {
+    return authResult; // 401または403エラー
+  }
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -162,7 +170,13 @@ export async function GET(request: Request) {
  * - reservedTime: 予約時間 (HH:mm)
  * - notes: 備考 (オプション)
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // 管理者権限チェック
+  const authResult = checkAdminAuthHeader(request);
+  if (typeof authResult !== 'string') {
+    return authResult; // 401または403エラー
+  }
+
   try {
     const body = await request.json();
 

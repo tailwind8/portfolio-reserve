@@ -1,15 +1,28 @@
+import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { adminUpdateReservationSchema } from '@/lib/validations';
+import {
+  adminUpdateReservationSchema,
+  validateStatusTransition,
+  canEditReservation,
+  canDeleteReservation,
+} from '@/lib/validations';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { checkAdminAuthHeader } from '@/lib/auth';
 
 /**
  * GET /api/admin/reservations/:id
  * 管理者用の予約詳細を取得
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者権限チェック
+  const authResult = checkAdminAuthHeader(request);
+  if (typeof authResult !== 'string') {
+    return authResult; // 401または403エラー
+  }
+
   try {
     const { id } = await params;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -94,9 +107,15 @@ export async function GET(
  * - notes: 備考 (オプション)
  */
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者権限チェック
+  const authResult = checkAdminAuthHeader(request);
+  if (typeof authResult !== 'string') {
+    return authResult; // 401または403エラー
+  }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -126,6 +145,42 @@ export async function PATCH(
 
     if (!existingReservation) {
       return errorResponse('Reservation not found', 404, 'NOT_FOUND');
+    }
+
+    // ステータス遷移のバリデーション（statusが指定されている場合）
+    if (status !== undefined && status !== existingReservation.status) {
+      const transitionValidation = validateStatusTransition(
+        existingReservation.status,
+        status
+      );
+
+      if (!transitionValidation.valid) {
+        return errorResponse(
+          transitionValidation.error || '不正な状態遷移です',
+          400,
+          'INVALID_STATUS_TRANSITION'
+        );
+      }
+    }
+
+    // ステータスに応じた編集制限（statusの変更以外の編集を試みている場合）
+    if (
+      (menuId !== undefined ||
+        staffId !== undefined ||
+        reservedDate !== undefined ||
+        reservedTime !== undefined ||
+        notes !== undefined) &&
+      status === undefined // statusの変更ではない場合
+    ) {
+      const editValidation = canEditReservation(existingReservation.status);
+
+      if (!editValidation.canEdit) {
+        return errorResponse(
+          editValidation.error || '予約の編集ができません',
+          400,
+          'CANNOT_EDIT_RESERVATION'
+        );
+      }
     }
 
     // メニューが指定されている場合、存在確認
@@ -192,8 +247,22 @@ export async function PATCH(
     if (staffId !== undefined) updateData.staffId = staffId;
     if (reservedDate !== undefined) updateData.reservedDate = new Date(reservedDate);
     if (reservedTime !== undefined) updateData.reservedTime = reservedTime;
-    if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
+
+    // ステータス変更の場合、成功メッセージを準備
+    let successMessage = '予約を更新しました';
+    if (status !== undefined) {
+      updateData.status = status;
+      if (status === 'CONFIRMED') {
+        successMessage = '予約を確定しました';
+      } else if (status === 'COMPLETED') {
+        successMessage = '予約を完了しました';
+      } else if (status === 'CANCELLED') {
+        successMessage = '予約をキャンセルしました';
+      } else if (status === 'NO_SHOW') {
+        successMessage = '無断キャンセルとして記録しました';
+      }
+    }
 
     // 予約を更新
     const updatedReservation = await prisma.bookingReservation.update({
@@ -240,6 +309,7 @@ export async function PATCH(
       notes: updatedReservation.notes || '',
       createdAt: updatedReservation.createdAt.toISOString(),
       updatedAt: updatedReservation.updatedAt.toISOString(),
+      message: successMessage,
     };
 
     return successResponse(formattedReservation);
@@ -259,9 +329,15 @@ export async function PATCH(
  * 管理者が予約を削除
  */
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者権限チェック
+  const authResult = checkAdminAuthHeader(request);
+  if (typeof authResult !== 'string') {
+    return authResult; // 401または403エラー
+  }
+
   try {
     const { id } = await params;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -278,7 +354,31 @@ export async function DELETE(
       return errorResponse('Reservation not found', 404, 'NOT_FOUND');
     }
 
-    // 予約を削除
+    // 削除可否チェック
+    const deleteValidation = canDeleteReservation(existingReservation.status);
+
+    if (!deleteValidation.canDelete) {
+      return errorResponse(
+        deleteValidation.error || '予約を削除できません',
+        400,
+        'CANNOT_DELETE_RESERVATION'
+      );
+    }
+
+    // PENDING または CONFIRMED の予約は削除ではなくCANCELLEDに変更
+    if (
+      existingReservation.status === 'PENDING' ||
+      existingReservation.status === 'CONFIRMED'
+    ) {
+      await prisma.bookingReservation.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
+
+      return successResponse({ message: '予約をキャンセルしました' });
+    }
+
+    // CANCELLED や NO_SHOW の予約は実際に削除
     await prisma.bookingReservation.delete({
       where: {
         id,

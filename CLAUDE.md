@@ -470,6 +470,72 @@ DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npm run build:ci
 
 ---
 
+## 📖 Context7で最新ドキュメントを取得
+
+このプロジェクトでは、**Context7 MCP**を使用して15,000以上のライブラリの最新ドキュメントをリアルタイムで取得できます。
+
+### 📦 現在のプロジェクトバージョン
+
+| ライブラリ | バージョン | Context7 ID |
+|----------|----------|------------|
+| **Next.js** | 16.1.1 | `/vercel/next.js` |
+| **React** | 19.2.3 | `/facebook/react` |
+| **Supabase JS** | 2.89.0 | `/supabase/supabase-js` |
+| **Prisma** | 7.2.0 | `/prisma/prisma` |
+| **Playwright** | 1.57.0 | `/microsoft/playwright` |
+| **Tailwind CSS** | 4.x | `/tailwindlabs/tailwindcss` |
+| **Zod** | 4.2.1 | `/colinhacks/zod` |
+
+### 🔍 使用例
+
+**Supabase認証の実装方法を調べる:**
+```
+Supabase v2系でメール・パスワード認証を実装する方法を教えて
+```
+
+**Next.js 16の新機能を確認:**
+```
+Next.js 16のServer Actionsの使い方を教えて
+```
+
+**Prisma 7のマイグレーション:**
+```
+Prisma 7でデータベースマイグレーションを実行する方法を教えて
+```
+
+**Playwright-BDDのGherkin構文:**
+```
+PlaywrightでGherkin形式のE2Eテストを書く方法を教えて
+```
+
+### ⚠️ 重要な注意事項
+
+1. **バージョン互換性**
+   - Context7のドキュメントは最新版に近いですが、完全一致しない場合があります
+   - v2系同士、v4系同士など、メジャーバージョンが一致していれば互換性は高いです
+   - 実装前に必ず公式ドキュメントでバージョン固有の変更を確認してください
+
+2. **実装時の確認手順**
+   - Context7で実装方法を取得
+   - プロジェクトの`package.json`でバージョンを確認
+   - 必要に応じて公式ドキュメントで差分を確認
+
+3. **よく使うライブラリのContext7 ID**
+   - Supabase公式ドキュメント全体: `/websites/supabase_com-docs`
+   - Next.js公式ドキュメント: `/websites/nextjs_org-docs`
+   - React公式ドキュメント: `/websites/react_dev`
+
+### 📚 Context7の活用が特に有効な場面
+
+- ✅ Supabase認証・データベース操作の実装
+- ✅ Next.js 16の新機能（Server Actions、Partial Prerenderingなど）
+- ✅ React 19の新機能（Suspense、use hookなど）
+- ✅ Prisma 7のスキーマ定義・マイグレーション
+- ✅ Playwright-BDDのテスト実装
+- ✅ Zodバリデーションスキーマの定義
+
+---
+
 ## 🚀 成功の鍵
 
 ✅ **毎朝rebase** - コンフリクトを最小化
@@ -477,8 +543,9 @@ DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npm run build:ci
 ✅ **日本語でコミット・PR** - 統一された履歴
 ✅ **テストを必ず書く** - 品質担保
 ✅ **ドキュメントを参照** - 迷ったら確認
+✅ **Context7を活用** - 最新ドキュメントで正確な実装
 
 ---
 
-**最終更新**: 2025-12-31
+**最終更新**: 2026-01-01
 **管理者**: Claude Code

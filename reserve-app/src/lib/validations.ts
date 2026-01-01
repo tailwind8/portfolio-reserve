@@ -37,7 +37,14 @@ export const createReservationSchema = z.object({
       return selectedDate >= today;
     }, 'Reservation date must be today or in the future'),
   reservedTime: z.string().regex(timeRegex, 'Time must be in HH:mm format'),
-  notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
+  notes: z.string().max(500, '備考は500文字以内で入力してください').optional(),
+  guestCount: z
+    .number()
+    .int('予約人数は整数で入力してください')
+    .min(1, '予約人数は1名以上で入力してください')
+    .max(10, '予約人数は10名以下で入力してください')
+    .optional()
+    .default(1),
 });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
@@ -96,7 +103,7 @@ export const registerSchema = z
     password: z
       .string()
       .min(8, 'パスワードは8文字以上で入力してください')
-      .max(100, 'パスワードは100文字以内で入力してください')
+      .max(72, 'パスワードは72文字以内で入力してください')
       .regex(/[a-z]/, 'パスワードには少なくとも1つの小文字英字を含めてください')
       .regex(/[A-Z]/, 'パスワードには少なくとも1つの大文字英字を含めてください')
       .regex(/[0-9]/, 'パスワードには少なくとも1つの数字を含めてください')
@@ -183,3 +190,170 @@ export const adminReservationsQuerySchema = z.object({
 });
 
 export type AdminReservationsQuery = z.infer<typeof adminReservationsQuerySchema>;
+
+/**
+ * メニュー作成スキーマ（管理者用）
+ */
+export const createMenuSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'メニュー名を入力してください')
+    .max(100, 'メニュー名は100文字以内で入力してください'),
+  description: z
+    .string()
+    .max(500, '説明は500文字以内で入力してください')
+    .optional()
+    .or(z.literal('')),
+  price: z
+    .number()
+    .int('価格は整数で入力してください')
+    .min(0, '価格は0以上の整数で入力してください')
+    .max(9999999, '価格は9999999円以下で入力してください'),
+  duration: z
+    .number()
+    .int('所要時間は整数で入力してください')
+    .min(1, '所要時間は1分以上で入力してください')
+    .max(480, '所要時間は480分以内で入力してください'),
+  category: z.string().optional().or(z.literal('')),
+  isActive: z.boolean().optional().default(true),
+});
+
+export type CreateMenuInput = z.infer<typeof createMenuSchema>;
+
+/**
+ * メニュー更新スキーマ（管理者用）
+ */
+export const updateMenuSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'メニュー名を入力してください')
+    .max(100, 'メニュー名は100文字以内で入力してください')
+    .optional(),
+  description: z
+    .string()
+    .max(500, '説明は500文字以内で入力してください')
+    .optional()
+    .or(z.literal('')),
+  price: z
+    .number()
+    .int('価格は整数で入力してください')
+    .min(0, '価格は0以上の整数で入力してください')
+    .max(9999999, '価格は9999999円以下で入力してください')
+    .optional(),
+  duration: z
+    .number()
+    .int('所要時間は整数で入力してください')
+    .min(1, '所要時間は1分以上で入力してください')
+    .max(480, '所要時間は480分以内で入力してください')
+    .optional(),
+  category: z.string().optional().or(z.literal('')),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateMenuInput = z.infer<typeof updateMenuSchema>;
+
+/**
+ * 予約ステータス遷移のバリデーション
+ *
+ * 許可される遷移:
+ * - PENDING → CONFIRMED
+ * - CONFIRMED → COMPLETED
+ * - CONFIRMED → CANCELLED
+ * - CONFIRMED → NO_SHOW
+ *
+ * 禁止される遷移（全て）:
+ * - COMPLETED → *（COMPLETEDからの遷移は全て禁止）
+ * - CANCELLED → *（CANCELLEDからの遷移は全て禁止）
+ * - NO_SHOW → *（NO_SHOWからの遷移は全て禁止）
+ */
+export function validateStatusTransition(
+  currentStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW',
+  newStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+): { valid: boolean; error?: string } {
+  // 同じステータスへの遷移は許可
+  if (currentStatus === newStatus) {
+    return { valid: true };
+  }
+
+  // COMPLETED からの遷移は全て禁止
+  if (currentStatus === 'COMPLETED') {
+    if (newStatus === 'PENDING') {
+      return { valid: false, error: '完了済みの予約は保留状態に戻せません' };
+    } else if (newStatus === 'CONFIRMED') {
+      return { valid: false, error: '完了済みの予約は確定状態に戻せません' };
+    } else if (newStatus === 'CANCELLED') {
+      return { valid: false, error: '完了済みの予約はキャンセルできません' };
+    }
+    return { valid: false, error: '完了済みの予約のステータスは変更できません' };
+  }
+
+  // CANCELLED からの遷移は全て禁止
+  if (currentStatus === 'CANCELLED') {
+    if (newStatus === 'PENDING') {
+      return { valid: false, error: 'キャンセル済みの予約は保留状態に戻せません' };
+    } else if (newStatus === 'CONFIRMED') {
+      return { valid: false, error: 'キャンセル済みの予約は確定状態に戻せません' };
+    } else if (newStatus === 'COMPLETED') {
+      return { valid: false, error: 'キャンセル済みの予約は完了状態にできません' };
+    }
+    return { valid: false, error: 'キャンセル済みの予約のステータスは変更できません' };
+  }
+
+  // NO_SHOW からの遷移は全て禁止
+  if (currentStatus === 'NO_SHOW') {
+    if (newStatus === 'PENDING') {
+      return { valid: false, error: '無断キャンセルの予約は保留状態に戻せません' };
+    } else if (newStatus === 'CONFIRMED') {
+      return { valid: false, error: '無断キャンセルの予約は確定状態に戻せません' };
+    } else if (newStatus === 'COMPLETED') {
+      return { valid: false, error: '無断キャンセルの予約は完了状態にできません' };
+    }
+    return { valid: false, error: '無断キャンセルの予約のステータスは変更できません' };
+  }
+
+  // PENDING からの遷移は CONFIRMED のみ許可
+  if (currentStatus === 'PENDING') {
+    if (newStatus === 'CONFIRMED') {
+      return { valid: true };
+    }
+    return { valid: false, error: '不正な状態遷移です' };
+  }
+
+  // CONFIRMED からの遷移は COMPLETED, CANCELLED, NO_SHOW のみ許可
+  if (currentStatus === 'CONFIRMED') {
+    if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED' || newStatus === 'NO_SHOW') {
+      return { valid: true };
+    }
+    return { valid: false, error: '不正な状態遷移です' };
+  }
+
+  return { valid: false, error: '不正な状態遷移です' };
+}
+
+/**
+ * ステータスに応じた編集可否チェック
+ */
+export function canEditReservation(
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+): { canEdit: boolean; error?: string } {
+  if (status === 'COMPLETED') {
+    return { canEdit: false, error: '完了済みの予約は編集できません' };
+  } else if (status === 'CANCELLED') {
+    return { canEdit: false, error: 'キャンセル済みの予約は編集できません' };
+  } else if (status === 'NO_SHOW') {
+    return { canEdit: false, error: '無断キャンセルの予約は編集できません' };
+  }
+  return { canEdit: true };
+}
+
+/**
+ * ステータスに応じた削除可否チェック
+ */
+export function canDeleteReservation(
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+): { canDelete: boolean; error?: string } {
+  if (status === 'COMPLETED') {
+    return { canDelete: false, error: '完了済みの予約は削除できません' };
+  }
+  return { canDelete: true };
+}

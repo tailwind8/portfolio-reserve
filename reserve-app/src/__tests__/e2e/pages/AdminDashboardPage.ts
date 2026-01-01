@@ -78,6 +78,15 @@ export class AdminDashboardPage {
   }
 
   /**
+   * ページタイトルを確認する
+   */
+  async expectPageTitle(title: string): Promise<void> {
+    const heading = this.page.locator('h1, h2').first();
+    await expect(heading).toBeVisible();
+    await expect(heading).toContainText(title);
+  }
+
+  /**
    * ローディング状態を確認する
    */
   async expectLoading(): Promise<void> {

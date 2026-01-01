@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isSafeRedirect } from '@/lib/sanitize';
 
 /**
  * メモリキャッシュ（Edge Runtime互換）
@@ -126,8 +127,40 @@ export async function middleware(request: NextRequest) {
     return csrfResponse;
   }
 
-  // 2. 管理画面への認証チェック
+  // 2. リダイレクトURLのバリデーション（オープンリダイレクト防止）
+  const redirectParam = request.nextUrl.searchParams.get('redirect');
+  if (redirectParam) {
+    // 内部URLのみ許可（相対パスまたは同一オリジン）
+    if (!isSafeRedirect(redirectParam, [request.nextUrl.origin])) {
+      console.warn('[Security] Blocked open redirect attempt:', redirectParam);
+      // 危険なリダイレクトURLは無視してホームページへ
+      const safeUrl = new URL('/', request.url);
+      return NextResponse.redirect(safeUrl);
+    }
+  }
+
+  // 3. 管理画面への認証チェック
   if (pathname.startsWith('/admin/')) {
+    // E2Eテスト環境では認証をスキップ
+    const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
+    if (!skipAuthInTest) {
+      const isAuthenticated = checkAuthentication(request);
+      if (!isAuthenticated) {
+        // 未ログイン時は/admin/loginへリダイレクト（元のURLをクエリパラメータに保存）
+        const loginUrl = new URL('/admin/login', request.url);
+        loginUrl.searchParams.set('redirect', pathname);
+        loginUrl.searchParams.set('message', 'ログインが必要です');
+        console.log('[Auth] Unauthorized access to admin page, redirecting to login');
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+  }
+
+  // 4. 一般ユーザー向け保護ページへの認証チェック
+  const protectedPaths = ['/mypage', '/booking/confirm', '/reservations'];
+  const isProtectedPath = protectedPaths.some((path) => pathname.startsWith(path));
+
+  if (isProtectedPath) {
     // E2Eテスト環境では認証をスキップ
     const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
     if (!skipAuthInTest) {
@@ -136,7 +169,8 @@ export async function middleware(request: NextRequest) {
         // 未ログイン時は/loginへリダイレクト（元のURLをクエリパラメータに保存）
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('redirect', pathname);
-        console.log('[Auth] Unauthorized access to admin page, redirecting to login');
+        loginUrl.searchParams.set('message', 'ログインが必要です');
+        console.log('[Auth] Unauthorized access to protected page, redirecting to login');
         return NextResponse.redirect(loginUrl);
       }
     }
@@ -149,7 +183,8 @@ export async function middleware(request: NextRequest) {
     '/favicon.ico',
     '/admin/', // 管理画面（認証済み）
     '/maintenance', // メンテナンスページ自体
-    '/login', // 管理者再ログイン用
+    '/login', // ログインページ
+    '/admin/login', // 管理者ログインページ
     '/register', // 登録ページ
   ];
 
@@ -158,7 +193,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. 公開状態チェック
+  // 5. 公開状態チェック
   const isPublic = await getPublicStatus(request);
 
   if (!isPublic) {
@@ -167,7 +202,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(maintenanceUrl);
   }
 
-  return NextResponse.next();
+  // 6. セキュリティヘッダーの追加（SameSite Cookie設定）
+  const response = NextResponse.next();
+
+  // SameSite=Lax属性をCookieに設定（CSRF対策）
+  // ※ Next.jsのCookieは自動的にSameSite=Laxが設定されるため、
+  // ここでは明示的に設定する必要はありませんが、念のため記載
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+
+  return response;
 }
 
 /**

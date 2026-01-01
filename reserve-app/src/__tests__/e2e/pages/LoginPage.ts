@@ -28,9 +28,21 @@ export class LoginPage {
 
   /**
    * ログインページに移動
+   * @param path - ログインページのパス（デフォルト: '/login'）
    */
-  async goto() {
-    await this.page.goto('/login');
+  async goto(path = '/login') {
+    await this.page.goto(path);
+  }
+
+  /**
+   * ログイン処理（ショートカットメソッド）
+   * @param email - メールアドレス
+   * @param password - パスワード
+   * @param remember - ログイン状態を保持するか（オプション）
+   */
+  async login(email: string, password: string, remember = false) {
+    await this.fillForm({ email, password, remember });
+    await this.submit();
   }
 
   /**

@@ -23,11 +23,11 @@ export async function GET(
       return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
     }
 
+    // 予約の存在確認（横断アクセス検出のため、userIdフィルタなし）
     const reservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId: TENANT_ID,
-        userId, // 自分の予約のみ取得可能
       },
       include: {
         user: { select: { id: true, name: true, email: true } },
@@ -38,6 +38,11 @@ export async function GET(
 
     if (!reservation) {
       return errorResponse('Reservation not found', 404, 'NOT_FOUND');
+    }
+
+    // 横断アクセス防止: 他のユーザーの予約へのアクセスを拒否
+    if (reservation.userId !== userId) {
+      return errorResponse('この予約にアクセスする権限がありません', 403, 'FORBIDDEN');
     }
 
     const formattedReservation: Reservation = {
@@ -83,12 +88,11 @@ export async function PATCH(
       return errorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    // 既存予約取得
+    // 既存予約取得（横断アクセス検出のため、userIdフィルタなし）
     const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId: TENANT_ID,
-        userId,
       },
       include: {
         menu: { select: { id: true, name: true, duration: true, price: true } },
@@ -99,6 +103,11 @@ export async function PATCH(
 
     if (!existingReservation) {
       return errorResponse('Reservation not found', 404, 'NOT_FOUND');
+    }
+
+    // 横断アクセス防止: 他のユーザーの予約を編集できない
+    if (existingReservation.userId !== userId) {
+      return errorResponse('この予約を編集する権限がありません', 403, 'FORBIDDEN');
     }
 
     // ビジネスルール検証
@@ -269,12 +278,11 @@ export async function DELETE(
       return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
     }
 
-    // 既存予約取得
+    // 既存予約取得（横断アクセス検出のため、userIdフィルタなし）
     const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId: TENANT_ID,
-        userId,
       },
       include: {
         user: { select: { id: true, name: true, email: true } },
@@ -285,6 +293,11 @@ export async function DELETE(
 
     if (!existingReservation) {
       return errorResponse('Reservation not found', 404, 'NOT_FOUND');
+    }
+
+    // 横断アクセス防止: 他のユーザーの予約を削除できない
+    if (existingReservation.userId !== userId) {
+      return errorResponse('この予約を削除する権限がありません', 403, 'FORBIDDEN');
     }
 
     // ビジネスルール検証

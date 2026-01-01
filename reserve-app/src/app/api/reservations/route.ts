@@ -181,10 +181,44 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check for duplicate reservations (same staff, date, and overlapping time)
-    // スタッフ指定がある場合のみチェック
-    const existingReservations = staffId
-      ? await prisma.bookingReservation.findMany({
+    // トランザクション内で予約を作成（Race Condition対策）
+    const reservation = await prisma.$transaction(async (tx) => {
+      // 1. ユーザー自身の重複予約チェック（同じ時間帯に既に予約がないか）
+      const userReservations = await tx.bookingReservation.findMany({
+        where: {
+          tenantId: TENANT_ID,
+          userId,
+          reservedDate: new Date(reservedDate),
+          status: { in: ['PENDING', 'CONFIRMED'] },
+        },
+        include: {
+          menu: { select: { duration: true } },
+        },
+      });
+
+      const [newHour, newMinute] = reservedTime.split(':').map(Number);
+      const newStartMinutes = newHour * 60 + newMinute;
+      const newEndMinutes = newStartMinutes + menu.duration;
+
+      // ユーザー自身の予約時間重複チェック
+      for (const userRes of userReservations) {
+        const [resHour, resMinute] = userRes.reservedTime.split(':').map(Number);
+        const resStartMinutes = resHour * 60 + resMinute;
+        const resEndMinutes = resStartMinutes + userRes.menu.duration;
+
+        // Check for overlap
+        if (
+          (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
+          (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
+          (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
+        ) {
+          throw new Error('既にこの時間帯に予約があります');
+        }
+      }
+
+      // 2. スタッフの重複予約チェック（スタッフ指定がある場合のみ）
+      if (staffId) {
+        const staffReservations = await tx.bookingReservation.findMany({
           where: {
             tenantId: TENANT_ID,
             staffId,
@@ -194,83 +228,116 @@ export async function POST(request: NextRequest) {
           include: {
             menu: { select: { duration: true } },
           },
-        })
-      : [];
+        });
 
-    // Check for time slot conflicts
-    const [newHour, newMinute] = reservedTime.split(':').map(Number);
-    const newStartMinutes = newHour * 60 + newMinute;
-    const newEndMinutes = newStartMinutes + menu.duration;
+        // スタッフの予約時間重複チェック
+        for (const staffRes of staffReservations) {
+          const [resHour, resMinute] = staffRes.reservedTime.split(':').map(Number);
+          const resStartMinutes = resHour * 60 + resMinute;
+          const resEndMinutes = resStartMinutes + staffRes.menu.duration;
 
-    for (const reservation of existingReservations) {
-      const [resHour, resMinute] = reservation.reservedTime.split(':').map(Number);
-      const resStartMinutes = resHour * 60 + resMinute;
-      const resEndMinutes = resStartMinutes + reservation.menu.duration;
-
-      // Check for overlap
-      if (
-        (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
-        (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
-        (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
-      ) {
-        return errorResponse(
-          'Time slot is already reserved',
-          409,
-          'TIME_SLOT_CONFLICT'
-        );
+          // Check for overlap
+          if (
+            (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
+            (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
+            (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
+          ) {
+            throw new Error('選択されたスタッフは指定時間帯に対応できません');
+          }
+        }
       }
-    }
 
-    // Create reservation
-    const reservationData: {
-      tenantId: string;
-      userId: string;
-      menuId: string;
-      staffId?: string | null;
-      reservedDate: Date;
-      reservedTime: string;
-      notes?: string | null;
-      status: 'PENDING';
-    } = {
-      tenantId: TENANT_ID,
-      userId,
-      menuId,
-      reservedDate: new Date(reservedDate),
-      reservedTime,
-      notes,
-      status: 'PENDING',
-    };
+      // 3. 全体の重複予約チェック（スタッフ指定なしの場合）
+      if (!staffId) {
+        const allReservations = await tx.bookingReservation.findMany({
+          where: {
+            tenantId: TENANT_ID,
+            staffId: null,
+            reservedDate: new Date(reservedDate),
+            status: { in: ['PENDING', 'CONFIRMED'] },
+          },
+          include: {
+            menu: { select: { duration: true } },
+          },
+        });
 
-    // staffIdが指定されている場合のみ追加
-    if (staffId) {
-      reservationData.staffId = staffId;
-    }
+        // 重複チェック
+        for (const res of allReservations) {
+          const [resHour, resMinute] = res.reservedTime.split(':').map(Number);
+          const resStartMinutes = resHour * 60 + resMinute;
+          const resEndMinutes = resStartMinutes + res.menu.duration;
 
-    const reservation = await prisma.bookingReservation.create({
-      data: reservationData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+          if (
+            (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
+            (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
+            (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
+          ) {
+            throw new Error('この時間は既に予約済みです');
+          }
+        }
+      }
+
+      // 4. 予約作成
+      const reservationData: {
+        tenantId: string;
+        userId: string;
+        menuId: string;
+        staffId?: string | null;
+        reservedDate: Date;
+        reservedTime: string;
+        notes?: string | null;
+        status: 'PENDING';
+      } = {
+        tenantId: TENANT_ID,
+        userId,
+        menuId,
+        reservedDate: new Date(reservedDate),
+        reservedTime,
+        notes,
+        status: 'PENDING',
+      };
+
+      // staffIdが指定されている場合のみ追加
+      if (staffId) {
+        reservationData.staffId = staffId;
+      }
+
+      return await tx.bookingReservation.create({
+        data: reservationData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          staff: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          menu: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              duration: true,
+            },
           },
         },
-        staff: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        menu: {
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            duration: true,
-          },
-        },
-      },
+      });
+    }).catch((error) => {
+      // トランザクションエラーを適切なHTTPエラーに変換
+      if (error.message === '既にこの時間帯に予約があります') {
+        throw { statusCode: 409, message: error.message, code: 'USER_TIME_SLOT_CONFLICT' };
+      } else if (error.message === '選択されたスタッフは指定時間帯に対応できません') {
+        throw { statusCode: 409, message: error.message, code: 'STAFF_TIME_SLOT_CONFLICT' };
+      } else if (error.message === 'この時間は既に予約済みです') {
+        throw { statusCode: 409, message: error.message, code: 'TIME_SLOT_CONFLICT' };
+      }
+      throw error;
     });
 
     const formattedReservation: Reservation = {

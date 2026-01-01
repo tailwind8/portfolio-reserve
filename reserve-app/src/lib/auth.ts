@@ -1,6 +1,8 @@
+import { NextRequest } from 'next/server';
 import { supabase } from './supabase';
 import { prisma } from './prisma';
 import type { User } from '@supabase/supabase-js';
+import { errorResponse } from './api-response';
 
 /**
  * 認証ヘルパー関数
@@ -117,4 +119,84 @@ export async function requireAdmin() {
     throw new Error('Forbidden');
   }
   return user;
+}
+
+/**
+ * リクエストヘッダーから認証チェック（ヘッダーベース）
+ *
+ * E2Eテスト環境やAPIリクエストで使用します。
+ * リクエストヘッダーから `x-user-id` を取得し、認証状態を確認します。
+ * 未認証の場合は401エラーレスポンスを返します。
+ *
+ * @param request - NextRequest オブジェクト
+ * @returns ユーザーIDまたは401エラーレスポンス
+ */
+export function checkAuthHeader(
+  request: NextRequest
+): string | ReturnType<typeof errorResponse> {
+  const userId = request.headers.get('x-user-id');
+
+  if (!userId) {
+    return errorResponse('認証が必要です', 401, 'UNAUTHORIZED');
+  }
+
+  return userId;
+}
+
+/**
+ * リクエストヘッダーから管理者権限チェック（ヘッダーベース）
+ *
+ * E2Eテスト環境やAPIリクエストで使用します。
+ * リクエストヘッダーから `x-user-role` を取得し、管理者権限を確認します。
+ * 管理者でない場合は403エラーレスポンスを返します。
+ *
+ * @param request - NextRequest オブジェクト
+ * @returns 管理者のユーザーIDまたは401/403エラーレスポンス
+ */
+export function checkAdminAuthHeader(
+  request: NextRequest
+): string | ReturnType<typeof errorResponse> {
+  const userId = request.headers.get('x-user-id');
+  const userRole = request.headers.get('x-user-role');
+
+  if (!userId) {
+    return errorResponse('認証が必要です', 401, 'UNAUTHORIZED');
+  }
+
+  if (userRole !== 'admin' && userRole !== 'ADMIN') {
+    return errorResponse('管理者権限が必要です', 403, 'FORBIDDEN');
+  }
+
+  return userId;
+}
+
+/**
+ * ユーザーがリソースにアクセスする権限があるかチェック（ヘッダーベース）
+ *
+ * @param request - NextRequest オブジェクト
+ * @param resourceUserId - リソースの所有者のユーザーID
+ * @returns 権限がある場合はtrue、ない場合は403エラーレスポンス
+ */
+export function checkResourceAccessHeader(
+  request: NextRequest,
+  resourceUserId: string
+): true | ReturnType<typeof errorResponse> {
+  const userId = request.headers.get('x-user-id');
+  const userRole = request.headers.get('x-user-role');
+
+  if (!userId) {
+    return errorResponse('認証が必要です', 401, 'UNAUTHORIZED');
+  }
+
+  // 管理者は全てのリソースにアクセス可能
+  if (userRole === 'admin' || userRole === 'ADMIN') {
+    return true;
+  }
+
+  // 一般ユーザーは自分のリソースのみアクセス可能
+  if (userId === resourceUserId) {
+    return true;
+  }
+
+  return errorResponse('このリソースにアクセスする権限がありません', 403, 'FORBIDDEN');
 }
