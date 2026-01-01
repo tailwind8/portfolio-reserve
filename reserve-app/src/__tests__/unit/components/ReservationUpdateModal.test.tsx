@@ -77,11 +77,14 @@ describe('ReservationUpdateModal', () => {
       />
     );
 
-    expect(screen.getByTestId('reservation-update-modal')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('reservation-update-modal')).toBeInTheDocument();
+    });
+
     expect(screen.getByTestId('modal-title')).toHaveTextContent('予約変更');
   });
 
-  it('should close modal when close button is clicked', () => {
+  it('should close modal when close button is clicked', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -89,6 +92,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('close-button')).toBeInTheDocument();
+    });
 
     const closeButton = screen.getByTestId('close-button');
     fireEvent.click(closeButton);
@@ -133,10 +140,10 @@ describe('ReservationUpdateModal', () => {
     const staffSelect = screen.getByTestId('staff-select') as HTMLSelectElement;
 
     expect(menuSelect.options.length).toBe(2);
-    expect(staffSelect.options.length).toBe(2);
+    expect(staffSelect.options.length).toBe(3); // 2 staff + 1 "指定なし" option
   });
 
-  it('should display current month', () => {
+  it('should display current month', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -144,6 +151,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('current-month')).toBeInTheDocument();
+    });
 
     const currentMonth = screen.getByTestId('current-month');
     const today = new Date();
@@ -152,7 +163,7 @@ describe('ReservationUpdateModal', () => {
     expect(currentMonth).toHaveTextContent(expectedText);
   });
 
-  it('should navigate to next month when next button is clicked', () => {
+  it('should navigate to next month when next button is clicked', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -160,6 +171,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('next-month-button')).toBeInTheDocument();
+    });
 
     const nextButton = screen.getByTestId('next-month-button');
     const currentMonth = screen.getByTestId('current-month');
@@ -173,7 +188,7 @@ describe('ReservationUpdateModal', () => {
     expect(currentMonth).toHaveTextContent(expectedText);
   });
 
-  it('should navigate to previous month when prev button is clicked', () => {
+  it('should navigate to previous month when prev button is clicked', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -181,6 +196,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('prev-month-button')).toBeInTheDocument();
+    });
 
     const prevButton = screen.getByTestId('prev-month-button');
     const currentMonth = screen.getByTestId('current-month');
@@ -194,7 +213,7 @@ describe('ReservationUpdateModal', () => {
     expect(currentMonth).toHaveTextContent(expectedText);
   });
 
-  it('should select a day when calendar day is clicked', () => {
+  it('should select a day when calendar day is clicked', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -202,6 +221,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('next-month-button')).toBeInTheDocument();
+    });
 
     // Get next month to ensure we have future dates
     const nextButton = screen.getByTestId('next-month-button');
@@ -213,7 +236,7 @@ describe('ReservationUpdateModal', () => {
     expect(dayButton).toHaveClass('bg-blue-500');
   });
 
-  it('should show time selection after day is selected', () => {
+  it('should show time selection after day is selected', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -221,6 +244,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('next-month-button')).toBeInTheDocument();
+    });
 
     // Get next month
     const nextButton = screen.getByTestId('next-month-button');
@@ -232,7 +259,7 @@ describe('ReservationUpdateModal', () => {
     expect(screen.getByTestId('time-selection-section')).toBeInTheDocument();
   });
 
-  it('should select time slot when time button is clicked', () => {
+  it('should select time slot when time button is clicked', async () => {
     render(
       <ReservationUpdateModal
         reservation={mockReservation}
@@ -240,6 +267,10 @@ describe('ReservationUpdateModal', () => {
         onSuccess={mockOnSuccess}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('next-month-button')).toBeInTheDocument();
+    });
 
     // Get next month
     const nextButton = screen.getByTestId('next-month-button');
