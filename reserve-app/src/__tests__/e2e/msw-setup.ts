@@ -773,6 +773,119 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
     }
   });
 
+  // /api/admin/settings のモック
+  await page.route('**/api/admin/settings**', async (route) => {
+    const request = route.request();
+
+    if (request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            tenantId: 'demo-restaurant',
+            storeName: 'サンプル美容室',
+            storeEmail: 'info@sample-salon.com',
+            storePhone: '03-1234-5678',
+            openTime: '09:00',
+            closeTime: '20:00',
+            closedDays: [],
+            slotDuration: 30,
+            isPublic: true,
+            minAdvanceBookingDays: 0,
+            maxAdvanceBookingDays: 90,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } else if (request.method() === 'PATCH') {
+      const postData = request.postDataJSON();
+
+      // バリデーション: min >= max をチェック
+      if (
+        postData.minAdvanceBookingDays !== undefined &&
+        postData.maxAdvanceBookingDays !== undefined &&
+        postData.minAdvanceBookingDays >= postData.maxAdvanceBookingDays
+      ) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'バリデーションエラー',
+              issues: [
+                {
+                  code: 'custom',
+                  path: ['minAdvanceBookingDays'],
+                  message: '最短予約日数は最長予約日数より小さい値を設定してください',
+                },
+              ],
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        return;
+      }
+
+      // バリデーション: 負の値をチェック
+      if (
+        (postData.minAdvanceBookingDays !== undefined && postData.minAdvanceBookingDays < 0) ||
+        (postData.maxAdvanceBookingDays !== undefined && postData.maxAdvanceBookingDays < 0)
+      ) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'バリデーションエラー',
+              issues: [
+                {
+                  code: 'custom',
+                  path: ['minAdvanceBookingDays'],
+                  message: '0以上の値を入力してください',
+                },
+              ],
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            tenantId: 'demo-restaurant',
+            storeName: postData.storeName || 'サンプル美容室',
+            storeEmail: postData.storeEmail || 'info@sample-salon.com',
+            storePhone: postData.storePhone || '03-1234-5678',
+            openTime: postData.openTime || '09:00',
+            closeTime: postData.closeTime || '20:00',
+            closedDays: postData.closedDays || [],
+            slotDuration: postData.slotDuration || 30,
+            isPublic: postData.isPublic ?? true,
+            minAdvanceBookingDays: postData.minAdvanceBookingDays ?? 0,
+            maxAdvanceBookingDays: postData.maxAdvanceBookingDays ?? 90,
+            updatedAt: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    }
+  });
+
   // /api/admin/reservations のモック
   await page.route('**/api/admin/reservations**', async (route) => {
     const request = route.request();

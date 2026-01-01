@@ -14,6 +14,8 @@ const updateSettingsSchema = z.object({
   closedDays: z.array(z.string()).optional(),
   slotDuration: z.number().min(15, '予約枠は15分以上である必要があります').max(120, '予約枠は120分以下である必要があります'),
   isPublic: z.boolean().optional().default(true),
+  minAdvanceBookingDays: z.number().int().min(0, '0以上の値を入力してください').optional(),
+  maxAdvanceBookingDays: z.number().int().min(1, '1以上の値を入力してください').optional(),
 }).refine((data) => {
   // 開店時刻が閉店時刻より前であることを検証
   const openMinutes = parseInt(data.openTime.split(':')[0]) * 60 + parseInt(data.openTime.split(':')[1]);
@@ -22,6 +24,15 @@ const updateSettingsSchema = z.object({
 }, {
   message: '開店時刻は閉店時刻より前である必要があります',
   path: ['openTime'],
+}).refine((data) => {
+  // 最短予約日数が最長予約日数より小さいことを検証
+  if (data.minAdvanceBookingDays !== undefined && data.maxAdvanceBookingDays !== undefined) {
+    return data.minAdvanceBookingDays < data.maxAdvanceBookingDays;
+  }
+  return true;
+}, {
+  message: '最短予約日数は最長予約日数より小さい値を設定してください',
+  path: ['minAdvanceBookingDays'],
 });
 
 /**
@@ -101,6 +112,12 @@ export async function PATCH(request: Request) {
         closedDays: validatedData.closedDays || [],
         slotDuration: validatedData.slotDuration,
         isPublic: validatedData.isPublic,
+        ...(validatedData.minAdvanceBookingDays !== undefined && {
+          minAdvanceBookingDays: validatedData.minAdvanceBookingDays,
+        }),
+        ...(validatedData.maxAdvanceBookingDays !== undefined && {
+          maxAdvanceBookingDays: validatedData.maxAdvanceBookingDays,
+        }),
       },
       create: {
         tenantId,
@@ -111,7 +128,9 @@ export async function PATCH(request: Request) {
         closeTime: validatedData.closeTime,
         closedDays: validatedData.closedDays || [],
         slotDuration: validatedData.slotDuration,
-        isPublic: validatedData.isPublic,
+        isPublic: validatedData.isPublic ?? true,
+        minAdvanceBookingDays: validatedData.minAdvanceBookingDays ?? 0,
+        maxAdvanceBookingDays: validatedData.maxAdvanceBookingDays ?? 90,
       },
     });
 

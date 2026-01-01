@@ -22,6 +22,8 @@ type FormData = {
   closedDays: string[];
   slotDuration: string;
   isPublic: boolean;
+  minAdvanceBookingDays: string;
+  maxAdvanceBookingDays: string;
 };
 
 const DAYS_OF_WEEK = [
@@ -52,6 +54,8 @@ export default function SettingsPage() {
     closedDays: [],
     slotDuration: '30',
     isPublic: true,
+    minAdvanceBookingDays: '0',
+    maxAdvanceBookingDays: '90',
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
@@ -73,6 +77,8 @@ export default function SettingsPage() {
           closedDays: settingsData.closedDays || [],
           slotDuration: settingsData.slotDuration.toString(),
           isPublic: settingsData.isPublic ?? true,
+          minAdvanceBookingDays: settingsData.minAdvanceBookingDays.toString(),
+          maxAdvanceBookingDays: settingsData.maxAdvanceBookingDays.toString(),
         });
       }
     } catch (error) {
@@ -107,6 +113,22 @@ export default function SettingsPage() {
       errors.push('開店時刻は閉店時刻より前である必要があります');
     }
 
+    // 予約受付期間のバリデーション
+    const minDays = parseInt(formData.minAdvanceBookingDays);
+    const maxDays = parseInt(formData.maxAdvanceBookingDays);
+
+    if (isNaN(minDays) || minDays < 0) {
+      errors.push('0以上の値を入力してください');
+    }
+
+    if (isNaN(maxDays) || maxDays < 0) {
+      errors.push('0以上の値を入力してください');
+    }
+
+    if (!isNaN(minDays) && !isNaN(maxDays) && minDays >= maxDays) {
+      errors.push('最短予約日数は最長予約日数より小さい値を設定してください');
+    }
+
     setFormErrors(errors);
     return errors.length === 0;
   };
@@ -136,6 +158,8 @@ export default function SettingsPage() {
           closedDays: formData.closedDays,
           slotDuration: parseInt(formData.slotDuration),
           isPublic: formData.isPublic,
+          minAdvanceBookingDays: parseInt(formData.minAdvanceBookingDays),
+          maxAdvanceBookingDays: parseInt(formData.maxAdvanceBookingDays),
         }),
       });
 
@@ -344,6 +368,57 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
+          </div>
+        </section>
+
+        {/* 予約受付期間設定 */}
+        <section data-testid="booking-period-section">
+          <h2 className="text-xl font-semibold mb-4">予約受付期間設定</h2>
+          <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+            <p className="text-sm text-blue-800 mb-2">
+              <strong>説明:</strong> 予約を受け付ける期間を設定します。
+              例えば、最短1日・最長30日と設定すると、明日から30日後までの予約が可能になります。
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                最短予約日数（何日後から予約可能）
+              </label>
+              <input
+                data-testid="min-advance-booking-days-input"
+                type="number"
+                min="0"
+                value={formData.minAdvanceBookingDays}
+                onChange={(e) =>
+                  setFormData({ ...formData, minAdvanceBookingDays: e.target.value })
+                }
+                className="w-full border rounded px-3 py-2"
+                placeholder="0"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                0 = 当日予約可能、1 = 明日から予約可能
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                最長予約日数（何日後まで予約可能）
+              </label>
+              <input
+                data-testid="max-advance-booking-days-input"
+                type="number"
+                min="1"
+                value={formData.maxAdvanceBookingDays}
+                onChange={(e) =>
+                  setFormData({ ...formData, maxAdvanceBookingDays: e.target.value })
+                }
+                className="w-full border rounded px-3 py-2"
+                placeholder="90"
+              />
+              <p className="text-xs text-gray-500 mt-1">例: 90日後まで予約可能</p>
+            </div>
           </div>
         </section>
 

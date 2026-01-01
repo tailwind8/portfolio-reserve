@@ -237,6 +237,108 @@ export class AdminSettingsPage {
   }
 
   // ========================================
+  // システム公開設定の操作
+  // ========================================
+
+  /**
+   * システム公開設定セクションが表示されることを確認
+   */
+  async expectSystemPublicSectionVisible() {
+    await expect(this.page.locator('[data-testid="system-public-section"]')).toBeVisible();
+  }
+
+  /**
+   * システム公開トグルをONにする
+   */
+  async turnOnSystemPublic() {
+    const toggle = this.page.locator('[data-testid="is-public-toggle"]');
+    if (!(await toggle.isChecked())) {
+      await toggle.check();
+    }
+  }
+
+  /**
+   * システム公開トグルをOFFにする
+   */
+  async turnOffSystemPublic() {
+    const toggle = this.page.locator('[data-testid="is-public-toggle"]');
+    if (await toggle.isChecked()) {
+      await toggle.uncheck();
+    }
+  }
+
+  /**
+   * システム公開トグルがONであることを確認
+   */
+  async expectSystemPublicOn() {
+    await expect(this.page.locator('[data-testid="is-public-toggle"]')).toBeChecked();
+  }
+
+  /**
+   * システム公開トグルがOFFであることを確認
+   */
+  async expectSystemPublicOff() {
+    await expect(this.page.locator('[data-testid="is-public-toggle"]')).not.toBeChecked();
+  }
+
+  // ========================================
+  // 予約受付期間設定の操作
+  // ========================================
+
+  /**
+   * 予約受付期間設定セクションが表示されることを確認
+   */
+  async expectBookingPeriodSectionVisible() {
+    await expect(this.page.locator('[data-testid="booking-period-section"]')).toBeVisible();
+  }
+
+  /**
+   * 最短予約日数を取得
+   */
+  async getMinAdvanceBookingDays(): Promise<string> {
+    return await this.page.locator('[data-testid="min-advance-booking-days-input"]').inputValue();
+  }
+
+  /**
+   * 最短予約日数を変更
+   */
+  async fillMinAdvanceBookingDays(days: string) {
+    await this.page.locator('[data-testid="min-advance-booking-days-input"]').fill(days);
+  }
+
+  /**
+   * 最短予約日数が表示されることを確認
+   */
+  async expectMinAdvanceBookingDays(days: string) {
+    await expect(this.page.locator('[data-testid="min-advance-booking-days-input"]')).toHaveValue(
+      days
+    );
+  }
+
+  /**
+   * 最長予約日数を取得
+   */
+  async getMaxAdvanceBookingDays(): Promise<string> {
+    return await this.page.locator('[data-testid="max-advance-booking-days-input"]').inputValue();
+  }
+
+  /**
+   * 最長予約日数を変更
+   */
+  async fillMaxAdvanceBookingDays(days: string) {
+    await this.page.locator('[data-testid="max-advance-booking-days-input"]').fill(days);
+  }
+
+  /**
+   * 最長予約日数が表示されることを確認
+   */
+  async expectMaxAdvanceBookingDays(days: string) {
+    await expect(this.page.locator('[data-testid="max-advance-booking-days-input"]')).toHaveValue(
+      days
+    );
+  }
+
+  // ========================================
   // 保存操作
   // ========================================
 
