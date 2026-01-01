@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { setupMSW } from './msw-setup';
 import { MyPage } from './pages/MyPage';
 
@@ -323,7 +323,7 @@ test.describe('予約変更機能', () => {
    *   And メールに変更後の日時が含まれる
    *   And メールに変更理由の記載欄が含まれる
    */
-  test.skip('変更確認メールに変更内容が含まれる', async ({ page }) => {
+  test.skip('変更確認メールに変更内容が含まれる', async () => {
     // TODO: メール送信APIのモック確認
     await myPage.expectReservationsOrEmptyState();
 

@@ -178,7 +178,7 @@ test.describe('予約キャンセル機能', () => {
    *   And メールにキャンセルした予約のスタッフ名が含まれる
    *   And メールにキャンセル日時が含まれる
    */
-  test.skip('キャンセル確認メール送信', async ({ page }) => {
+  test.skip('キャンセル確認メール送信', async () => {
     // TODO: メール送信APIのモック確認
     // 予約が存在することを確認
     await myPage.expectReservationsOrEmptyState();
@@ -213,9 +213,6 @@ test.describe('予約キャンセル機能', () => {
   test('キャンセル後の予約一覧表示', async () => {
     // 予約が存在することを確認
     await myPage.expectReservationsOrEmptyState();
-
-    // 初期の予約件数を記録
-    const initialCount = await myPage.getReservationCount();
 
     // キャンセルボタンをクリック
     await myPage.openCancelDialog();
@@ -253,7 +250,7 @@ test.describe('予約キャンセル機能', () => {
    *   And 日付"20日"を選択する
    *   Then 時間帯"14:00"が利用可能として表示される
    */
-  test.skip('キャンセル後の時間帯が利用可能になる', async ({ page }) => {
+  test.skip('キャンセル後の時間帯が利用可能になる', async () => {
     // TODO: 予約ページとの連携テスト
     // 予約が存在することを確認
     await myPage.expectReservationsOrEmptyState();
@@ -289,7 +286,7 @@ test.describe('予約キャンセル機能', () => {
    *   And 確認ダイアログに"田中"が表示される
    *   And 確認ダイアログに"5000円"が表示される
    */
-  test('キャンセル確認ダイアログの詳細表示', async ({ page }) => {
+  test('キャンセル確認ダイアログの詳細表示', async () => {
     // 予約が存在することを確認
     await myPage.expectReservationsOrEmptyState();
 

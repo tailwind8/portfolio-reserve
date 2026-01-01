@@ -268,7 +268,7 @@ async function main() {
       create: {
         tenantId: TENANT_ID,
         staffId: '550e8400-e29b-41d4-a716-446655440021',
-        dayOfWeek: day as any,
+        dayOfWeek: day as DayOfWeek,
         startTime: '09:00',
         endTime: '20:00',
         isActive: true,
@@ -297,7 +297,7 @@ async function main() {
       create: {
         tenantId: TENANT_ID,
         staffId: '550e8400-e29b-41d4-a716-446655440022',
-        dayOfWeek: day as any,
+        dayOfWeek: day as DayOfWeek,
         startTime: '10:00',
         endTime: '19:00',
         isActive: true,
@@ -326,7 +326,7 @@ async function main() {
       create: {
         tenantId: TENANT_ID,
         staffId: '550e8400-e29b-41d4-a716-446655440023',
-        dayOfWeek: day as any,
+        dayOfWeek: day as DayOfWeek,
         startTime: '09:00',
         endTime: '18:00',
         isActive: true,
