@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 /**
  * メニュー管理ページ
@@ -39,7 +39,6 @@ type MenuFormData = {
 
 export default function MenusPage() {
   const [menus, setMenus] = useState<Menu[]>([]);
-  const [filteredMenus, setFilteredMenus] = useState<Menu[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -71,11 +70,13 @@ export default function MenusPage() {
 
   // メニュー一覧を取得
   useEffect(() => {
+    // Data fetching on mount is an acceptable use case for setState in useEffect
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMenus();
   }, []);
 
-  // 検索とフィルター
-  useEffect(() => {
+  // 検索とフィルター - useMemoで計算
+  const filteredMenus = useMemo(() => {
     let result = menus;
 
     // 検索フィルター
@@ -90,7 +91,7 @@ export default function MenusPage() {
       result = result.filter((menu) => menu.category === categoryFilter);
     }
 
-    setFilteredMenus(result);
+    return result;
   }, [menus, searchQuery, categoryFilter]);
 
   const handleAddMenu = () => {
