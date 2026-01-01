@@ -44,6 +44,8 @@ model RestaurantStaff {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   reservations RestaurantReservation[]
+  shifts       RestaurantStaffShift[]
+  vacations    RestaurantStaffVacation[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -113,6 +115,47 @@ model RestaurantSettings {
 }
 
 // ========================================
+// Staff Shift Models
+// ========================================
+
+model RestaurantStaffShift {
+  id        String    @id @default(uuid())
+  tenantId  String    @default("demo-restaurant") @map("tenant_id")
+  staffId   String    @map("staff_id")
+  dayOfWeek DayOfWeek @map("day_of_week") // 曜日
+  startTime String    @map("start_time") // 出勤時間（例: "09:00"）
+  endTime   String    @map("end_time") // 退勤時間（例: "18:00"）
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  staff RestaurantStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, staffId, dayOfWeek])
+  @@index([tenantId])
+  @@index([staffId])
+  @@map("restaurant_staff_shifts")
+}
+
+model RestaurantStaffVacation {
+  id        String   @id @default(uuid())
+  tenantId  String   @default("demo-restaurant") @map("tenant_id")
+  staffId   String   @map("staff_id")
+  startDate DateTime @map("start_date") // 休暇開始日
+  endDate   DateTime @map("end_date") // 休暇終了日
+  reason    String? // 理由（任意）
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  staff RestaurantStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([staffId])
+  @@index([startDate, endDate])
+  @@map("restaurant_staff_vacations")
+}
+
+// ========================================
 // Enums
 // ========================================
 
@@ -122,4 +165,14 @@ enum ReservationStatus {
   CANCELLED // キャンセル
   COMPLETED // 完了（来店済み）
   NO_SHOW // 無断キャンセル
+}
+
+enum DayOfWeek {
+  MONDAY // 月曜日
+  TUESDAY // 火曜日
+  WEDNESDAY // 水曜日
+  THURSDAY // 木曜日
+  FRIDAY // 金曜日
+  SATURDAY // 土曜日
+  SUNDAY // 日曜日
 }
