@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     }
 
     const { status, dateRange, search, tenantId } = queryValidation.data;
-    const finalTenantId = tenantId || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const finalTenantId = tenantId || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // フィルター条件を構築
     const where: Record<string, unknown> = {
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     }
 
     // 予約一覧を取得
-    const reservations = await prisma.restaurantReservation.findMany({
+    const reservations = await prisma.bookingReservation.findMany({
       where,
       include: {
         user: {
@@ -114,13 +114,13 @@ export async function GET(request: Request) {
     // 検索フィルター（フロントエンド側でフィルタリング用のデータも含める）
     let filteredReservations = reservations;
     if (search) {
-      filteredReservations = reservations.filter((reservation) =>
+      filteredReservations = reservations.filter((reservation: typeof reservations[number]) =>
         reservation.user?.name?.includes(search)
       );
     }
 
     // レスポンス整形
-    const formattedReservations = filteredReservations.map((reservation) => ({
+    const formattedReservations = filteredReservations.map((reservation: typeof reservations[number]) => ({
       id: reservation.id,
       reservedDate: reservation.reservedDate.toISOString().split('T')[0], // YYYY-MM-DD
       reservedTime: reservation.reservedTime,
@@ -179,10 +179,10 @@ export async function POST(request: Request) {
     }
 
     const { userId, menuId, staffId, reservedDate, reservedTime, notes } = validation.data;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // ユーザーの存在確認
-    const user = await prisma.restaurantUser.findFirst({
+    const user = await prisma.bookingUser.findFirst({
       where: {
         id: userId,
         tenantId,
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
     }
 
     // メニューの存在確認
-    const menu = await prisma.restaurantMenu.findFirst({
+    const menu = await prisma.bookingMenu.findFirst({
       where: {
         id: menuId,
         tenantId,
@@ -207,7 +207,7 @@ export async function POST(request: Request) {
     }
 
     // スタッフの存在確認
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id: staffId,
         tenantId,
@@ -220,7 +220,7 @@ export async function POST(request: Request) {
     }
 
     // 予約日時の重複チェック（同じスタッフ、同じ時間）
-    const existingReservation = await prisma.restaurantReservation.findFirst({
+    const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         tenantId,
         staffId,
@@ -241,7 +241,7 @@ export async function POST(request: Request) {
     }
 
     // 予約を作成
-    const reservation = await prisma.restaurantReservation.create({
+    const reservation = await prisma.bookingReservation.create({
       data: {
         tenantId,
         userId,

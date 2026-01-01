@@ -37,7 +37,7 @@ export async function PATCH(
     const { memo } = validation.data;
 
     // 顧客が存在するか確認
-    const existingCustomer = await prisma.restaurantUser.findUnique({
+    const existingCustomer = await prisma.bookingUser.findUnique({
       where: {
         id,
         tenantId,
@@ -49,7 +49,7 @@ export async function PATCH(
     }
 
     // 顧客メモを更新
-    const updatedCustomer = await prisma.restaurantUser.update({
+    const updatedCustomer = await prisma.bookingUser.update({
       where: {
         id,
       },

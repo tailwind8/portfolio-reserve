@@ -18,7 +18,7 @@ import prisma from '@/lib/prisma';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // 現在の日時情報
     const now = new Date();
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
     // 本日の予約件数
-    const todayReservations = await prisma.restaurantReservation.count({
+    const todayReservations = await prisma.bookingReservation.count({
       where: {
         tenantId,
         reservedDate: {
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     });
 
     // 今月の予約件数
-    const monthlyReservations = await prisma.restaurantReservation.count({
+    const monthlyReservations = await prisma.bookingReservation.count({
       where: {
         tenantId,
         reservedDate: {
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     });
 
     // 本日の予約一覧（詳細情報付き）
-    const todayReservationsList = await prisma.restaurantReservation.findMany({
+    const todayReservationsList = await prisma.bookingReservation.findMany({
       where: {
         tenantId,
         reservedDate: {
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     });
 
     // 今月の売上計算
-    const monthlyReservationsWithPrice = await prisma.restaurantReservation.findMany({
+    const monthlyReservationsWithPrice = await prisma.bookingReservation.findMany({
       where: {
         tenantId,
         reservedDate: {
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
 
     // リピート率計算（今月予約した顧客のうち、過去にも予約している人の割合）
     // N+1問題を回避: 1回のクエリで今月予約した顧客のユニークIDを取得
-    const uniqueCustomersThisMonth = await prisma.restaurantReservation.findMany({
+    const uniqueCustomersThisMonth = await prisma.bookingReservation.findMany({
       where: {
         tenantId,
         reservedDate: {
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
 
     // N+1問題を回避: 1回のクエリで過去に予約があった顧客を全て取得
     const customersWithPastReservations = customerIds.length > 0
-      ? await prisma.restaurantReservation.findMany({
+      ? await prisma.bookingReservation.findMany({
           where: {
             tenantId,
             userId: { in: customerIds },
@@ -159,7 +159,7 @@ export async function GET(request: Request) {
     const weekEnd = new Date(now);
     weekEnd.setHours(23, 59, 59, 999);
 
-    const weeklyReservations = await prisma.restaurantReservation.findMany({
+    const weeklyReservations = await prisma.bookingReservation.findMany({
       where: {
         tenantId,
         reservedDate: {

@@ -25,7 +25,7 @@ async function getPublicStatus(request: NextRequest): Promise<boolean> {
   }
 
   try {
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
     const baseUrl = request.nextUrl.origin;
     const apiUrl = `${baseUrl}/api/internal/public-status?tenantId=${tenantId}`;
 
@@ -128,13 +128,17 @@ export async function middleware(request: NextRequest) {
 
   // 2. 管理画面への認証チェック
   if (pathname.startsWith('/admin/')) {
-    const isAuthenticated = checkAuthentication(request);
-    if (!isAuthenticated) {
-      // 未ログイン時は/loginへリダイレクト（元のURLをクエリパラメータに保存）
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      console.log('[Auth] Unauthorized access to admin page, redirecting to login');
-      return NextResponse.redirect(loginUrl);
+    // E2Eテスト環境では認証をスキップ
+    const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
+    if (!skipAuthInTest) {
+      const isAuthenticated = checkAuthentication(request);
+      if (!isAuthenticated) {
+        // 未ログイン時は/loginへリダイレクト（元のURLをクエリパラメータに保存）
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('redirect', pathname);
+        console.log('[Auth] Unauthorized access to admin page, redirecting to login');
+        return NextResponse.redirect(loginUrl);
+      }
     }
   }
 

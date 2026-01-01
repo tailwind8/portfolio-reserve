@@ -22,13 +22,13 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const TENANT_ID = 'demo-restaurant';
+  const TENANT_ID = 'demo-booking';
 
   console.log('🌱 デモデータの投入を開始します...\n');
 
-  // 1. RestaurantSettings作成
+  // 1. BookingSettings作成
   console.log('📝 店舗設定を作成中...');
-  await prisma.restaurantSettings.upsert({
+  await prisma.bookingSettings.upsert({
     where: { tenantId: TENANT_ID },
     update: {},
     create: {
@@ -44,7 +44,7 @@ async function main() {
   });
   console.log('✅ 店舗設定を作成しました\n');
 
-  // 2. RestaurantMenu作成（15種類）
+  // 2. BookingMenu作成（15種類）
   console.log('📝 メニューを作成中...');
 
   const menus = [
@@ -177,7 +177,7 @@ async function main() {
   ];
 
   for (const menu of menus) {
-    await prisma.restaurantMenu.upsert({
+    await prisma.bookingMenu.upsert({
       where: { id: menu.id },
       update: {},
       create: {
@@ -189,7 +189,7 @@ async function main() {
   }
   console.log(`✅ メニューを${menus.length}件作成しました\n`);
 
-  // 3. RestaurantStaff作成（5人）
+  // 3. BookingStaff作成（5人）
   console.log('📝 スタッフを作成中...');
 
   const staff = [
@@ -231,7 +231,7 @@ async function main() {
   ];
 
   for (const s of staff) {
-    await prisma.restaurantStaff.upsert({
+    await prisma.bookingStaff.upsert({
       where: { id: s.id },
       update: {},
       create: {
@@ -256,7 +256,7 @@ async function main() {
     'SATURDAY',
   ];
   for (const day of tanaka_shifts) {
-    await prisma.restaurantStaffShift.upsert({
+    await prisma.bookingStaffShift.upsert({
       where: {
         tenantId_staffId_dayOfWeek: {
           tenantId: TENANT_ID,
@@ -285,7 +285,7 @@ async function main() {
     'SATURDAY',
   ];
   for (const day of sato_shifts) {
-    await prisma.restaurantStaffShift.upsert({
+    await prisma.bookingStaffShift.upsert({
       where: {
         tenantId_staffId_dayOfWeek: {
           tenantId: TENANT_ID,
@@ -314,7 +314,7 @@ async function main() {
     'FRIDAY',
   ];
   for (const day of suzuki_shifts) {
-    await prisma.restaurantStaffShift.upsert({
+    await prisma.bookingStaffShift.upsert({
       where: {
         tenantId_staffId_dayOfWeek: {
           tenantId: TENANT_ID,
@@ -336,7 +336,7 @@ async function main() {
 
   console.log('✅ スタッフシフトを作成しました\n');
 
-  // 5. RestaurantUser（顧客）作成（10人）
+  // 5. BookingUser（顧客）作成（10人）
   console.log('📝 顧客を作成中...');
 
   const users = [
@@ -403,7 +403,7 @@ async function main() {
   ];
 
   for (const user of users) {
-    await prisma.restaurantUser.upsert({
+    await prisma.bookingUser.upsert({
       where: { id: user.id },
       update: {},
       create: {
@@ -414,7 +414,7 @@ async function main() {
   }
   console.log(`✅ 顧客を${users.length}件作成しました\n`);
 
-  // 6. RestaurantReservation作成（過去30件 + 未来20件）
+  // 6. BookingReservation作成（過去30件 + 未来20件）
   console.log('📝 予約を作成中...');
 
   const reservations = [];
@@ -487,7 +487,7 @@ async function main() {
   }
 
   for (const reservation of reservations) {
-    await prisma.restaurantReservation.upsert({
+    await prisma.bookingReservation.upsert({
       where: { id: reservation.id },
       update: {},
       create: {

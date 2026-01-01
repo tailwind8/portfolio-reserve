@@ -480,6 +480,73 @@ const availableSlotsHandler = http.get(`${BASE_URL}/api/available-slots`, ({ req
 });
 
 // ===========================
+// Admin Analytics API
+// ===========================
+const adminAnalyticsHandler = http.get(`${BASE_URL}/api/admin/analytics`, () => {
+  const today = new Date();
+
+  // 日別データ（過去30日分）
+  const dailyData = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    dailyData.push({
+      date: date.toISOString().split('T')[0],
+      count: Math.floor(Math.random() * 10) + 3,
+    });
+  }
+
+  // 週別データ（過去8週間分）
+  const weeklyData = [];
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - i * 7);
+    weeklyData.push({
+      week: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
+      count: Math.floor(Math.random() * 30) + 20,
+    });
+  }
+
+  // 月別データ（過去12ヶ月分）
+  const monthlyData = [];
+  for (let i = 11; i >= 0; i--) {
+    const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    monthlyData.push({
+      month: `${monthDate.getFullYear()}/${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
+      count: Math.floor(Math.random() * 100) + 80,
+    });
+  }
+
+  // 月別リピート率推移（過去6ヶ月）
+  const monthlyRepeatTrends = [];
+  for (let i = 5; i >= 0; i--) {
+    const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    monthlyRepeatTrends.push({
+      month: `${monthDate.getFullYear()}/${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
+      rate: Math.floor(Math.random() * 20) + 50, // 50-70%
+    });
+  }
+
+  return HttpResponse.json({
+    success: true,
+    data: {
+      reservationTrends: {
+        daily: dailyData,
+        weekly: weeklyData,
+        monthly: monthlyData,
+      },
+      repeatRate: {
+        overall: 65,
+        newCustomers: 45,
+        repeatCustomers: 83,
+        monthlyTrends: monthlyRepeatTrends,
+      },
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ===========================
 // Export all handlers
 // ===========================
 export const handlers = [
@@ -487,6 +554,7 @@ export const handlers = [
   menusHandler,
   staffHandler,
   adminStatsHandler,
+  adminAnalyticsHandler,
   registerHandler,
   loginHandler,
   reservationsHandler,

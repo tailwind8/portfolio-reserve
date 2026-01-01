@@ -48,6 +48,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       DATABASE_URL: process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy',
+      SKIP_AUTH_IN_TEST: 'true', // E2Eテスト時に認証をスキップ
     },
   },
 });

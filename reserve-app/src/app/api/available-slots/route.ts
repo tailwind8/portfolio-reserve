@@ -4,7 +4,7 @@ import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-res
 import { availableSlotsQuerySchema } from '@/lib/validations';
 import type { AvailableSlots, TimeSlot } from '@/types/api';
 
-const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
 /**
  * Generate time slots based on store settings
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     const { date, menuId, staffId } = validation.data;
 
     // Check if date is a closed day
-    const settings = await prisma.restaurantSettings.findUnique({
+    const settings = await prisma.bookingSettings.findUnique({
       where: { tenantId: TENANT_ID },
     });
 
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get menu details
-    const menu = await prisma.restaurantMenu.findUnique({
+    const menu = await prisma.bookingMenu.findUnique({
       where: { id: menuId },
       select: { duration: true },
     });
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
 
     // If staffId is provided, check availability for that specific staff
     if (staffId) {
-      const reservations = await prisma.restaurantReservation.findMany({
+      const reservations = await prisma.bookingReservation.findMany({
         where: {
           tenantId: TENANT_ID,
           staffId,
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If no staffId, check availability across all active staff
-    const activeStaff = await prisma.restaurantStaff.findMany({
+    const activeStaff = await prisma.bookingStaff.findMany({
       where: {
         tenantId: TENANT_ID,
         isActive: true,
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
       return successResponse<AvailableSlots>({ date, slots });
     }
 
-    const allReservations = await prisma.restaurantReservation.findMany({
+    const allReservations = await prisma.bookingReservation.findMany({
       where: {
         tenantId: TENANT_ID,
         reservedDate: new Date(date),

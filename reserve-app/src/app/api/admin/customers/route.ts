@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     }
 
     // 顧客一覧を取得
-    const customers = await prisma.restaurantUser.findMany({
+    const customers = await prisma.bookingUser.findMany({
       where,
       select: {
         id: true,

@@ -12,9 +12,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId =
-      searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+      searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    const settings = await prisma.restaurantSettings.findUnique({
+    const settings = await prisma.bookingSettings.findUnique({
       where: { tenantId },
       select: { isPublic: true }, // 必要最小限のフィールドのみ取得
     });

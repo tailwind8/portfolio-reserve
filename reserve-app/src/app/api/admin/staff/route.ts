@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
-    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // フィルター条件を構築
     const where: Record<string, unknown> = {
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     }
 
     // スタッフ一覧を取得
-    const staff = await prisma.restaurantStaff.findMany({
+    const staff = await prisma.bookingStaff.findMany({
       where,
       select: {
         id: true,
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = createStaffSchema.safeParse(body);
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     const { name, email, phone, role } = validation.data;
 
     // メールアドレスの重複チェック
-    const existingStaff = await prisma.restaurantStaff.findFirst({
+    const existingStaff = await prisma.bookingStaff.findFirst({
       where: {
         tenantId,
         email,
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     }
 
     // スタッフを作成
-    const staff = await prisma.restaurantStaff.create({
+    const staff = await prisma.bookingStaff.create({
       data: {
         tenantId,
         name,

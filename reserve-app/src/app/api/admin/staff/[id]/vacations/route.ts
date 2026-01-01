@@ -25,10 +25,10 @@ export async function GET(
 ) {
   try {
     const { id: staffId } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // スタッフの存在確認
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id: staffId,
         tenantId,
@@ -40,7 +40,7 @@ export async function GET(
     }
 
     // 休暇を取得（未来の休暇のみ）
-    const vacations = await prisma.restaurantStaffVacation.findMany({
+    const vacations = await prisma.bookingStaffVacation.findMany({
       where: {
         staffId,
         tenantId,
@@ -86,7 +86,7 @@ export async function POST(
   try {
     const { id: staffId } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = createVacationSchema.safeParse(body);
@@ -103,7 +103,7 @@ export async function POST(
     const { startDate, endDate, reason } = validation.data;
 
     // スタッフの存在確認
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id: staffId,
         tenantId,
@@ -127,7 +127,7 @@ export async function POST(
     }
 
     // 休暇を作成
-    const vacation = await prisma.restaurantStaffVacation.create({
+    const vacation = await prisma.bookingStaffVacation.create({
       data: {
         tenantId,
         staffId,

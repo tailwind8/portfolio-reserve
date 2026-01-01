@@ -36,33 +36,33 @@ export async function getServerSession() {
 }
 
 /**
- * Supabase AuthのユーザーIDからPrismaのRestaurantUserを取得
+ * Supabase AuthのユーザーIDからPrismaのBookingUserを取得
  */
-export async function getRestaurantUserByAuthId(authId: string) {
-  return await prisma.restaurantUser.findUnique({
+export async function getBookingUserByAuthId(authId: string) {
+  return await prisma.bookingUser.findUnique({
     where: { authId },
   });
 }
 
 /**
- * Supabase AuthのユーザーIDから、または新規作成してRestaurantUserを取得
+ * Supabase AuthのユーザーIDから、または新規作成してBookingUserを取得
  * ログイン時に自動的にPrismaレコードを作成する場合に使用
  */
-export async function getOrCreateRestaurantUser(
+export async function getOrCreateBookingUser(
   authId: string,
   email: string,
   name?: string,
   phone?: string
 ) {
   // 既存ユーザーを検索
-  let user = await prisma.restaurantUser.findUnique({
+  let user = await prisma.bookingUser.findUnique({
     where: { authId },
   });
 
   // 存在しない場合は作成
   if (!user) {
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
-    user = await prisma.restaurantUser.create({
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+    user = await prisma.bookingUser.create({
       data: {
         authId,
         email,
@@ -85,7 +85,7 @@ export async function isAdmin(user: User | null): Promise<boolean> {
 
   // 例: 特定のメールアドレスを管理者とする
   const adminEmails = [
-    'admin@demo-restaurant.com',
+    'admin@demo-booking.com',
     'admin@store.com',
     // 環境変数から取得することも可能
     process.env.ADMIN_EMAIL,

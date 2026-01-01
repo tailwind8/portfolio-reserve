@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get tenant ID from environment
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // Fetch user profile from database
-    const user = await prisma.restaurantUser.findFirst({
+    const user = await prisma.bookingUser.findFirst({
       where: {
         tenantId,
         authId: authData.user.id,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       // User exists in Supabase but not in our database
       // This shouldn't happen, but we'll create a profile if it doesn't exist
       try {
-        const newUser = await prisma.restaurantUser.create({
+        const newUser = await prisma.bookingUser.create({
           data: {
             tenantId,
             authId: authData.user.id,

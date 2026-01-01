@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, withErrorHandling } from '@/lib/api-response';
 import type { Staff } from '@/types/api';
 
-const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
 /**
  * Get all active staff members
@@ -28,7 +28,7 @@ const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
  */
 export async function GET() {
   return withErrorHandling(async () => {
-    const staff = await prisma.restaurantStaff.findMany({
+    const staff = await prisma.bookingStaff.findMany({
       where: {
         tenantId: TENANT_ID,
         isActive: true,
