@@ -81,9 +81,10 @@ model RestaurantReservation {
   reservedTime String            @map("reserved_time") // 予約時間（例: "14:00"）
   status       ReservationStatus @default(PENDING)
 
-  notes     String? // 備考・要望
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  notes        String?  @default("") // 備考・要望
+  reminderSent Boolean  @default(false) @map("reminder_sent") // リマインダーメール送信済みフラグ
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   user  RestaurantUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
   staff RestaurantStaff? @relation(fields: [staffId], references: [id])

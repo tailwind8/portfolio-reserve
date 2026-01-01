@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, DayOfWeek } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
@@ -261,7 +261,7 @@ async function main() {
         tenantId_staffId_dayOfWeek: {
           tenantId: TENANT_ID,
           staffId: '550e8400-e29b-41d4-a716-446655440021',
-          dayOfWeek: day as any,
+          dayOfWeek: day as DayOfWeek,
         },
       },
       update: {},
@@ -290,7 +290,7 @@ async function main() {
         tenantId_staffId_dayOfWeek: {
           tenantId: TENANT_ID,
           staffId: '550e8400-e29b-41d4-a716-446655440022',
-          dayOfWeek: day as any,
+          dayOfWeek: day as DayOfWeek,
         },
       },
       update: {},
@@ -319,7 +319,7 @@ async function main() {
         tenantId_staffId_dayOfWeek: {
           tenantId: TENANT_ID,
           staffId: '550e8400-e29b-41d4-a716-446655440023',
-          dayOfWeek: day as any,
+          dayOfWeek: day as DayOfWeek,
         },
       },
       update: {},
@@ -438,8 +438,8 @@ async function main() {
     const randomMenu = menus.slice(0, 10)[Math.floor(Math.random() * 10)]; // 主要メニューから
 
     // ランダムなステータス（過去の予約）
-    const statuses = ['COMPLETED', 'COMPLETED', 'COMPLETED', 'CANCELLED']; // 75%完了、25%キャンセル
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    const statuses = ['COMPLETED', 'COMPLETED', 'COMPLETED', 'CANCELLED'] as const; // 75%完了、25%キャンセル
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)] as 'COMPLETED' | 'CANCELLED';
 
     reservations.push({
       id: `past-${i}`,
@@ -471,8 +471,8 @@ async function main() {
     const randomMenu = menus.slice(0, 10)[Math.floor(Math.random() * 10)];
 
     // 未来の予約は CONFIRMED または PENDING
-    const statuses = ['CONFIRMED', 'CONFIRMED', 'PENDING'];
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    const statuses = ['CONFIRMED', 'CONFIRMED', 'PENDING'] as const;
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)] as 'CONFIRMED' | 'PENDING';
 
     reservations.push({
       id: `future-${i}`,
