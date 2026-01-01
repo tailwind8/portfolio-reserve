@@ -24,6 +24,42 @@ interface StaffFormData {
   role?: string;
 }
 
+// シフト設定の型定義
+type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+interface ShiftData {
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}
+
+interface ShiftFormData {
+  [key: string]: {
+    enabled: boolean;
+    startTime: string;
+    endTime: string;
+  };
+}
+
+interface VacationFormData {
+  startDate: string;
+  endDate: string;
+  reason: string;
+}
+
+const DAY_OF_WEEK_MAP: { [key: string]: DayOfWeek } = {
+  '月曜日': 'MONDAY',
+  '火曜日': 'TUESDAY',
+  '水曜日': 'WEDNESDAY',
+  '木曜日': 'THURSDAY',
+  '金曜日': 'FRIDAY',
+  '土曜日': 'SATURDAY',
+  '日曜日': 'SUNDAY',
+};
+
+const DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
+
 export default function AdminStaffPage() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +70,7 @@ export default function AdminStaffPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showShiftModal, setShowShiftModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
 
   // フォームデータ
@@ -43,6 +80,15 @@ export default function AdminStaffPage() {
     phone: '',
     role: '',
   });
+
+  // シフト設定データ
+  const [shiftFormData, setShiftFormData] = useState<ShiftFormData>({});
+  const [vacationFormData, setVacationFormData] = useState<VacationFormData>({
+    startDate: '',
+    endDate: '',
+    reason: '',
+  });
+  const [activeTab, setActiveTab] = useState<'shift' | 'vacation'>('shift');
 
   // 検索
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,8 +157,144 @@ export default function AdminStaffPage() {
     setShowAddModal(false);
     setShowEditModal(false);
     setShowDeleteDialog(false);
+    setShowShiftModal(false);
     setSelectedStaff(null);
     setFormData({ name: '', email: '', phone: '', role: '' });
+    setShiftFormData({});
+    setVacationFormData({ startDate: '', endDate: '', reason: '' });
+    setActiveTab('shift');
+  };
+
+  const handleShiftSetting = async (staffMember: Staff) => {
+    setSelectedStaff(staffMember);
+
+    // 初期化
+    const initialShiftData: ShiftFormData = {};
+    DAYS.forEach(day => {
+      initialShiftData[day] = {
+        enabled: false,
+        startTime: '09:00',
+        endTime: '18:00',
+      };
+    });
+
+    // 既存のシフトを取得
+    try {
+      const response = await fetch(`/api/admin/staff/${staffMember.id}/shifts`);
+      const result = await response.json();
+
+      if (result.success && result.data.length > 0) {
+        result.data.forEach((shift: ShiftData) => {
+          const dayName = Object.keys(DAY_OF_WEEK_MAP).find(
+            key => DAY_OF_WEEK_MAP[key] === shift.dayOfWeek
+          );
+          if (dayName) {
+            initialShiftData[dayName] = {
+              enabled: shift.isActive,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+            };
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch shifts:', err);
+    }
+
+    setShiftFormData(initialShiftData);
+    setShowShiftModal(true);
+  };
+
+  const submitShiftSetting = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (!selectedStaff) return;
+
+      // 有効なシフトのみを抽出
+      const shifts: ShiftData[] = [];
+      Object.entries(shiftFormData).forEach(([day, data]) => {
+        if (data.enabled) {
+          const dayOfWeek = DAY_OF_WEEK_MAP[day];
+          if (dayOfWeek) {
+            // 時間の妥当性チェック
+            const startMinutes = timeToMinutes(data.startTime);
+            const endMinutes = timeToMinutes(data.endTime);
+
+            if (endMinutes <= startMinutes) {
+              setError('退勤時間は出勤時間より後である必要があります');
+              return;
+            }
+
+            shifts.push({
+              dayOfWeek,
+              startTime: data.startTime,
+              endTime: data.endTime,
+              isActive: true,
+            });
+          }
+        }
+      });
+
+      if (shifts.length === 0) {
+        setError('少なくとも1つのシフトを設定してください');
+        return;
+      }
+
+      const response = await fetch(`/api/admin/staff/${selectedStaff.id}/shifts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shifts }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccessMessage('シフトを保存しました');
+        closeModals();
+      } else {
+        setError(result.error?.message || result.error || 'シフトの保存に失敗しました');
+      }
+    } catch (err) {
+      setError('シフトの保存に失敗しました');
+      console.error('Submit shift error:', err);
+    }
+  };
+
+  const submitVacationSetting = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (!selectedStaff) return;
+
+      if (!vacationFormData.startDate || !vacationFormData.endDate) {
+        setError('休暇期間を入力してください');
+        return;
+      }
+
+      const response = await fetch(`/api/admin/staff/${selectedStaff.id}/vacations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vacationFormData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccessMessage('休暇を設定しました');
+        closeModals();
+      } else {
+        setError(result.error?.message || result.error || '休暇の設定に失敗しました');
+      }
+    } catch (err) {
+      setError('休暇の設定に失敗しました');
+      console.error('Submit vacation error:', err);
+    }
+  };
+
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
   };
 
   const submitAddStaff = async (e: React.FormEvent) => {
@@ -312,6 +494,15 @@ export default function AdminStaffPage() {
                       </Button>
 
                       <Button
+                        data-testid="shift-button"
+                        onClick={() => handleShiftSetting(staffMember)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        シフト設定
+                      </Button>
+
+                      <Button
                         data-testid="delete-button"
                         onClick={() => handleDeleteStaff(staffMember)}
                         variant="outline"
@@ -320,8 +511,6 @@ export default function AdminStaffPage() {
                       >
                         削除
                       </Button>
-
-                      {/* TODO: Issue #22でシフト設定ボタンを追加 */}
                     </div>
                   </div>
                 );
@@ -495,6 +684,209 @@ export default function AdminStaffPage() {
                 削除
               </Button>
             </div>
+          </Card>
+        </div>
+      )}
+
+      {/* シフト設定モーダル */}
+      {showShiftModal && selectedStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="shift-setting-modal">
+            <h2 data-testid="shift-modal-title" className="mb-4 text-xl font-semibold">
+              シフト設定 - {selectedStaff.name}
+            </h2>
+
+            {/* タブ */}
+            <div className="mb-6 flex gap-2 border-b border-gray-200">
+              <button
+                onClick={() => setActiveTab('shift')}
+                className={`px-4 py-2 font-medium ${
+                  activeTab === 'shift'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                シフト設定
+              </button>
+              <button
+                data-testid="vacation-tab"
+                onClick={() => setActiveTab('vacation')}
+                className={`px-4 py-2 font-medium ${
+                  activeTab === 'vacation'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                休暇設定
+              </button>
+            </div>
+
+            {/* シフト設定タブ */}
+            {activeTab === 'shift' && (
+              <form onSubmit={submitShiftSetting}>
+                <div className="space-y-4">
+                  {DAYS.map((day) => (
+                    <div key={day} className="flex items-center gap-4 rounded-lg border border-gray-200 p-4">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          data-testid="shift-day-checkbox"
+                          data-day={day}
+                          checked={shiftFormData[day]?.enabled || false}
+                          onChange={(e) =>
+                            setShiftFormData({
+                              ...shiftFormData,
+                              [day]: {
+                                ...shiftFormData[day],
+                                enabled: e.target.checked,
+                              },
+                            })
+                          }
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label className="ml-2 w-16 text-sm font-medium text-gray-700">{day}</label>
+                      </div>
+
+                      <div className="flex flex-1 items-center gap-2">
+                        <input
+                          type="time"
+                          data-testid="shift-start-time"
+                          data-day={day}
+                          value={shiftFormData[day]?.startTime || '09:00'}
+                          onChange={(e) =>
+                            setShiftFormData({
+                              ...shiftFormData,
+                              [day]: {
+                                ...shiftFormData[day],
+                                startTime: e.target.value,
+                              },
+                            })
+                          }
+                          disabled={!shiftFormData[day]?.enabled}
+                          className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+                        />
+                        <span className="text-gray-500">〜</span>
+                        <input
+                          type="time"
+                          data-testid="shift-end-time"
+                          data-day={day}
+                          value={shiftFormData[day]?.endTime || '18:00'}
+                          onChange={(e) =>
+                            setShiftFormData({
+                              ...shiftFormData,
+                              [day]: {
+                                ...shiftFormData[day],
+                                endTime: e.target.value,
+                              },
+                            })
+                          }
+                          disabled={!shiftFormData[day]?.enabled}
+                          className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {error && (
+                  <div data-testid="shift-modal-validation-error" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+                    {error}
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    data-testid="shift-modal-cancel-button"
+                    onClick={closeModals}
+                    variant="outline"
+                    size="md"
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="submit"
+                    data-testid="shift-modal-submit-button"
+                    variant="primary"
+                    size="md"
+                  >
+                    保存
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* 休暇設定タブ */}
+            {activeTab === 'vacation' && (
+              <form onSubmit={submitVacationSetting}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">開始日</label>
+                    <input
+                      type="date"
+                      data-testid="vacation-start-date"
+                      value={vacationFormData.startDate}
+                      onChange={(e) =>
+                        setVacationFormData({ ...vacationFormData, startDate: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">終了日</label>
+                    <input
+                      type="date"
+                      data-testid="vacation-end-date"
+                      value={vacationFormData.endDate}
+                      onChange={(e) =>
+                        setVacationFormData({ ...vacationFormData, endDate: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">理由（任意）</label>
+                    <textarea
+                      value={vacationFormData.reason}
+                      onChange={(e) =>
+                        setVacationFormData({ ...vacationFormData, reason: e.target.value })
+                      }
+                      rows={3}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+                    {error}
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    onClick={closeModals}
+                    variant="outline"
+                    size="md"
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="submit"
+                    data-testid="shift-modal-submit-button"
+                    variant="primary"
+                    size="md"
+                  >
+                    保存
+                  </Button>
+                </div>
+              </form>
+            )}
           </Card>
         </div>
       )}
