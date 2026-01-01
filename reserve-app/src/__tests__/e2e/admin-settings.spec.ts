@@ -45,6 +45,7 @@ test.describe('店舗設定管理 (#24)', () => {
     await settingsPage.expectStoreInfoSectionVisible();
     await settingsPage.expectBusinessHoursSectionVisible();
     await settingsPage.expectClosedDaysSectionVisible();
+    await settingsPage.expectSystemPublicSectionVisible();
     await settingsPage.expectSlotDurationSectionVisible();
   });
 

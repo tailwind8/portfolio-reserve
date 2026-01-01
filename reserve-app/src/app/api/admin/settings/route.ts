@@ -13,6 +13,7 @@ const updateSettingsSchema = z.object({
   closeTime: z.string().regex(/^\d{2}:\d{2}$/, '時刻の形式が正しくありません'),
   closedDays: z.array(z.string()).optional(),
   slotDuration: z.number().min(15, '予約枠は15分以上である必要があります').max(120, '予約枠は120分以下である必要があります'),
+  isPublic: z.boolean().optional().default(true),
 }).refine((data) => {
   // 開店時刻が閉店時刻より前であることを検証
   const openMinutes = parseInt(data.openTime.split(':')[0]) * 60 + parseInt(data.openTime.split(':')[1]);
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
           closeTime: '20:00',
           closedDays: [],
           slotDuration: 30,
+          isPublic: true,
         },
       });
     }
@@ -98,6 +100,7 @@ export async function PATCH(request: Request) {
         closeTime: validatedData.closeTime,
         closedDays: validatedData.closedDays || [],
         slotDuration: validatedData.slotDuration,
+        isPublic: validatedData.isPublic,
       },
       create: {
         tenantId,
@@ -108,6 +111,7 @@ export async function PATCH(request: Request) {
         closeTime: validatedData.closeTime,
         closedDays: validatedData.closedDays || [],
         slotDuration: validatedData.slotDuration,
+        isPublic: validatedData.isPublic,
       },
     });
 

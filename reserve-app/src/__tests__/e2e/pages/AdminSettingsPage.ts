@@ -344,4 +344,56 @@ export class AdminSettingsPage {
   async expectAccessDeniedMessage() {
     await expect(this.page.locator('[data-testid="access-denied-message"]')).toBeVisible();
   }
+
+  // ========================================
+  // システム公開設定
+  // ========================================
+
+  /**
+   * システム公開設定セクションが表示されることを確認
+   */
+  async expectSystemPublicSectionVisible() {
+    await expect(this.page.locator('[data-testid="system-public-section"]')).toBeVisible();
+  }
+
+  /**
+   * isPublicトグルをONにする（公開中）
+   */
+  async enableIsPublic() {
+    const toggle = this.page.locator('[data-testid="is-public-toggle"]');
+    if (!(await toggle.isChecked())) {
+      await toggle.check();
+    }
+  }
+
+  /**
+   * isPublicトグルをOFFにする（非公開）
+   */
+  async disableIsPublic() {
+    const toggle = this.page.locator('[data-testid="is-public-toggle"]');
+    if (await toggle.isChecked()) {
+      await toggle.uncheck();
+    }
+  }
+
+  /**
+   * isPublicトグルがONであることを確認
+   */
+  async expectIsPublicEnabled() {
+    await expect(this.page.locator('[data-testid="is-public-toggle"]')).toBeChecked();
+  }
+
+  /**
+   * isPublicトグルがOFFであることを確認
+   */
+  async expectIsPublicDisabled() {
+    await expect(this.page.locator('[data-testid="is-public-toggle"]')).not.toBeChecked();
+  }
+
+  /**
+   * isPublicラベルテキストを確認
+   */
+  async expectIsPublicLabel(label: 'システム公開中' | 'メンテナンス中（非公開）') {
+    await expect(this.page.locator('[data-testid="is-public-label"]')).toHaveText(label);
+  }
 }
