@@ -7,8 +7,8 @@ describe('Authentication Validations', () => {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '090-1234-5678',
-        password: 'password123',
-        passwordConfirm: 'password123',
+        password: 'Password123!',
+        passwordConfirm: 'Password123!',
         termsAccepted: true,
       };
 
@@ -21,8 +21,8 @@ describe('Authentication Validations', () => {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '',
-        password: 'password123',
-        passwordConfirm: 'password123',
+        password: 'Password123!',
+        passwordConfirm: 'Password123!',
         termsAccepted: true,
       };
 
@@ -35,8 +35,8 @@ describe('Authentication Validations', () => {
         name: '',
         email: 'yamada@example.com',
         phone: '090-1234-5678',
-        password: 'password123',
-        passwordConfirm: 'password123',
+        password: 'Password123!',
+        passwordConfirm: 'Password123!',
         termsAccepted: true,
       };
 
@@ -52,8 +52,8 @@ describe('Authentication Validations', () => {
         name: '山田太郎',
         email: 'invalid-email',
         phone: '090-1234-5678',
-        password: 'password123',
-        passwordConfirm: 'password123',
+        password: 'Password123!',
+        passwordConfirm: 'Password123!',
         termsAccepted: true,
       };
 
@@ -83,13 +83,13 @@ describe('Authentication Validations', () => {
       }
     });
 
-    it('should reject password without letters', () => {
+    it('should reject password without lowercase letters', () => {
       const invalidData = {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '090-1234-5678',
-        password: '12345678',
-        passwordConfirm: '12345678',
+        password: 'PASSWORD123!',
+        passwordConfirm: 'PASSWORD123!',
         termsAccepted: true,
       };
 
@@ -97,7 +97,26 @@ describe('Authentication Validations', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe(
-          'パスワードには少なくとも1つの英字を含めてください'
+          'パスワードには少なくとも1つの小文字英字を含めてください'
+        );
+      }
+    });
+
+    it('should reject password without uppercase letters', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'password123!',
+        passwordConfirm: 'password123!',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          'パスワードには少なくとも1つの大文字英字を含めてください'
         );
       }
     });
@@ -107,8 +126,8 @@ describe('Authentication Validations', () => {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '090-1234-5678',
-        password: 'password',
-        passwordConfirm: 'password',
+        password: 'Password!',
+        passwordConfirm: 'Password!',
         termsAccepted: true,
       };
 
@@ -121,13 +140,32 @@ describe('Authentication Validations', () => {
       }
     });
 
+    it('should reject password without symbols', () => {
+      const invalidData = {
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        phone: '090-1234-5678',
+        password: 'Password123',
+        passwordConfirm: 'Password123',
+        termsAccepted: true,
+      };
+
+      const result = registerSchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe(
+          'パスワードには少なくとも1つの記号（!@#$%^&*など）を含めてください'
+        );
+      }
+    });
+
     it('should reject mismatched passwords', () => {
       const invalidData = {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '090-1234-5678',
-        password: 'password123',
-        passwordConfirm: 'password456',
+        password: 'Password123!',
+        passwordConfirm: 'Password456!',
         termsAccepted: true,
       };
 
@@ -143,8 +181,8 @@ describe('Authentication Validations', () => {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '090-1234-5678',
-        password: 'password123',
-        passwordConfirm: 'password123',
+        password: 'Password123!',
+        passwordConfirm: 'Password123!',
         termsAccepted: false,
       };
 
@@ -170,8 +208,8 @@ describe('Authentication Validations', () => {
           name: '山田太郎',
           email: 'yamada@example.com',
           phone,
-          password: 'password123',
-          passwordConfirm: 'password123',
+          password: 'Password123!',
+          passwordConfirm: 'Password123!',
           termsAccepted: true,
         };
 
@@ -185,8 +223,8 @@ describe('Authentication Validations', () => {
         name: '山田太郎',
         email: 'yamada@example.com',
         phone: '123-456', // Too short
-        password: 'password123',
-        passwordConfirm: 'password123',
+        password: 'Password123!',
+        passwordConfirm: 'Password123!',
         termsAccepted: true,
       };
 

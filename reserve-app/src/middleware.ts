@@ -91,10 +91,31 @@ function validateCSRF(request: NextRequest): NextResponse | null {
 }
 
 /**
+ * 認証チェック
+ * Supabaseのセッションcookieを確認
+ */
+function checkAuthentication(request: NextRequest): boolean {
+  // Supabaseのセッションcookie名パターン
+  // sb-<project-ref>-auth-token または sb-<project-ref>-auth-token-code-verifier
+  const cookies = request.cookies;
+
+  // Supabaseのアクセストークンcookieを探す
+  // 一般的なパターン: sb-*-auth-token
+  let hasAuthToken = false;
+  cookies.getAll().forEach((cookie) => {
+    if (cookie.name.startsWith('sb-') && cookie.name.includes('auth-token') && cookie.value) {
+      hasAuthToken = true;
+    }
+  });
+
+  return hasAuthToken;
+}
+
+/**
  * ミドルウェア
  * 1. CSRF保護（POSTリクエスト時のorigin検証）
- * 2. システム非公開時は一般ユーザーをメンテナンス画面にリダイレクト
- * 3. 管理画面（/admin/*）は常にアクセス可能
+ * 2. 管理画面への認証チェック
+ * 3. システム非公開時は一般ユーザーをメンテナンス画面にリダイレクト
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -105,12 +126,24 @@ export async function middleware(request: NextRequest) {
     return csrfResponse;
   }
 
+  // 2. 管理画面への認証チェック
+  if (pathname.startsWith('/admin/')) {
+    const isAuthenticated = checkAuthentication(request);
+    if (!isAuthenticated) {
+      // 未ログイン時は/loginへリダイレクト（元のURLをクエリパラメータに保存）
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      console.log('[Auth] Unauthorized access to admin page, redirecting to login');
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // 除外パス（これらのパスは公開状態チェックをスキップ）
   const excludedPaths = [
     '/api/',
     '/_next/',
     '/favicon.ico',
-    '/admin/', // 管理画面は常にアクセス可能
+    '/admin/', // 管理画面（認証済み）
     '/maintenance', // メンテナンスページ自体
     '/login', // 管理者再ログイン用
     '/register', // 登録ページ
@@ -121,7 +154,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. 公開状態チェック
+  // 3. 公開状態チェック
   const isPublic = await getPublicStatus(request);
 
   if (!isPublic) {
