@@ -22,6 +22,7 @@ model RestaurantUser {
   email     String
   name      String?
   phone     String?
+  memo      String?  @default("") // 顧客メモ（500文字以内）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
