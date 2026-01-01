@@ -19,7 +19,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:push": "prisma db push",
-    "prisma:format": "prisma format"
+    "prisma:format": "prisma format",
+    "prisma:seed": "npx dotenv-cli -e .env.local -- npx tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "npx dotenv-cli -e .env.local -- npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
