@@ -3,12 +3,19 @@ import { loginSchema } from '@/lib/validations';
 import { supabase } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { checkRateLimit, loginRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/login
  * Authenticate user with Supabase Auth
  */
 export async function POST(request: NextRequest) {
+  // レート制限チェック
+  const rateLimitResponse = await checkRateLimit(request, loginRateLimit);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const body = await request.json();
 
