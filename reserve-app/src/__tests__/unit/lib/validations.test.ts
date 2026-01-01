@@ -8,7 +8,7 @@ describe('validations', () => {
   describe('availableSlotsQuerySchema', () => {
     it('should validate correct query parameters', () => {
       const validData = {
-        date: '2025-01-20',
+        date: '2026-01-20',
         menuId: '123e4567-e89b-12d3-a456-426614174000',
       };
 
@@ -18,7 +18,7 @@ describe('validations', () => {
 
     it('should validate with optional staffId', () => {
       const validData = {
-        date: '2025-01-20',
+        date: '2026-01-20',
         menuId: '123e4567-e89b-12d3-a456-426614174000',
         staffId: '123e4567-e89b-12d3-a456-426614174001',
       };
@@ -29,7 +29,7 @@ describe('validations', () => {
 
     it('should reject invalid date format', () => {
       const invalidData = {
-        date: '2025/01/20',
+        date: '2026/01/20',
         menuId: '123e4567-e89b-12d3-a456-426614174000',
       };
 
@@ -39,7 +39,7 @@ describe('validations', () => {
 
     it('should reject invalid menuId UUID', () => {
       const invalidData = {
-        date: '2025-01-20',
+        date: '2026-01-20',
         menuId: 'not-a-uuid',
       };
 
@@ -53,7 +53,7 @@ describe('validations', () => {
       const validData = {
         menuId: '123e4567-e89b-12d3-a456-426614174000',
         staffId: '123e4567-e89b-12d3-a456-426614174001',
-        reservedDate: '2025-12-31',
+        reservedDate: '2026-12-31',
         reservedTime: '14:00',
         notes: 'Window seat preferred',
       };
@@ -66,7 +66,7 @@ describe('validations', () => {
       const validData = {
         menuId: '123e4567-e89b-12d3-a456-426614174000',
         staffId: '123e4567-e89b-12d3-a456-426614174001',
-        reservedDate: '2025-12-31',
+        reservedDate: '2026-12-31',
         reservedTime: '14:00',
       };
 
@@ -90,7 +90,7 @@ describe('validations', () => {
       const invalidData = {
         menuId: '123e4567-e89b-12d3-a456-426614174000',
         staffId: '123e4567-e89b-12d3-a456-426614174001',
-        reservedDate: '2025-12-31',
+        reservedDate: '2026-12-31',
         reservedTime: '2:00 PM',
       };
 
@@ -102,7 +102,7 @@ describe('validations', () => {
       const invalidData = {
         menuId: '123e4567-e89b-12d3-a456-426614174000',
         staffId: '123e4567-e89b-12d3-a456-426614174001',
-        reservedDate: '2025-12-31',
+        reservedDate: '2026-12-31',
         reservedTime: '14:00',
         notes: 'a'.repeat(501),
       };
@@ -115,7 +115,7 @@ describe('validations', () => {
       const invalidData = {
         menuId: '123e4567-e89b-12d3-a456-426614174000',
         staffId: '123e4567-e89b-12d3-a456-426614174001',
-        reservedDate: '2025-12-31',
+        reservedDate: '2026-12-31',
         reservedTime: '24:00',
       };
 
@@ -136,7 +136,7 @@ describe('validations', () => {
 
     it('should validate multiple fields update', () => {
       const validData = {
-        reservedDate: '2025-12-31',
+        reservedDate: '2026-12-31',
         reservedTime: '15:00',
         notes: 'Updated notes',
       };

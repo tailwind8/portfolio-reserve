@@ -67,7 +67,7 @@ export class AdminStaffPage {
     // シフト設定モーダル
     shiftModal: '[data-testid="shift-setting-modal"]',
     shiftModalTitle: '[data-testid="shift-modal-title"]',
-    shiftModalDayCheckbox: '[data-testid="shift-day-checkbox"]',
+    shiftModalDayCheckbox: '[data-testid="shift-day-checkbox"]', // 曜日チェックボックス
     shiftModalStartTime: '[data-testid="shift-start-time"]',
     shiftModalEndTime: '[data-testid="shift-end-time"]',
     shiftModalSubmitButton: '[data-testid="shift-modal-submit-button"]',

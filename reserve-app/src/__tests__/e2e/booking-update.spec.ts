@@ -114,7 +114,7 @@ test.describe('予約変更機能', () => {
     await myPage.expectEditModalVisible();
 
     // 新しいスタッフを選択
-    await myPage.selectStaffByName('佐藤');
+    await myPage.selectStaffByName('佐藤花子');
 
     // 変更を保存
     await myPage.clickSaveChangesButton();
@@ -158,10 +158,10 @@ test.describe('予約変更機能', () => {
     await myPage.selectTimeSlot('18:00');
 
     // 新しいメニューを選択
-    await myPage.selectMenuByName('カット+カラー');
+    await myPage.selectMenuByName('パーマ');
 
     // 新しいスタッフを選択
-    await myPage.selectStaffByName('鈴木');
+    await myPage.selectStaffByName('鈴木一郎');
 
     // 変更を保存
     await myPage.clickSaveChangesButton();

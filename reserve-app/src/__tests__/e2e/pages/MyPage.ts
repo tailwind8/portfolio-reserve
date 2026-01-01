@@ -7,6 +7,20 @@ import { Page, expect, Locator } from '@playwright/test';
 export class MyPage {
   constructor(private page: Page) {}
 
+  // メニュー名からIDへのマッピング（MSWモックと一致）
+  private menuIds: Record<string, string> = {
+    'カット': '550e8400-e29b-41d4-a716-446655440001',
+    'カラー': '550e8400-e29b-41d4-a716-446655440002',
+    'パーマ': '550e8400-e29b-41d4-a716-446655440003',
+  };
+
+  // スタッフ名からIDへのマッピング（MSWモックと一致）
+  private staffIds: Record<string, string> = {
+    '田中太郎': '550e8400-e29b-41d4-a716-446655440011',
+    '佐藤花子': '550e8400-e29b-41d4-a716-446655440012',
+    '鈴木一郎': '550e8400-e29b-41d4-a716-446655440013',
+  };
+
   // セレクタを一箇所で管理
   private selectors = {
     pageHeading: 'h1',
@@ -347,17 +361,25 @@ export class MyPage {
    * @param menuName - メニュー名（例: "カット", "カラー"）
    */
   async selectMenuByName(menuName: string) {
+    const menuId = this.menuIds[menuName];
+    if (!menuId) {
+      throw new Error(`Unknown menu name: ${menuName}. Available: ${Object.keys(this.menuIds).join(', ')}`);
+    }
     const menuSelect = this.page.locator(this.selectors.menuSelect);
-    await menuSelect.selectOption({ label: menuName });
+    await menuSelect.selectOption({ value: menuId });
   }
 
   /**
    * 特定のスタッフを選択
-   * @param staffName - スタッフ名（例: "田中", "佐藤"）
+   * @param staffName - スタッフ名（例: "田中太郎", "佐藤花子"）
    */
   async selectStaffByName(staffName: string) {
+    const staffId = this.staffIds[staffName];
+    if (!staffId) {
+      throw new Error(`Unknown staff name: ${staffName}. Available: ${Object.keys(this.staffIds).join(', ')}`);
+    }
     const staffSelect = this.page.locator(this.selectors.staffSelect);
-    await staffSelect.selectOption({ label: staffName });
+    await staffSelect.selectOption({ value: staffId });
   }
 
   /**
