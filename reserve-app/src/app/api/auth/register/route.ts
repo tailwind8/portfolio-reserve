@@ -3,12 +3,19 @@ import { registerSchema } from '@/lib/validations';
 import { supabase, getSupabaseAdmin } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { checkRateLimit, registerRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/register
  * Register a new user with Supabase Auth and create user profile in database
  */
 export async function POST(request: NextRequest) {
+  // レート制限チェック
+  const rateLimitResponse = await checkRateLimit(request, registerRateLimit);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const body = await request.json();
 
