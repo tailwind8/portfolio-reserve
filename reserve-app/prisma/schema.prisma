@@ -120,6 +120,9 @@ model RestaurantSettings {
   minAdvanceBookingDays Int @default(0) @map("min_advance_booking_days") // 何日後から予約可能
   maxAdvanceBookingDays Int @default(90) @map("max_advance_booking_days") // 何日後まで予約可能
 
+  // キャンセル期限設定
+  cancellationDeadlineHours Int @default(24) @map("cancellation_deadline_hours") // 予約日の何時間前までキャンセル可能
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

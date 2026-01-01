@@ -24,6 +24,7 @@ type FormData = {
   isPublic: boolean;
   minAdvanceBookingDays: string;
   maxAdvanceBookingDays: string;
+  cancellationDeadlineHours: string;
 };
 
 const DAYS_OF_WEEK = [
@@ -56,6 +57,7 @@ export default function SettingsPage() {
     isPublic: true,
     minAdvanceBookingDays: '0',
     maxAdvanceBookingDays: '90',
+    cancellationDeadlineHours: '24',
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
@@ -79,6 +81,7 @@ export default function SettingsPage() {
           isPublic: settingsData.isPublic ?? true,
           minAdvanceBookingDays: settingsData.minAdvanceBookingDays.toString(),
           maxAdvanceBookingDays: settingsData.maxAdvanceBookingDays.toString(),
+          cancellationDeadlineHours: settingsData.cancellationDeadlineHours?.toString() || '24',
         });
       }
     } catch (error) {
@@ -129,6 +132,12 @@ export default function SettingsPage() {
       errors.push('最短予約日数は最長予約日数より小さい値を設定してください');
     }
 
+    // キャンセル期限のバリデーション
+    const cancellationHours = parseInt(formData.cancellationDeadlineHours);
+    if (isNaN(cancellationHours) || cancellationHours < 0) {
+      errors.push('キャンセル期限は0以上の値を入力してください');
+    }
+
     setFormErrors(errors);
     return errors.length === 0;
   };
@@ -160,6 +169,7 @@ export default function SettingsPage() {
           isPublic: formData.isPublic,
           minAdvanceBookingDays: parseInt(formData.minAdvanceBookingDays),
           maxAdvanceBookingDays: parseInt(formData.maxAdvanceBookingDays),
+          cancellationDeadlineHours: parseInt(formData.cancellationDeadlineHours),
         }),
       });
 
@@ -419,6 +429,37 @@ export default function SettingsPage() {
               />
               <p className="text-xs text-gray-500 mt-1">例: 90日後まで予約可能</p>
             </div>
+          </div>
+        </section>
+
+        {/* キャンセル期限設定 */}
+        <section data-testid="cancellation-deadline-section">
+          <h2 className="text-xl font-semibold mb-4">キャンセル期限設定</h2>
+          <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+            <p className="text-sm text-blue-800 mb-2">
+              <strong>説明:</strong> 予約日時の何時間前までキャンセル可能かを設定します。
+              例えば、24時間と設定すると、予約日時の24時間前までキャンセルできます。
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              キャンセル可能期限（予約日時の何時間前まで）
+            </label>
+            <input
+              data-testid="cancellation-deadline-hours-input"
+              type="number"
+              min="0"
+              value={formData.cancellationDeadlineHours}
+              onChange={(e) =>
+                setFormData({ ...formData, cancellationDeadlineHours: e.target.value })
+              }
+              className="w-full md:w-1/2 border rounded px-3 py-2"
+              placeholder="24"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              例: 24時間 = 予約日時の24時間前までキャンセル可能
+            </p>
           </div>
         </section>
 

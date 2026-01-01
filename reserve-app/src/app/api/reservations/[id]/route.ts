@@ -305,6 +305,32 @@ export async function DELETE(
       return errorResponse('Cannot cancel past reservation', 400, 'PAST_RESERVATION');
     }
 
+    // キャンセル期限チェック
+    const settings = await prisma.restaurantSettings.findUnique({
+      where: { tenantId: TENANT_ID },
+      select: { cancellationDeadlineHours: true },
+    });
+
+    const cancellationDeadlineHours = settings?.cancellationDeadlineHours || 24;
+
+    // 予約日時から期限時間を引いた時刻を計算
+    const [hours, minutes] = existingReservation.reservedTime.split(':').map(Number);
+    const reservationDateTime = new Date(existingReservation.reservedDate);
+    reservationDateTime.setHours(hours, minutes, 0, 0);
+
+    const deadlineDateTime = new Date(reservationDateTime);
+    deadlineDateTime.setHours(deadlineDateTime.getHours() - cancellationDeadlineHours);
+
+    const now = new Date();
+
+    if (now > deadlineDateTime) {
+      return errorResponse(
+        `キャンセル期限を過ぎています。予約日時の${cancellationDeadlineHours}時間前までキャンセル可能です。`,
+        400,
+        'CANCELLATION_DEADLINE_PASSED'
+      );
+    }
+
     // キャンセル理由を取得（オプション）
     let cancellationReason: string | undefined;
     try {
