@@ -172,6 +172,15 @@ export async function GET(request: NextRequest) {
       select: { id: true },
     });
 
+    // スタッフが存在しない場合、全ての時間スロットを利用可能として返す
+    if (activeStaff.length === 0) {
+      const slots: TimeSlot[] = allTimeSlots.map((time) => ({
+        time,
+        available: true,
+      }));
+      return successResponse<AvailableSlots>({ date, slots });
+    }
+
     const allReservations = await prisma.restaurantReservation.findMany({
       where: {
         tenantId: TENANT_ID,

@@ -170,27 +170,32 @@ export async function POST(request: NextRequest) {
       return errorResponse('Menu not found or inactive', 404, 'MENU_NOT_FOUND');
     }
 
-    // Check if staff exists and is active
-    const staff = await prisma.restaurantStaff.findUnique({
-      where: { id: staffId },
-    });
+    // Check if staff exists and is active (only if staffId is provided)
+    if (staffId) {
+      const staff = await prisma.restaurantStaff.findUnique({
+        where: { id: staffId },
+      });
 
-    if (!staff || !staff.isActive) {
-      return errorResponse('Staff not found or inactive', 404, 'STAFF_NOT_FOUND');
+      if (!staff || !staff.isActive) {
+        return errorResponse('Staff not found or inactive', 404, 'STAFF_NOT_FOUND');
+      }
     }
 
     // Check for duplicate reservations (same staff, date, and overlapping time)
-    const existingReservations = await prisma.restaurantReservation.findMany({
-      where: {
-        tenantId: TENANT_ID,
-        staffId,
-        reservedDate: new Date(reservedDate),
-        status: { in: ['PENDING', 'CONFIRMED'] },
-      },
-      include: {
-        menu: { select: { duration: true } },
-      },
-    });
+    // スタッフ指定がある場合のみチェック
+    const existingReservations = staffId
+      ? await prisma.restaurantReservation.findMany({
+          where: {
+            tenantId: TENANT_ID,
+            staffId,
+            reservedDate: new Date(reservedDate),
+            status: { in: ['PENDING', 'CONFIRMED'] },
+          },
+          include: {
+            menu: { select: { duration: true } },
+          },
+        })
+      : [];
 
     // Check for time slot conflicts
     const [newHour, newMinute] = reservedTime.split(':').map(Number);
@@ -217,17 +222,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Create reservation
+    const reservationData: {
+      tenantId: string;
+      userId: string;
+      menuId: string;
+      staffId?: string | null;
+      reservedDate: Date;
+      reservedTime: string;
+      notes?: string | null;
+      status: 'PENDING';
+    } = {
+      tenantId: TENANT_ID,
+      userId,
+      menuId,
+      reservedDate: new Date(reservedDate),
+      reservedTime,
+      notes,
+      status: 'PENDING',
+    };
+
+    // staffIdが指定されている場合のみ追加
+    if (staffId) {
+      reservationData.staffId = staffId;
+    }
+
     const reservation = await prisma.restaurantReservation.create({
-      data: {
-        tenantId: TENANT_ID,
-        userId,
-        menuId,
-        staffId,
-        reservedDate: new Date(reservedDate),
-        reservedTime,
-        notes,
-        status: 'PENDING',
-      },
+      data: reservationData,
       include: {
         user: {
           select: {
@@ -276,7 +296,7 @@ export async function POST(request: NextRequest) {
         to: reservation.user.email,
         userName: reservation.user.name || 'お客様',
         menuName: reservation.menu.name,
-        staffName: reservation.staff.name,
+        staffName: reservation.staff?.name || '指名なし',
         reservedDate: formattedReservation.reservedDate,
         reservedTime: reservation.reservedTime,
         price: reservation.menu.price,

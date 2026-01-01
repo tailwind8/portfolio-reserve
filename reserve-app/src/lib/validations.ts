@@ -16,7 +16,7 @@ const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
 export const availableSlotsQuerySchema = z.object({
   date: z.string().regex(dateRegex, 'Date must be in YYYY-MM-DD format'),
   menuId: z.string().uuid('Invalid menu ID'),
-  staffId: z.string().uuid('Invalid staff ID').optional(),
+  staffId: z.string().uuid('Invalid staff ID').nullable().optional(),
 });
 
 export type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>;
@@ -26,7 +26,7 @@ export type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>;
  */
 export const createReservationSchema = z.object({
   menuId: z.string().uuid('Invalid menu ID'),
-  staffId: z.string().uuid('Invalid staff ID'),
+  staffId: z.string().uuid('Invalid staff ID').nullable().optional(), // 指名なし可
   reservedDate: z
     .string()
     .regex(dateRegex, 'Date must be in YYYY-MM-DD format')

@@ -156,8 +156,7 @@ function BookingContent() {
   const isFormValid =
     selectedDate &&
     selectedTime &&
-    selectedMenuId &&
-    selectedStaffId;
+    selectedMenuId;
 
   const handleSubmit = async () => {
     if (!isFormValid || !selectedDate || !selectedTime) return;
@@ -168,7 +167,7 @@ function BookingContent() {
     try {
       const reservationData = {
         menuId: selectedMenuId,
-        staffId: selectedStaffId,
+        staffId: selectedStaffId || undefined, // 指名なしの場合はundefined
         reservedDate: selectedDate.toISOString().split('T')[0],
         reservedTime: selectedTime,
         notes: notes || undefined,

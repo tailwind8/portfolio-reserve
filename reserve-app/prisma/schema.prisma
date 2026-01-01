@@ -71,11 +71,11 @@ model RestaurantMenu {
 }
 
 model RestaurantReservation {
-  id       String @id @default(uuid())
-  tenantId String @default("demo-restaurant") @map("tenant_id")
-  userId   String @map("user_id")
-  staffId  String @map("staff_id")
-  menuId   String @map("menu_id")
+  id       String  @id @default(uuid())
+  tenantId String  @default("demo-restaurant") @map("tenant_id")
+  userId   String  @map("user_id")
+  staffId  String? @map("staff_id") // オプショナル（指名なし可）
+  menuId   String  @map("menu_id")
 
   reservedDate DateTime          @map("reserved_date") // 予約日
   reservedTime String            @map("reserved_time") // 予約時間（例: "14:00"）
@@ -85,9 +85,9 @@ model RestaurantReservation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user  RestaurantUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  staff RestaurantStaff @relation(fields: [staffId], references: [id])
-  menu  RestaurantMenu  @relation(fields: [menuId], references: [id])
+  user  RestaurantUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staff RestaurantStaff? @relation(fields: [staffId], references: [id])
+  menu  RestaurantMenu   @relation(fields: [menuId], references: [id])
 
   @@index([tenantId])
   @@index([userId])

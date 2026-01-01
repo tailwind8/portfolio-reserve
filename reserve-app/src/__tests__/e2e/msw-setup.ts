@@ -592,7 +592,7 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
       return;
     }
 
-    // 成功レスポンス
+    // 成功レスポンス（30分単位のスロット）
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -602,15 +602,175 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
           date,
           slots: [
             { time: '10:00', available: true },
+            { time: '10:30', available: true },
             { time: '11:00', available: true },
-            { time: '12:00', available: false },
+            { time: '11:30', available: false }, // 予約済み
+            { time: '12:00', available: false }, // 予約済み
+            { time: '12:30', available: true },
+            { time: '13:00', available: true },
+            { time: '13:30', available: true },
             { time: '14:00', available: true },
+            { time: '14:30', available: true },
             { time: '15:00', available: true },
+            { time: '15:30', available: true },
+            { time: '16:00', available: true },
+            { time: '16:30', available: true },
+            { time: '17:00', available: true },
+            { time: '17:30', available: true },
+            { time: '18:00', available: true },
+            { time: '18:30', available: true },
+            { time: '19:00', available: true },
+            { time: '19:30', available: true },
           ],
         },
         timestamp: new Date().toISOString(),
       }),
     });
+  });
+
+  // /api/admin/menus のモック
+  await page.route('**/api/admin/menus**', async (route) => {
+    const request = route.request();
+    const url = request.url();
+
+    // 個別メニューの操作（/:id）
+    if (url.match(/\/api\/admin\/menus\/[^/]+$/)) {
+      const menuId = url.split('/').pop();
+
+      if (request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: menuId,
+              name: 'カット',
+              description: 'シャンプー・ブロー込み',
+              price: 5000,
+              duration: 60,
+              category: 'ヘアケア',
+              isActive: true,
+              _count: {
+                reservations: 0,
+              },
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } else if (request.method() === 'PATCH') {
+        const postData = request.postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: menuId,
+              ...postData,
+              updatedAt: new Date().toISOString(),
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } else if (request.method() === 'DELETE') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: null,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      }
+      return;
+    }
+
+    // メニュー一覧の取得と作成
+    if (request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: [
+            {
+              id: '550e8400-e29b-41d4-a716-446655440001',
+              name: 'カット',
+              description: 'シャンプー・ブロー込み',
+              price: 5000,
+              duration: 60,
+              category: 'ヘアケア',
+              isActive: true,
+              _count: {
+                reservations: 0,
+              },
+            },
+            {
+              id: '550e8400-e29b-41d4-a716-446655440002',
+              name: 'カラー',
+              description: 'フルカラー',
+              price: 8000,
+              duration: 90,
+              category: 'カラーリング',
+              isActive: true,
+              _count: {
+                reservations: 0,
+              },
+            },
+            {
+              id: '550e8400-e29b-41d4-a716-446655440003',
+              name: 'パーマ',
+              description: 'デジタルパーマ',
+              price: 12000,
+              duration: 120,
+              category: 'パーマ',
+              isActive: true,
+              _count: {
+                reservations: 0,
+              },
+            },
+          ],
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } else if (request.method() === 'POST') {
+      const postData = request.postDataJSON();
+
+      // バリデーション
+      if (!postData?.name || !postData?.price || !postData?.duration) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'Validation failed',
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: '550e8400-e29b-41d4-a716-446655440004',
+            ...postData,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    }
   });
 
   // /api/admin/reservations のモック
