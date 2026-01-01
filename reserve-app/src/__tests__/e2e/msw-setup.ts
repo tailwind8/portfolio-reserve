@@ -1025,5 +1025,213 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
     }
   });
 
+  // /api/admin/customers のモック
+  await page.route('**/api/admin/customers**', async (route) => {
+    const request = route.request();
+    const url = request.url();
+
+    // 顧客メモ更新（/:id/memo）を先にチェック
+    if (url.match(/\/api\/admin\/customers\/[^/]+\/memo$/)) {
+      if (request.method() === 'PATCH') {
+        const postData = request.postDataJSON();
+        const customerId = url.split('/')[5]; // /api/admin/customers/[id]/memo
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: customerId,
+              memo: postData.memo || '',
+              updatedAt: new Date().toISOString(),
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      }
+      return;
+    }
+
+    // 顧客詳細取得（/:id）
+    if (url.match(/\/api\/admin\/customers\/[^/]+$/)) {
+      const customerId = url.split('/').pop()?.split('?')[0];
+
+      if (request.method() === 'GET') {
+        // 過去の来店日を生成
+        const pastDate1 = new Date();
+        pastDate1.setDate(pastDate1.getDate() - 30);
+        const pastDate2 = new Date();
+        pastDate2.setDate(pastDate2.getDate() - 15);
+        const pastDate3 = new Date();
+        pastDate3.setDate(pastDate3.getDate() - 5);
+
+        // 未来の予約日を生成
+        const futureDate1 = new Date();
+        futureDate1.setDate(futureDate1.getDate() + 7);
+        const futureDate2 = new Date();
+        futureDate2.setDate(futureDate2.getDate() + 14);
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: customerId,
+              name: '山田太郎',
+              email: 'yamada@example.com',
+              phone: '080-1111-2222',
+              memo: '',
+              visitHistory: [
+                {
+                  id: 'visit-1',
+                  date: pastDate1.toISOString().split('T')[0],
+                  time: '14:00',
+                  menuName: 'カット',
+                  menuPrice: 5000,
+                  menuDuration: 60,
+                  staffName: '田中太郎',
+                  staffRole: 'シニアスタイリスト',
+                },
+                {
+                  id: 'visit-2',
+                  date: pastDate2.toISOString().split('T')[0],
+                  time: '11:00',
+                  menuName: 'カラー',
+                  menuPrice: 8000,
+                  menuDuration: 90,
+                  staffName: '佐藤花子',
+                  staffRole: 'スタイリスト',
+                },
+                {
+                  id: 'visit-3',
+                  date: pastDate3.toISOString().split('T')[0],
+                  time: '15:00',
+                  menuName: 'カット',
+                  menuPrice: 5000,
+                  menuDuration: 60,
+                  staffName: '田中太郎',
+                  staffRole: 'シニアスタイリスト',
+                },
+              ],
+              reservationHistory: [
+                {
+                  id: 'reservation-1',
+                  date: futureDate1.toISOString().split('T')[0],
+                  time: '14:00',
+                  status: 'CONFIRMED',
+                  menuName: 'カット',
+                  menuPrice: 5000,
+                  staffName: '田中太郎',
+                  createdAt: new Date().toISOString(),
+                },
+                {
+                  id: 'reservation-2',
+                  date: futureDate2.toISOString().split('T')[0],
+                  time: '11:00',
+                  status: 'PENDING',
+                  menuName: 'カラー',
+                  menuPrice: 8000,
+                  staffName: '佐藤花子',
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+              visitCount: 3,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } else if (request.method() === 'PATCH') {
+        const postData = request.postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: customerId,
+              ...postData,
+              updatedAt: new Date().toISOString(),
+            },
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      }
+      return;
+    }
+
+    // 顧客一覧取得
+    if (request.method() === 'GET') {
+      const urlObj = new URL(url);
+      const search = urlObj.searchParams.get('search');
+
+      // 検索クエリがある場合はフィルタリング
+      const allCustomers = [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440031',
+          name: '山田太郎',
+          email: 'yamada@example.com',
+          phone: '080-1111-2222',
+          visitCount: 3,
+          lastVisitDate: '2025-01-15',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '550e8400-e29b-41d4-a716-446655440032',
+          name: '田中次郎',
+          email: 'tanaka.customer@example.com',
+          phone: '080-2222-3333',
+          visitCount: 5,
+          lastVisitDate: '2025-01-20',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '550e8400-e29b-41d4-a716-446655440033',
+          name: '鈴木由紀',
+          email: 'suzuki.yuki@example.com',
+          phone: '080-3333-4444',
+          visitCount: 2,
+          lastVisitDate: '2025-01-10',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '550e8400-e29b-41d4-a716-446655440034',
+          name: '佐藤明子',
+          email: 'sato.akiko@example.com',
+          phone: '080-4444-5555',
+          visitCount: 1,
+          lastVisitDate: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      let filteredCustomers = allCustomers;
+      if (search) {
+        filteredCustomers = allCustomers.filter(
+          (c) => c.name?.includes(search) || c.email.includes(search)
+        );
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: filteredCustomers,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
   console.log('✓ MSW API mocks setup complete for this page');
 }
