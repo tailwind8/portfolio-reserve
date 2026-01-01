@@ -111,6 +111,7 @@ export async function GET(request: Request) {
     );
 
     // リピート率計算（今月予約した顧客のうち、過去にも予約している人の割合）
+    // N+1問題を回避: 1回のクエリで今月予約した顧客のユニークIDを取得
     const uniqueCustomersThisMonth = await prisma.restaurantReservation.findMany({
       where: {
         tenantId,
@@ -125,27 +126,54 @@ export async function GET(request: Request) {
       distinct: ['userId'],
     });
 
-    let repeatCustomers = 0;
-    for (const { userId } of uniqueCustomersThisMonth) {
-      const pastReservations = await prisma.restaurantReservation.count({
-        where: {
-          tenantId,
-          userId,
-          reservedDate: {
-            lt: monthStart,
-          },
-        },
-      });
-      if (pastReservations > 0) {
-        repeatCustomers++;
-      }
-    }
+    const customerIds = uniqueCustomersThisMonth.map((r) => r.userId);
 
+    // N+1問題を回避: 1回のクエリで過去に予約があった顧客を全て取得
+    const customersWithPastReservations = customerIds.length > 0
+      ? await prisma.restaurantReservation.findMany({
+          where: {
+            tenantId,
+            userId: { in: customerIds },
+            reservedDate: {
+              lt: monthStart,
+            },
+          },
+          select: {
+            userId: true,
+          },
+          distinct: ['userId'],
+        })
+      : [];
+
+    const repeatCustomers = customersWithPastReservations.length;
     const repeatRate = uniqueCustomersThisMonth.length > 0
       ? Math.round((repeatCustomers / uniqueCustomersThisMonth.length) * 100)
       : 0;
 
     // 週間統計（過去7日間の予約件数）
+    // N+1問題を回避: 1回のクエリで7日分のデータを取得
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(now);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const weeklyReservations = await prisma.restaurantReservation.findMany({
+      where: {
+        tenantId,
+        reservedDate: {
+          gte: weekStart,
+          lte: weekEnd,
+        },
+        status: { not: 'CANCELLED' },
+      },
+      select: {
+        reservedDate: true,
+      },
+    });
+
+    // 日付ごとにグループ化してカウント
     const weeklyStats = [];
     for (let i = 6; i >= 0; i--) {
       const dayStart = new Date(now);
@@ -155,16 +183,10 @@ export async function GET(request: Request) {
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const count = await prisma.restaurantReservation.count({
-        where: {
-          tenantId,
-          reservedDate: {
-            gte: dayStart,
-            lte: dayEnd,
-          },
-          status: { not: 'CANCELLED' },
-        },
-      });
+      const count = weeklyReservations.filter((reservation) => {
+        const reservedDate = new Date(reservation.reservedDate);
+        return reservedDate >= dayStart && reservedDate <= dayEnd;
+      }).length;
 
       weeklyStats.push({
         date: dayStart.toISOString().split('T')[0],

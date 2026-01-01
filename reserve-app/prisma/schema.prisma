@@ -109,6 +109,8 @@ model RestaurantSettings {
 
   slotDuration Int @default(30) @map("slot_duration") // 予約枠の間隔（分）
 
+  isPublic Boolean @default(true) @map("is_public") // システム公開・非公開フラグ
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
