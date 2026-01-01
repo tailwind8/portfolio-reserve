@@ -77,16 +77,16 @@ describe('ReservationCard', () => {
   it('should render status badge for CONFIRMED status', () => {
     render(<ReservationCard reservation={mockReservation} type="upcoming" onUpdate={mockOnUpdate} />);
 
-    expect(screen.getByText('確定')).toBeInTheDocument();
-    expect(screen.getByText('確定').className).toContain('bg-green-100');
+    expect(screen.getByText('予約確定')).toBeInTheDocument();
+    expect(screen.getByText('予約確定').className).toContain('bg-green-100');
   });
 
   it('should render status badge for PENDING status', () => {
     const pendingReservation = { ...mockReservation, status: 'PENDING' as const };
     render(<ReservationCard reservation={pendingReservation} type="upcoming" onUpdate={mockOnUpdate} />);
 
-    expect(screen.getByText('確定待ち')).toBeInTheDocument();
-    expect(screen.getByText('確定待ち').className).toContain('bg-yellow-100');
+    expect(screen.getByText('予約待ち')).toBeInTheDocument();
+    expect(screen.getByText('予約待ち').className).toContain('bg-yellow-100');
   });
 
   it('should render status badge for CANCELLED status', () => {
@@ -94,7 +94,7 @@ describe('ReservationCard', () => {
     render(<ReservationCard reservation={cancelledReservation} type="past" onUpdate={mockOnUpdate} />);
 
     expect(screen.getByText('キャンセル')).toBeInTheDocument();
-    expect(screen.getByText('キャンセル').className).toContain('bg-gray-100');
+    expect(screen.getByText('キャンセル').className).toContain('bg-red-100');
   });
 
   it('should show edit and cancel buttons for upcoming reservations', () => {

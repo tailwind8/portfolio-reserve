@@ -3,23 +3,17 @@
 import { useState } from 'react';
 import Card from './Card';
 import Button from './Button';
+import StatusBadge from './StatusBadge';
 import ReservationUpdateModal from './ReservationUpdateModal';
 import CancellationDialog from './CancellationDialog';
 import type { Reservation } from '@/types/api';
+import type { ReservationStatus } from './StatusBadge';
 
 interface ReservationCardProps {
   reservation: Reservation;
   type: 'upcoming' | 'past';
   onUpdate: () => void;
 }
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING: { label: '確定待ち', color: 'bg-yellow-100 text-yellow-800' },
-  CONFIRMED: { label: '確定', color: 'bg-green-100 text-green-800' },
-  CANCELLED: { label: 'キャンセル', color: 'bg-gray-100 text-gray-800' },
-  COMPLETED: { label: '完了', color: 'bg-blue-100 text-blue-800' },
-  NO_SHOW: { label: '無断キャンセル', color: 'bg-red-100 text-red-800' },
-};
 
 export default function ReservationCard({
   reservation,
@@ -33,11 +27,6 @@ export default function ReservationCard({
     type === 'upcoming' &&
     !['CANCELLED', 'COMPLETED', 'NO_SHOW'].includes(reservation.status);
 
-  const statusInfo = STATUS_LABELS[reservation.status] || {
-    label: reservation.status,
-    color: 'bg-gray-100 text-gray-800',
-  };
-
   return (
     <>
       <Card hover>
@@ -45,11 +34,7 @@ export default function ReservationCard({
           {/* 予約情報 */}
           <div className="flex-1">
             <div className="mb-2 flex items-center gap-2">
-              <span
-                className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusInfo.color}`}
-              >
-                {statusInfo.label}
-              </span>
+              <StatusBadge status={reservation.status as ReservationStatus} />
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
