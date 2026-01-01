@@ -486,8 +486,9 @@ So that I can handle phone bookings
 
 ---
 
-### #19 [FEATURE] 顧客管理（一覧・詳細） ⚠️ OPEN
+### #19 [FEATURE] 顧客管理（一覧・詳細） ✅ CLOSED
 **Labels**: `feature`, `sprint-3`, `priority-medium`
+**完了日**: 2026-01-01
 
 **ユーザーストーリー**:
 ```
@@ -497,18 +498,37 @@ So that I can provide personalized service
 ```
 
 **実装タスク**:
-- [ ] 顧客一覧ページ作成
-- [ ] 顧客詳細ページ作成
-- [ ] 来店履歴表示機能
+- [x] 顧客一覧ページ作成
+- [x] 顧客詳細ページ作成
+- [x] 来店履歴表示機能
+- [x] 予約履歴表示機能
+- [x] 検索機能実装
+- [x] ソート機能実装
+
+**成果物**:
+- `reserve-app/src/app/api/admin/customers/route.ts`
+- `reserve-app/src/app/api/admin/customers/[id]/route.ts`
+- `reserve-app/src/app/admin/customers/page.tsx`
+- `reserve-app/src/app/admin/customers/[id]/page.tsx`
+- `reserve-app/src/__tests__/e2e/admin-customers.spec.ts`
 
 ---
 
-### #20 [FEATURE] 顧客メモ機能 ⚠️ OPEN
+### #20 [FEATURE] 顧客メモ機能 ✅ CLOSED
 **Labels**: `feature`, `sprint-3`, `priority-medium`
+**完了日**: 2026-01-01
 
 **実装タスク**:
-- [ ] 顧客メモCRUD機能
-- [ ] メモ表示UI
+- [x] 顧客メモCRUD機能
+- [x] メモ表示UI
+- [x] データベーススキーマ変更（memoフィールド追加）
+- [x] 文字数制限実装（500文字）
+- [x] 文字カウンター表示
+
+**成果物**:
+- `reserve-app/src/app/api/admin/customers/[id]/memo/route.ts`
+- `reserve-app/src/app/admin/customers/[id]/page.tsx`（メモ機能含む）
+- `reserve-app/prisma/schema.prisma`（memoフィールド追加）
 
 ---
 
@@ -810,8 +830,6 @@ Backlog → In Progress → Review → Done
 ### 未完了Issue一覧（優先順位順）
 
 **優先度: 中〜高**
-- #19: 顧客管理（一覧・詳細）
-- #20: 顧客メモ機能
 - #67: セキュリティイベントのログ記録実装
 - #70: トランザクションの実装
 - #71: 検索フィルターのDB最適化
@@ -830,7 +848,7 @@ Backlog → In Progress → Review → Done
 
 ### 推奨タスク優先順位
 1. **Issue #30をクローズ**: API設計書は既に完成
-2. **顧客管理機能の実装** (#19, #20): ポートフォリオ価値向上
+2. ~~**顧客管理機能の実装** (#19, #20): ポートフォリオ価値向上~~ ✅ 完了
 3. **分析レポート機能の実装** (#26, #27): データ可視化スキルのアピール
 4. **パフォーマンス強化** (#70, #71): システムの完成度向上
 5. **コンポーネント整理** (#29): 技術的負債の解消
