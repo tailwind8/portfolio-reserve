@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { AdminCustomersPage } from './pages/AdminCustomersPage';
-import { setupMSW } from './msw-setup';
+import { setupMSW, setupAdminAuth } from './msw-setup';
 
 /**
  * Feature: 顧客管理
@@ -20,10 +20,11 @@ test.describe('顧客管理 (#19, #20)', () => {
   test.beforeEach(async ({ page }) => {
     // MSW API モックをセットアップ
     await setupMSW(page);
+    
+    // 管理者認証cookieを設定（middlewareの認証チェックを通過するため）
+    await setupAdminAuth(page);
 
     customersPage = new AdminCustomersPage(page);
-    // TODO: 管理者ログイン処理を実装後に追加（Issue #7）
-    // 現在はログイン不要で顧客管理ページに直接アクセス
   });
 
   /**
@@ -53,12 +54,13 @@ test.describe('顧客管理 (#19, #20)', () => {
     expect(count).toBeGreaterThan(0);
 
     // And: 最初の顧客に必要な情報がすべて表示される
+    // 日付フォーマットは toLocaleDateString('ja-JP') により "2025/1/15" 形式になる
     await customersPage.expectCustomerItem(0, {
       name: '山田太郎',
       email: 'yamada@example.com',
       phone: '080-1111-2222',
       visitCount: 3,
-      lastVisitDate: '2025-01-15',
+      lastVisitDate: '2025/1/15',
     });
   });
 
@@ -167,7 +169,8 @@ test.describe('顧客管理 (#19, #20)', () => {
     // Then: 成功メッセージが表示される
     await customersPage.expectSuccessMessage('メモを保存しました');
 
-    // And: メモが顧客詳細に表示される
+    // And: メモが顧客詳細に表示される（ページ再読み込みを待つ）
+    await customersPage.page.waitForTimeout(500); // APIレスポンスとページ更新を待つ
     await customersPage.expectMemo(memoText);
   });
 

@@ -22,7 +22,15 @@ export interface MSWOptions {
   adminReservationsLarge?: boolean;
 }
 
+// メモ保存状態を保持するためのマップ（テスト間で共有）
+const customerMemoStore = new Map<string, string>();
+// 顧客情報保存状態を保持するためのマップ（テスト間で共有）
+const customerInfoStore = new Map<string, { name?: string; phone?: string }>();
+
 export async function setupMSW(page: Page, options: MSWOptions = {}) {
+  // メモストアと顧客情報ストアをクリア（各テストの開始時に）
+  customerMemoStore.clear();
+  customerInfoStore.clear();
   // /api/health のモック
   await page.route('**/api/health', async (route) => {
     await route.fulfill({
@@ -1034,7 +1042,14 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
     if (url.match(/\/api\/admin\/customers\/[^/]+\/memo$/)) {
       if (request.method() === 'PATCH') {
         const postData = request.postDataJSON();
-        const customerId = url.split('/')[5]; // /api/admin/customers/[id]/memo
+        // URLからcustomerIdを抽出: /api/admin/customers/[id]/memo
+        const urlParts = url.split('/');
+        const customerId = urlParts[urlParts.length - 2]; // memoの前の部分
+        
+        // メモをストアに保存
+        const memoValue = postData.memo || '';
+        customerMemoStore.set(customerId, memoValue);
+        console.log(`[MSW] Memo saved for customer ${customerId}: ${memoValue}`);
 
         await route.fulfill({
           status: 200,
@@ -1043,7 +1058,7 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
             success: true,
             data: {
               id: customerId,
-              memo: postData.memo || '',
+              memo: memoValue,
               updatedAt: new Date().toISOString(),
             },
             timestamp: new Date().toISOString(),
@@ -1054,8 +1069,14 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
     }
 
     // 顧客詳細取得（/:id）
-    if (url.match(/\/api\/admin\/customers\/[^/]+$/)) {
-      const customerId = url.split('/').pop()?.split('?')[0];
+    if (url.match(/\/api\/admin\/customers\/[^/]+$/) && !url.includes('/memo')) {
+      const urlParts = url.split('/');
+      const customerId = urlParts[urlParts.length - 1]?.split('?')[0] || '';
+      
+      // ストアからメモと顧客情報を取得
+      const savedMemo = customerMemoStore.get(customerId) || '';
+      const savedInfo = customerInfoStore.get(customerId) || {};
+      console.log(`[MSW] Fetching customer ${customerId}, memo: ${savedMemo}, info:`, savedInfo);
 
       if (request.method() === 'GET') {
         // 過去の来店日を生成
@@ -1079,10 +1100,10 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
             success: true,
             data: {
               id: customerId,
-              name: '山田太郎',
+              name: savedInfo.name || '山田太郎',
               email: 'yamada@example.com',
-              phone: '080-1111-2222',
-              memo: '',
+              phone: savedInfo.phone || '080-1111-2222',
+              memo: savedMemo,
               visitHistory: [
                 {
                   id: 'visit-1',
@@ -1146,6 +1167,16 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
         });
       } else if (request.method() === 'PATCH') {
         const postData = request.postDataJSON();
+        
+        // 顧客情報をストアに保存
+        const existingInfo = customerInfoStore.get(customerId) || {};
+        customerInfoStore.set(customerId, {
+          ...existingInfo,
+          ...(postData.name !== undefined && { name: postData.name }),
+          ...(postData.phone !== undefined && { phone: postData.phone }),
+        });
+        console.log(`[MSW] Customer info updated for ${customerId}:`, customerInfoStore.get(customerId));
+        
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -1234,4 +1265,25 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
   });
 
   console.log('✓ MSW API mocks setup complete for this page');
+}
+
+/**
+ * 管理者認証cookieを設定するヘルパー関数
+ * middlewareの認証チェックを通過するために使用
+ */
+export async function setupAdminAuth(page: Page) {
+  // Supabaseの認証cookieパターン: sb-<project-ref>-auth-token
+  // middleware.tsでこのパターンを探しているため、ダミーのcookieを設定
+  await page.context().addCookies([
+    {
+      name: 'sb-demo-restaurant-auth-token',
+      value: 'mock-auth-token-for-testing',
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+    },
+  ]);
+  console.log('✓ Admin auth cookie set for testing');
 }
