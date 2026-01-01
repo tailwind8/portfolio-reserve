@@ -36,6 +36,8 @@ model RestaurantStaff {
   id        String   @id @default(uuid())
   tenantId  String   @default("demo-restaurant") @map("tenant_id")
   name      String
+  email     String
+  phone     String?
   role      String? // 役職（例: スタイリスト、シニアスタイリスト）
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
@@ -43,6 +45,7 @@ model RestaurantStaff {
 
   reservations RestaurantReservation[]
 
+  @@unique([tenantId, email])
   @@index([tenantId])
   @@map("restaurant_staff")
 }
