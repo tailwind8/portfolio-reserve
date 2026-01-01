@@ -164,7 +164,7 @@ export function getReminderEmailHtml(data: ReminderEmailData): string {
     <div class="footer">
       <p>このメールは自動送信されています。<br>
       返信いただいても対応できませんのでご了承ください。</p>
-      <p>© 2025 Demo Restaurant. All rights reserved.</p>
+      <p>© 2025 Demo Booking. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -216,6 +216,6 @@ ${staffInfo}
 このメールは自動送信されています。
 返信いただいても対応できませんのでご了承ください。
 
-© 2025 Demo Restaurant. All rights reserved.
+© 2025 Demo Booking. All rights reserved.
   `.trim();
 }

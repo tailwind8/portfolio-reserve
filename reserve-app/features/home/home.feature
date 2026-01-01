@@ -2,7 +2,7 @@
 Feature: ホームページ（トップページ）
   As a visitor
   I want to view the home page
-  So that I can understand the restaurant reservation system and navigate to other pages
+  So that I can understand the booking system and navigate to other pages
 
   Background:
     Given ホームページにアクセスしている

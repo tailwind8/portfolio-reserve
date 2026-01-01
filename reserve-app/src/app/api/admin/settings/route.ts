@@ -42,10 +42,10 @@ const updateSettingsSchema = z.object({
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // 店舗設定を取得（1テナント1設定）
-    let settings = await prisma.restaurantSettings.findUnique({
+    let settings = await prisma.bookingSettings.findUnique({
       where: {
         tenantId,
       },
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
     // 設定が存在しない場合は初期値で作成
     if (!settings) {
-      settings = await prisma.restaurantSettings.create({
+      settings = await prisma.bookingSettings.create({
         data: {
           tenantId,
           storeName: 'サンプル美容室',
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = updateSettingsSchema.safeParse(body);
@@ -99,7 +99,7 @@ export async function PATCH(request: Request) {
     const validatedData = validation.data;
 
     // 店舗設定を更新（upsert: 存在しない場合は作成）
-    const settings = await prisma.restaurantSettings.upsert({
+    const settings = await prisma.bookingSettings.upsert({
       where: {
         tenantId,
       },

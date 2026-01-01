@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const category = searchParams.get('category');
-    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // フィルター条件を構築
     const where: Record<string, unknown> = {
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     }
 
     // メニュー一覧を取得
-    const menus = await prisma.restaurantMenu.findMany({
+    const menus = await prisma.bookingMenu.findMany({
       where,
       select: {
         id: true,
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = createMenuSchema.safeParse(body);
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     const { name, price, duration, category, description } = validation.data;
 
     // メニューを作成
-    const menu = await prisma.restaurantMenu.create({
+    const menu = await prisma.bookingMenu.create({
       data: {
         tenantId,
         name,

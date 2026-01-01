@@ -11,7 +11,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const TENANT_ID = 'demo-restaurant';
+const TENANT_ID = 'demo-booking';
 
 /**
  * リマインダーメール送信Cron Job API
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
     // 翌日の予約で、リマインダー未送信、かつキャンセルされていないものを取得
-    const reservations = await prisma.restaurantReservation.findMany({
+    const reservations = await prisma.bookingReservation.findMany({
       where: {
         tenantId: TENANT_ID,
         reservedDate: {
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         });
 
         // リマインダー送信済みフラグを立てる
-        await prisma.restaurantReservation.update({
+        await prisma.bookingReservation.update({
           where: { id: reservation.id },
           data: { reminderSent: true },
         });

@@ -793,7 +793,7 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
           success: true,
           data: {
             id: '550e8400-e29b-41d4-a716-446655440001',
-            tenantId: 'demo-restaurant',
+            tenantId: 'demo-booking',
             storeName: 'サンプル美容室',
             storeEmail: 'info@sample-salon.com',
             storePhone: '03-1234-5678',
@@ -875,7 +875,7 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
           success: true,
           data: {
             id: '550e8400-e29b-41d4-a716-446655440001',
-            tenantId: 'demo-restaurant',
+            tenantId: 'demo-booking',
             storeName: postData.storeName || 'サンプル美容室',
             storeEmail: postData.storeEmail || 'info@sample-salon.com',
             storePhone: postData.storePhone || '03-1234-5678',

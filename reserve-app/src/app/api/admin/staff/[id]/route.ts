@@ -22,9 +22,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id,
         tenantId,
@@ -68,7 +68,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = updateStaffSchema.safeParse(body);
@@ -83,7 +83,7 @@ export async function PATCH(
     }
 
     // スタッフの存在確認
-    const existingStaff = await prisma.restaurantStaff.findFirst({
+    const existingStaff = await prisma.bookingStaff.findFirst({
       where: {
         id,
         tenantId,
@@ -96,7 +96,7 @@ export async function PATCH(
 
     // メールアドレス変更時の重複チェック
     if (validation.data.email && validation.data.email !== existingStaff.email) {
-      const emailExists = await prisma.restaurantStaff.findFirst({
+      const emailExists = await prisma.bookingStaff.findFirst({
         where: {
           tenantId,
           email: validation.data.email,
@@ -116,7 +116,7 @@ export async function PATCH(
     }
 
     // スタッフ情報を更新
-    const staff = await prisma.restaurantStaff.update({
+    const staff = await prisma.bookingStaff.update({
       where: {
         id,
       },
@@ -149,10 +149,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // スタッフの存在確認
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id,
         tenantId,
@@ -180,7 +180,7 @@ export async function DELETE(
     }
 
     // 論理削除（isActiveをfalseに設定）
-    await prisma.restaurantStaff.update({
+    await prisma.bookingStaff.update({
       where: {
         id,
       },

@@ -10,14 +10,14 @@ datasource db {
 }
 
 // ========================================
-// Restaurant Reservation System Models
+// Booking System Models
 // ========================================
-// Note: All tables use 'restaurant_' prefix for multi-portfolio support
+// Note: All tables use 'booking_' prefix for multi-portfolio support
 // tenantId is used for logical data separation
 
-model RestaurantUser {
+model BookingUser {
   id        String   @id @default(uuid())
-  tenantId  String   @default("demo-restaurant") @map("tenant_id")
+  tenantId  String   @default("demo-booking") @map("tenant_id")
   authId    String?  @unique @map("auth_id") // Supabase Auth UUID
   email     String
   name      String?
@@ -26,16 +26,16 @@ model RestaurantUser {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  reservations RestaurantReservation[]
+  reservations BookingReservation[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
-  @@map("restaurant_users")
+  @@map("booking_users")
 }
 
-model RestaurantStaff {
+model BookingStaff {
   id        String   @id @default(uuid())
-  tenantId  String   @default("demo-restaurant") @map("tenant_id")
+  tenantId  String   @default("demo-booking") @map("tenant_id")
   name      String
   email     String
   phone     String?
@@ -44,18 +44,18 @@ model RestaurantStaff {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  reservations RestaurantReservation[]
-  shifts       RestaurantStaffShift[]
-  vacations    RestaurantStaffVacation[]
+  reservations BookingReservation[]
+  shifts       BookingStaffShift[]
+  vacations    BookingStaffVacation[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
-  @@map("restaurant_staff")
+  @@map("booking_staff")
 }
 
-model RestaurantMenu {
+model BookingMenu {
   id          String   @id @default(uuid())
-  tenantId    String   @default("demo-restaurant") @map("tenant_id")
+  tenantId    String   @default("demo-booking") @map("tenant_id")
   name        String
   description String?
   price       Int // 価格（円）
@@ -65,15 +65,15 @@ model RestaurantMenu {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  reservations RestaurantReservation[]
+  reservations BookingReservation[]
 
   @@index([tenantId])
-  @@map("restaurant_menus")
+  @@map("booking_menus")
 }
 
-model RestaurantReservation {
+model BookingReservation {
   id       String  @id @default(uuid())
-  tenantId String  @default("demo-restaurant") @map("tenant_id")
+  tenantId String  @default("demo-booking") @map("tenant_id")
   userId   String  @map("user_id")
   staffId  String? @map("staff_id") // オプショナル（指名なし可）
   menuId   String  @map("menu_id")
@@ -87,9 +87,9 @@ model RestaurantReservation {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user  RestaurantUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  staff RestaurantStaff? @relation(fields: [staffId], references: [id])
-  menu  RestaurantMenu   @relation(fields: [menuId], references: [id])
+  user  BookingUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staff BookingStaff? @relation(fields: [staffId], references: [id])
+  menu  BookingMenu   @relation(fields: [menuId], references: [id])
 
   @@index([tenantId])
   @@index([userId])
@@ -99,12 +99,12 @@ model RestaurantReservation {
   @@index([tenantId, staffId, reservedDate]) // スタッフの予約状況
   @@index([tenantId, status]) // ステータス別予約取得
   @@index([staffId, reservedDate, status]) // スタッフの空き状況確認
-  @@map("restaurant_reservations")
+  @@map("booking_reservations")
 }
 
-model RestaurantSettings {
+model BookingSettings {
   id         String  @id @default(uuid())
-  tenantId   String  @unique @default("demo-restaurant") @map("tenant_id")
+  tenantId   String  @unique @default("demo-booking") @map("tenant_id")
   storeName  String  @map("store_name")
   storeEmail String? @map("store_email")
   storePhone String? @map("store_phone")
@@ -127,16 +127,16 @@ model RestaurantSettings {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("restaurant_settings")
+  @@map("booking_settings")
 }
 
 // ========================================
 // Staff Shift Models
 // ========================================
 
-model RestaurantStaffShift {
+model BookingStaffShift {
   id        String    @id @default(uuid())
-  tenantId  String    @default("demo-restaurant") @map("tenant_id")
+  tenantId  String    @default("demo-booking") @map("tenant_id")
   staffId   String    @map("staff_id")
   dayOfWeek DayOfWeek @map("day_of_week") // 曜日
   startTime String    @map("start_time") // 出勤時間（例: "09:00"）
@@ -145,17 +145,17 @@ model RestaurantStaffShift {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  staff RestaurantStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff BookingStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, staffId, dayOfWeek])
   @@index([tenantId])
   @@index([staffId])
-  @@map("restaurant_staff_shifts")
+  @@map("booking_staff_shifts")
 }
 
-model RestaurantStaffVacation {
+model BookingStaffVacation {
   id        String   @id @default(uuid())
-  tenantId  String   @default("demo-restaurant") @map("tenant_id")
+  tenantId  String   @default("demo-booking") @map("tenant_id")
   staffId   String   @map("staff_id")
   startDate DateTime @map("start_date") // 休暇開始日
   endDate   DateTime @map("end_date") // 休暇終了日
@@ -163,12 +163,12 @@ model RestaurantStaffVacation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  staff RestaurantStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff BookingStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([staffId])
   @@index([startDate, endDate])
-  @@map("restaurant_staff_vacations")
+  @@map("booking_staff_vacations")
 }
 
 // ========================================

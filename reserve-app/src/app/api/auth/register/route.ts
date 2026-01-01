@@ -28,10 +28,10 @@ export async function POST(request: NextRequest) {
     const { name, email, phone, password } = validationResult.data;
 
     // Get tenant ID from environment
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // Check if user already exists in database
-    const existingUser = await prisma.restaurantUser.findFirst({
+    const existingUser = await prisma.bookingUser.findFirst({
       where: {
         tenantId,
         email,
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Create user profile in database
     try {
-      const user = await prisma.restaurantUser.create({
+      const user = await prisma.bookingUser.create({
         data: {
           tenantId,
           authId: authData.user.id,

@@ -31,10 +31,10 @@ export async function GET(
 ) {
   try {
     const { id: staffId } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // スタッフの存在確認
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id: staffId,
         tenantId,
@@ -46,7 +46,7 @@ export async function GET(
     }
 
     // シフトを取得
-    const shifts = await prisma.restaurantStaffShift.findMany({
+    const shifts = await prisma.bookingStaffShift.findMany({
       where: {
         staffId,
         tenantId,
@@ -96,7 +96,7 @@ export async function POST(
   try {
     const { id: staffId } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = createShiftsSchema.safeParse(body);
@@ -113,7 +113,7 @@ export async function POST(
     const { shifts } = validation.data;
 
     // スタッフの存在確認
-    const staff = await prisma.restaurantStaff.findFirst({
+    const staff = await prisma.bookingStaff.findFirst({
       where: {
         id: staffId,
         tenantId,
@@ -139,7 +139,7 @@ export async function POST(
     }
 
     // 既存のシフトを削除（上書き保存）
-    await prisma.restaurantStaffShift.deleteMany({
+    await prisma.bookingStaffShift.deleteMany({
       where: {
         staffId,
         tenantId,
@@ -147,7 +147,7 @@ export async function POST(
     });
 
     // 新しいシフトを作成
-    const createdShifts = await prisma.restaurantStaffShift.createMany({
+    const createdShifts = await prisma.bookingStaffShift.createMany({
       data: shifts.map((shift) => ({
         tenantId,
         staffId,
@@ -159,7 +159,7 @@ export async function POST(
     });
 
     // 作成されたシフトを取得して返す
-    const savedShifts = await prisma.restaurantStaffShift.findMany({
+    const savedShifts = await prisma.bookingStaffShift.findMany({
       where: {
         staffId,
         tenantId,

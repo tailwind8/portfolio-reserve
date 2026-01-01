@@ -5,7 +5,7 @@ import { createReservationSchema } from '@/lib/validations';
 import { sendReservationConfirmationEmail } from '@/lib/email';
 import type { Reservation } from '@/types/api';
 
-const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
 /**
  * Get all reservations for the current user
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
     }
 
-    const reservations = await prisma.restaurantReservation.findMany({
+    const reservations = await prisma.bookingReservation.findMany({
       where: {
         tenantId: TENANT_ID,
         userId,
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     const { menuId, staffId, reservedDate, reservedTime, notes } = validation.data;
 
     // Check if menu exists and is active
-    const menu = await prisma.restaurantMenu.findUnique({
+    const menu = await prisma.bookingMenu.findUnique({
       where: { id: menuId },
     });
 
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     // Check if staff exists and is active (only if staffId is provided)
     if (staffId) {
-      const staff = await prisma.restaurantStaff.findUnique({
+      const staff = await prisma.bookingStaff.findUnique({
         where: { id: staffId },
       });
 
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     // Check for duplicate reservations (same staff, date, and overlapping time)
     // スタッフ指定がある場合のみチェック
     const existingReservations = staffId
-      ? await prisma.restaurantReservation.findMany({
+      ? await prisma.bookingReservation.findMany({
           where: {
             tenantId: TENANT_ID,
             staffId,
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
       reservationData.staffId = staffId;
     }
 
-    const reservation = await prisma.restaurantReservation.create({
+    const reservation = await prisma.bookingReservation.create({
       data: reservationData,
       include: {
         user: {

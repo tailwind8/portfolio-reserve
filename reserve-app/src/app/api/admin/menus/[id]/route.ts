@@ -24,9 +24,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    const menu = await prisma.restaurantMenu.findFirst({
+    const menu = await prisma.bookingMenu.findFirst({
       where: {
         id,
         tenantId,
@@ -71,7 +71,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // バリデーション
     const validation = updateMenuSchema.safeParse(body);
@@ -86,7 +86,7 @@ export async function PATCH(
     }
 
     // メニューの存在確認
-    const existingMenu = await prisma.restaurantMenu.findFirst({
+    const existingMenu = await prisma.bookingMenu.findFirst({
       where: {
         id,
         tenantId,
@@ -98,7 +98,7 @@ export async function PATCH(
     }
 
     // メニュー情報を更新
-    const menu = await prisma.restaurantMenu.update({
+    const menu = await prisma.bookingMenu.update({
       where: {
         id,
       },
@@ -132,10 +132,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // メニューの存在確認
-    const menu = await prisma.restaurantMenu.findFirst({
+    const menu = await prisma.bookingMenu.findFirst({
       where: {
         id,
         tenantId,
@@ -163,7 +163,7 @@ export async function DELETE(
     }
 
     // 論理削除（isActiveをfalseに設定）
-    await prisma.restaurantMenu.update({
+    await prisma.bookingMenu.update({
       where: {
         id,
       },

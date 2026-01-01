@@ -5,7 +5,7 @@ import { updateReservationSchema, cancelReservationSchema } from '@/lib/validati
 import { sendReservationUpdateEmail, sendReservationCancellationEmail } from '@/lib/email';
 import type { Reservation } from '@/types/api';
 
-const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
 /**
  * Get reservation by ID
@@ -23,7 +23,7 @@ export async function GET(
       return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
     }
 
-    const reservation = await prisma.restaurantReservation.findFirst({
+    const reservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId: TENANT_ID,
@@ -84,7 +84,7 @@ export async function PATCH(
     }
 
     // 既存予約取得
-    const existingReservation = await prisma.restaurantReservation.findFirst({
+    const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId: TENANT_ID,
@@ -125,7 +125,7 @@ export async function PATCH(
     let newMenu = existingReservation.menu;
 
     if (menuId && menuId !== existingReservation.menuId) {
-      const menu = await prisma.restaurantMenu.findUnique({
+      const menu = await prisma.bookingMenu.findUnique({
         where: { id: menuId },
         select: { id: true, name: true, duration: true, price: true, isActive: true },
       });
@@ -137,7 +137,7 @@ export async function PATCH(
     }
 
     if (staffId && staffId !== existingReservation.staffId) {
-      const staff = await prisma.restaurantStaff.findUnique({
+      const staff = await prisma.bookingStaff.findUnique({
         where: { id: staffId },
         select: { id: true, name: true, isActive: true },
       });
@@ -157,7 +157,7 @@ export async function PATCH(
       reservedTime !== undefined ||
       staffId !== undefined
     ) {
-      const overlappingReservations = await prisma.restaurantReservation.findMany({
+      const overlappingReservations = await prisma.bookingReservation.findMany({
         where: {
           tenantId: TENANT_ID,
           staffId: finalStaffId,
@@ -201,7 +201,7 @@ export async function PATCH(
       staffName: existingReservation.staff?.name || '指名なし',
     };
 
-    const updatedReservation = await prisma.restaurantReservation.update({
+    const updatedReservation = await prisma.bookingReservation.update({
       where: { id },
       data: {
         ...(menuId && { menuId }),
@@ -270,7 +270,7 @@ export async function DELETE(
     }
 
     // 既存予約取得
-    const existingReservation = await prisma.restaurantReservation.findFirst({
+    const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId: TENANT_ID,
@@ -306,7 +306,7 @@ export async function DELETE(
     }
 
     // キャンセル期限チェック
-    const settings = await prisma.restaurantSettings.findUnique({
+    const settings = await prisma.bookingSettings.findUnique({
       where: { tenantId: TENANT_ID },
       select: { cancellationDeadlineHours: true },
     });
@@ -344,7 +344,7 @@ export async function DELETE(
     }
 
     // ステータスをCANCELLEDに更新（ソフトデリート）
-    const cancelledReservation = await prisma.restaurantReservation.update({
+    const cancelledReservation = await prisma.bookingReservation.update({
       where: { id },
       data: {
         status: 'CANCELLED',

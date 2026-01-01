@@ -12,9 +12,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    const reservation = await prisma.restaurantReservation.findFirst({
+    const reservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId,
@@ -114,10 +114,10 @@ export async function PATCH(
     }
 
     const { menuId, staffId, reservedDate, reservedTime, status, notes } = validation.data;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // 既存予約の確認
-    const existingReservation = await prisma.restaurantReservation.findFirst({
+    const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId,
@@ -130,7 +130,7 @@ export async function PATCH(
 
     // メニューが指定されている場合、存在確認
     if (menuId) {
-      const menu = await prisma.restaurantMenu.findFirst({
+      const menu = await prisma.bookingMenu.findFirst({
         where: {
           id: menuId,
           tenantId,
@@ -145,7 +145,7 @@ export async function PATCH(
 
     // スタッフが指定されている場合、存在確認
     if (staffId) {
-      const staff = await prisma.restaurantStaff.findFirst({
+      const staff = await prisma.bookingStaff.findFirst({
         where: {
           id: staffId,
           tenantId,
@@ -164,7 +164,7 @@ export async function PATCH(
       const checkDate = reservedDate ? new Date(reservedDate) : existingReservation.reservedDate;
       const checkTime = reservedTime || existingReservation.reservedTime;
 
-      const conflictingReservation = await prisma.restaurantReservation.findFirst({
+      const conflictingReservation = await prisma.bookingReservation.findFirst({
         where: {
           id: { not: id }, // 自分自身を除く
           tenantId,
@@ -196,7 +196,7 @@ export async function PATCH(
     if (notes !== undefined) updateData.notes = notes;
 
     // 予約を更新
-    const updatedReservation = await prisma.restaurantReservation.update({
+    const updatedReservation = await prisma.bookingReservation.update({
       where: {
         id,
       },
@@ -264,10 +264,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // 既存予約の確認
-    const existingReservation = await prisma.restaurantReservation.findFirst({
+    const existingReservation = await prisma.bookingReservation.findFirst({
       where: {
         id,
         tenantId,
@@ -279,7 +279,7 @@ export async function DELETE(
     }
 
     // 予約を削除
-    await prisma.restaurantReservation.delete({
+    await prisma.bookingReservation.delete({
       where: {
         id,
       },
