@@ -19,7 +19,7 @@ export type FeatureFlagName =
 /**
  * 機能フラグをデータベースから直接取得する
  */
-async function getFeatureFlags(): Promise<Record<FeatureFlagName, boolean> | null> {
+export async function getFeatureFlags(): Promise<Record<FeatureFlagName, boolean> | null> {
   try {
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
