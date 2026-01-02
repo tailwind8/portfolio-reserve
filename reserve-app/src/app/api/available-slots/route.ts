@@ -147,8 +147,8 @@ export async function GET(request: NextRequest) {
       return errorResponse('Store settings not found', 404, 'SETTINGS_NOT_FOUND');
     }
 
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-    if (settings.closedDays.includes(dayOfWeek)) {
+    const closedDayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+    if (settings.closedDays.includes(closedDayName)) {
       return successResponse<AvailableSlots>({
         date,
         slots: [],

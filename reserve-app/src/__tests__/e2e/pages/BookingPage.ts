@@ -83,9 +83,10 @@ export class BookingPage {
 
   /**
    * スタッフ選択ドロップダウンが表示されることを検証
+   * 機能フラグのAPI取得を待つため、タイムアウトを延長
    */
   async expectStaffSelectVisible() {
-    await expect(this.page.locator(this.selectors.staffSelect)).toBeVisible();
+    await expect(this.page.locator(this.selectors.staffSelect)).toBeVisible({ timeout: 10000 });
   }
 
   /**

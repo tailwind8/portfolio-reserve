@@ -174,7 +174,7 @@ test.describe('Issue #77: スタッフ指名機能のON/OFF設定', () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowDay = tomorrow.getDate();
     await page.click(`[data-day="${tomorrowDay}"]`);
-    await expect(page.locator('[data-testid="time-slot"]')).toBeVisible();
+    await expect(page.locator('[data-testid="time-slot"]').first()).toBeVisible();
   });
 
   test('スタッフ指名機能がOFFの場合、スタッフが自動割り当てされる', async ({ page }) => {
