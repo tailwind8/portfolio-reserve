@@ -1,4 +1,4 @@
-import { PrismaClient, DayOfWeek } from '@prisma/client';
+import { PrismaClient, DayOfWeek, UserRole } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
@@ -498,6 +498,50 @@ async function main() {
   }
   console.log(`✅ 予約を${reservations.length}件作成しました\n`);
 
+  // 7. スーパーadminユーザー作成
+  console.log('📝 スーパーadminユーザーを作成中...');
+  const superAdminId = 'super-admin-001';
+  await prisma.bookingUser.upsert({
+    where: { id: superAdminId },
+    update: {},
+    create: {
+      id: superAdminId,
+      tenantId: TENANT_ID,
+      email: 'contact@tailwind8.com',
+      name: 'スーパー管理者',
+      phone: '080-0000-0000',
+      role: 'SUPER_ADMIN',
+      memo: '開発者用スーパーadminアカウント',
+    },
+  });
+  console.log('✅ スーパーadminユーザーを作成しました');
+  console.log('   📧 Email: contact@tailwind8.com');
+  console.log('   🔑 Role: SUPER_ADMIN\n');
+
+  // 8. FeatureFlag作成
+  console.log('📝 機能フラグを作成中...');
+  await prisma.featureFlag.upsert({
+    where: { tenantId: TENANT_ID },
+    update: {},
+    create: {
+      tenantId: TENANT_ID,
+      // デモ環境では実装済み機能のみ有効化
+      enableStaffSelection: true, // スタッフ指名機能（実装済み）
+      enableStaffShiftManagement: true, // スタッフシフト管理（実装済み）
+      enableCustomerManagement: true, // 顧客管理・メモ機能（実装済み）
+      enableReservationUpdate: false, // 予約変更機能（未実装）
+      enableReminderEmail: true, // リマインダーメール（実装済み）
+      enableManualReservation: true, // 予約手動追加（実装済み）
+      enableAnalyticsReport: true, // 分析レポート（実装済み）
+      enableRepeatRateAnalysis: false, // リピート率分析（未実装）
+      enableCouponFeature: false, // クーポン機能（未実装）
+      enableLineNotification: false, // LINE通知連携（未実装）
+    },
+  });
+  console.log('✅ 機能フラグを作成しました');
+  console.log('   ✓ 実装済み機能: 6個を有効化');
+  console.log('   ✗ 未実装機能: 4個を無効化\n');
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🎉 すべてのデモデータを作成しました！');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -507,8 +551,13 @@ async function main() {
   console.log(`  ├─ スタッフ: ${staff.length}件`);
   console.log(`  ├─ スタッフシフト: 複数曜日`);
   console.log(`  ├─ 顧客: ${users.length}件`);
-  console.log(`  └─ 予約: ${reservations.length}件`);
-  console.log('\n🌐 デモサイトでご確認ください！\n');
+  console.log(`  ├─ 予約: ${reservations.length}件`);
+  console.log(`  ├─ スーパーadmin: 1件 (contact@tailwind8.com)`);
+  console.log(`  └─ 機能フラグ: 10種類 (実装済み6個/未実装4個)`);
+  console.log('\n🌐 デモサイトでご確認ください！');
+  console.log('\n🔐 スーパー管理者アカウント:');
+  console.log('   Email: contact@tailwind8.com');
+  console.log('   ※ Supabaseで事前にアカウントを作成してください\n');
 }
 
 main()
