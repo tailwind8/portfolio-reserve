@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { checkRateLimit, loginRateLimit } from '@/lib/rate-limit';
+import { logSecurityEvent, getClientIp, getUserAgent } from '@/lib/security-logger';
 
 /**
  * POST /api/auth/login
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
+
+  // クライアント情報を取得
+  const ipAddress = getClientIp(request);
+  const userAgent = getUserAgent(request);
 
   try {
     const body = await request.json();
@@ -35,6 +40,18 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error('Supabase Auth error:', authError);
+
+      // ログイン失敗をログに記録
+      await logSecurityEvent({
+        eventType: 'LOGIN_FAILED',
+        ipAddress,
+        userAgent,
+        metadata: {
+          email,
+          reason: authError.message,
+        },
+      });
+
       return errorResponse(
         'Invalid email or password',
         401
@@ -84,6 +101,15 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // ログイン成功をログに記録
+        await logSecurityEvent({
+          eventType: 'LOGIN_SUCCESS',
+          userId: newUser.id,
+          ipAddress,
+          userAgent,
+          metadata: { email: newUser.email },
+        });
+
         return successResponse({
           user: newUser,
           session: {
@@ -97,6 +123,15 @@ export async function POST(request: NextRequest) {
         return errorResponse('Failed to create user profile', 500);
       }
     }
+
+    // ログイン成功をログに記録
+    await logSecurityEvent({
+      eventType: 'LOGIN_SUCCESS',
+      userId: user.id,
+      ipAddress,
+      userAgent,
+      metadata: { email: user.email },
+    });
 
     return successResponse({
       user,

@@ -220,8 +220,8 @@ export async function GET(request: NextRequest) {
     const enableShiftManagement = featureFlags?.enableStaffShiftManagement || false;
 
     // シフト管理がONの場合、シフトと休暇情報を取得
-    let staffShifts: Map<string, { dayOfWeek: string; startTime: string; endTime: string; isActive: boolean }[]> = new Map();
-    let staffVacations: Map<string, { startDate: Date; endDate: Date }[]> = new Map();
+    const staffShifts: Map<string, { dayOfWeek: string; startTime: string; endTime: string; isActive: boolean }[]> = new Map();
+    const staffVacations: Map<string, { startDate: Date; endDate: Date }[]> = new Map();
 
     if (enableShiftManagement) {
       // 指定日の曜日を取得

@@ -1,6 +1,7 @@
 import { Ratelimit, type Duration } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { logSecurityEvent, getUserAgent } from './security-logger';
 
 /**
  * Upstash Redisクライアント
@@ -114,6 +115,21 @@ export async function checkRateLimit(
 
     // レート制限に達した場合、429エラーを返す
     const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+
+    // レート制限超過をログに記録
+    const userAgent = getUserAgent(request);
+    const endpoint = new URL(request.url).pathname;
+    await logSecurityEvent({
+      eventType: 'RATE_LIMIT_EXCEEDED',
+      ipAddress: ip,
+      userAgent,
+      metadata: {
+        endpoint,
+        limit: limit.toString(),
+        remaining: remaining.toString(),
+        reset: new Date(reset).toISOString(),
+      },
+    });
 
     return NextResponse.json(
       {

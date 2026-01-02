@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { prisma } from './prisma';
 import type { User } from '@supabase/supabase-js';
 import { errorResponse } from './api-response';
+import { logSecurityEvent, getClientIp, getUserAgent } from './security-logger';
 
 /**
  * 認証ヘルパー関数
@@ -164,6 +165,21 @@ export function checkAdminAuthHeader(
   }
 
   if (userRole !== 'admin' && userRole !== 'ADMIN') {
+    // 権限エラーをログに記録
+    const ipAddress = getClientIp(request);
+    const userAgent = getUserAgent(request);
+    const path = new URL(request.url).pathname;
+
+    logSecurityEvent({
+      eventType: 'UNAUTHORIZED_ACCESS',
+      userId,
+      ipAddress,
+      userAgent,
+      metadata: { path, method: request.method, reason: 'Admin role required' },
+    }).catch((error) => {
+      console.error('Failed to log security event:', error);
+    });
+
     return errorResponse('管理者権限が必要です', 403, 'FORBIDDEN');
   }
 
@@ -197,6 +213,26 @@ export function checkResourceAccessHeader(
   if (userId === resourceUserId) {
     return true;
   }
+
+  // 権限エラーをログに記録
+  const ipAddress = getClientIp(request);
+  const userAgent = getUserAgent(request);
+  const path = new URL(request.url).pathname;
+
+  logSecurityEvent({
+    eventType: 'UNAUTHORIZED_ACCESS',
+    userId,
+    ipAddress,
+    userAgent,
+    metadata: {
+      path,
+      method: request.method,
+      reason: 'Resource access denied',
+      resourceUserId,
+    },
+  }).catch((error) => {
+    console.error('Failed to log security event:', error);
+  });
 
   return errorResponse('このリソースにアクセスする権限がありません', 403, 'FORBIDDEN');
 }

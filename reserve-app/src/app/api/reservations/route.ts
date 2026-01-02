@@ -160,7 +160,8 @@ export async function POST(request: NextRequest) {
       return errorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    let { menuId, staffId, reservedDate, reservedTime, notes } = validation.data;
+    const { menuId, reservedDate, reservedTime, notes } = validation.data;
+    let { staffId } = validation.data;
 
     // Check if menu exists and is active
     const menu = await prisma.bookingMenu.findUnique({

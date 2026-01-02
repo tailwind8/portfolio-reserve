@@ -4,6 +4,7 @@ import { supabase, getSupabaseAdmin } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { checkRateLimit, registerRateLimit } from '@/lib/rate-limit';
+import { logSecurityEvent, getClientIp, getUserAgent } from '@/lib/security-logger';
 
 /**
  * POST /api/auth/register
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
+
+  // クライアント情報を取得
+  const ipAddress = getClientIp(request);
+  const userAgent = getUserAgent(request);
 
   try {
     const body = await request.json();
@@ -84,6 +89,15 @@ export async function POST(request: NextRequest) {
           phone: true,
           createdAt: true,
         },
+      });
+
+      // ユーザー登録をログに記録
+      await logSecurityEvent({
+        eventType: 'USER_REGISTER',
+        userId: user.id,
+        ipAddress,
+        userAgent,
+        metadata: { email: user.email },
       });
 
       return successResponse(

@@ -226,3 +226,25 @@ enum UserRole {
   ADMIN // 店舗管理者
   SUPER_ADMIN // スーパー管理者（開発者）
 }
+
+// ========================================
+// Security Logging Model
+// ========================================
+
+model SecurityLog {
+  id        String   @id @default(uuid())
+  tenantId  String   @default("demo-booking") @map("tenant_id")
+  eventType String   @map("event_type") // LOGIN_SUCCESS, LOGIN_FAILED, USER_REGISTER, LOGOUT, UNAUTHORIZED_ACCESS, RATE_LIMIT_EXCEEDED
+  userId    String?  @map("user_id") // ログインユーザーがいる場合
+  ipAddress String?  @map("ip_address") // リクエスト元IPアドレス
+  userAgent String?  @map("user_agent") // User-Agent文字列
+  metadata  Json? // その他の情報（email、reason、pathなど）
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([tenantId, eventType, createdAt]) // イベント種別・日時での検索用
+  @@map("security_logs")
+}
