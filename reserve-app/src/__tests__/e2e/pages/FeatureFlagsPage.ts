@@ -28,6 +28,13 @@ export class FeatureFlagsPage {
   }
 
   /**
+   * ページが読み込まれるまで待つ
+   */
+  async waitForLoad() {
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
    * 見出しを検証
    */
   async expectHeading(headingText: string) {
@@ -104,7 +111,8 @@ export class FeatureFlagsPage {
    */
   async toggleFeature(featureName: string) {
     const toggle = this.getToggle(featureName);
-    await toggle.click();
+    // force: trueを使用してスタイル要素の干渉を回避
+    await toggle.click({ force: true });
   }
 
   /**
@@ -144,9 +152,9 @@ export class FeatureFlagsPage {
 
   /**
    * 成功メッセージが表示されることを検証
-   * @param message - メッセージ内容
+   * @param message - メッセージ内容（デフォルト: "保存しました"）
    */
-  async expectSuccessMessage(message: string) {
+  async expectSuccessMessage(message: string = '保存しました') {
     const element = this.page.locator(`text=${message}`);
     await expect(element).toBeVisible({ timeout: 10000 });
   }
