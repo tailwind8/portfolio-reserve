@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-response';
 import { createReservationSchema } from '@/lib/validations';
 import { sendReservationConfirmationEmail } from '@/lib/email';
+import { getFeatureFlags } from '@/lib/api-feature-flag';
 import type { Reservation } from '@/types/api';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
       return errorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const { menuId, staffId, reservedDate, reservedTime, notes } = validation.data;
+    let { menuId, staffId, reservedDate, reservedTime, notes } = validation.data;
 
     // Check if menu exists and is active
     const menu = await prisma.bookingMenu.findUnique({
@@ -168,6 +169,76 @@ export async function POST(request: NextRequest) {
 
     if (!menu || !menu.isActive) {
       return errorResponse('Menu not found or inactive', 404, 'MENU_NOT_FOUND');
+    }
+
+    // 機能フラグを取得
+    const featureFlags = await getFeatureFlags();
+
+    // Issue #77: スタッフ指名機能がOFFの場合、スタッフを自動割り当て
+    if (featureFlags && !featureFlags.enableStaffSelection && !staffId) {
+      // 利用可能なスタッフを検索
+      const availableStaff = await prisma.bookingStaff.findMany({
+        where: {
+          tenantId: TENANT_ID,
+          isActive: true,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (availableStaff.length === 0) {
+        return errorResponse('No staff available', 404, 'NO_STAFF_AVAILABLE');
+      }
+
+      // 各スタッフの予約状況を確認し、空いているスタッフを見つける
+      const [reservedHour, reservedMinute] = reservedTime.split(':').map(Number);
+      const reservedStartMinutes = reservedHour * 60 + reservedMinute;
+      const reservedEndMinutes = reservedStartMinutes + menu.duration;
+
+      for (const staff of availableStaff) {
+        // スタッフの既存予約を確認
+        const staffReservations = await prisma.bookingReservation.findMany({
+          where: {
+            tenantId: TENANT_ID,
+            staffId: staff.id,
+            reservedDate: new Date(reservedDate),
+            status: { in: ['PENDING', 'CONFIRMED'] },
+          },
+          include: {
+            menu: { select: { duration: true } },
+          },
+        });
+
+        // 時間重複チェック
+        let isAvailable = true;
+        for (const res of staffReservations) {
+          const [resHour, resMinute] = res.reservedTime.split(':').map(Number);
+          const resStartMinutes = resHour * 60 + resMinute;
+          const resEndMinutes = resStartMinutes + res.menu.duration;
+
+          // 時間が重複している場合
+          if (
+            (reservedStartMinutes >= resStartMinutes && reservedStartMinutes < resEndMinutes) ||
+            (reservedEndMinutes > resStartMinutes && reservedEndMinutes <= resEndMinutes) ||
+            (reservedStartMinutes <= resStartMinutes && reservedEndMinutes >= resEndMinutes)
+          ) {
+            isAvailable = false;
+            break;
+          }
+        }
+
+        // 空いているスタッフが見つかった
+        if (isAvailable) {
+          staffId = staff.id;
+          break;
+        }
+      }
+
+      // 空いているスタッフが見つからなかった場合
+      if (!staffId) {
+        return errorResponse('No available staff for the selected time', 409, 'NO_STAFF_AVAILABLE_FOR_TIME');
+      }
     }
 
     // Check if staff exists and is active (only if staffId is provided)

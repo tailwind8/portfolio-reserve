@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-response';
 import { availableSlotsQuerySchema } from '@/lib/validations';
+import { getFeatureFlags } from '@/lib/api-feature-flag';
 import type { AvailableSlots, TimeSlot } from '@/types/api';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -29,6 +30,39 @@ function generateTimeSlots(
   }
 
   return slots;
+}
+
+/**
+ * Issue #78: スタッフがシフト内で勤務しているかチェック
+ */
+function isStaffWorkingAtTime(
+  time: string,
+  shifts: { dayOfWeek: string; startTime: string; endTime: string; isActive: boolean }[],
+  dayOfWeek: string
+): boolean {
+  // シフトが登録されていない場合は勤務していない
+  if (shifts.length === 0) {
+    return false;
+  }
+
+  // 指定された曜日のアクティブなシフトを検索
+  const shift = shifts.find((s) => s.dayOfWeek === dayOfWeek && s.isActive);
+  if (!shift) {
+    return false;
+  }
+
+  // 時間を分に変換
+  const [timeHour, timeMinute] = time.split(':').map(Number);
+  const timeMinutes = timeHour * 60 + timeMinute;
+
+  const [startHour, startMinute] = shift.startTime.split(':').map(Number);
+  const startMinutes = startHour * 60 + startMinute;
+
+  const [endHour, endMinute] = shift.endTime.split(':').map(Number);
+  const endMinutes = endHour * 60 + endMinute;
+
+  // シフト内の時間かチェック
+  return timeMinutes >= startMinutes && timeMinutes < endMinutes;
 }
 
 /**
@@ -113,8 +147,8 @@ export async function GET(request: NextRequest) {
       return errorResponse('Store settings not found', 404, 'SETTINGS_NOT_FOUND');
     }
 
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-    if (settings.closedDays.includes(dayOfWeek)) {
+    const closedDayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+    if (settings.closedDays.includes(closedDayName)) {
       return successResponse<AvailableSlots>({
         date,
         slots: [],
@@ -181,6 +215,110 @@ export async function GET(request: NextRequest) {
       return successResponse<AvailableSlots>({ date, slots });
     }
 
+    // Issue #78: 機能フラグを取得してシフト管理を確認
+    const featureFlags = await getFeatureFlags();
+    const enableShiftManagement = featureFlags?.enableStaffShiftManagement || false;
+
+    // シフト管理がONの場合、シフトと休暇情報を取得
+    let staffShifts: Map<string, { dayOfWeek: string; startTime: string; endTime: string; isActive: boolean }[]> = new Map();
+    let staffVacations: Map<string, { startDate: Date; endDate: Date }[]> = new Map();
+
+    if (enableShiftManagement) {
+      // 指定日の曜日を取得
+      const dateObj = new Date(date);
+      const dayOfWeekMap = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const dayOfWeek = dayOfWeekMap[dateObj.getDay()];
+
+      // 全スタッフのシフト情報を取得
+      const shifts = await prisma.bookingStaffShift.findMany({
+        where: {
+          tenantId: TENANT_ID,
+          staffId: { in: activeStaff.map((s) => s.id) },
+          isActive: true,
+        },
+        select: {
+          staffId: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+          isActive: true,
+        },
+      });
+
+      // スタッフごとにシフトをグループ化
+      for (const shift of shifts) {
+        const staffShiftList = staffShifts.get(shift.staffId) || [];
+        staffShiftList.push({
+          dayOfWeek: shift.dayOfWeek,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          isActive: shift.isActive,
+        });
+        staffShifts.set(shift.staffId, staffShiftList);
+      }
+
+      // 全スタッフの休暇情報を取得
+      const vacations = await prisma.bookingStaffVacation.findMany({
+        where: {
+          tenantId: TENANT_ID,
+          staffId: { in: activeStaff.map((s) => s.id) },
+          startDate: { lte: new Date(date + 'T23:59:59Z') },
+          endDate: { gte: new Date(date + 'T00:00:00Z') },
+        },
+        select: {
+          staffId: true,
+          startDate: true,
+          endDate: true,
+        },
+      });
+
+      // スタッフごとに休暇をグループ化
+      for (const vacation of vacations) {
+        const staffVacationList = staffVacations.get(vacation.staffId) || [];
+        staffVacationList.push({
+          startDate: vacation.startDate,
+          endDate: vacation.endDate,
+        });
+        staffVacations.set(vacation.staffId, staffVacationList);
+      }
+
+      // シフト管理ON時: シフト未登録または休暇中のスタッフを除外
+      const dateObj2 = new Date(date);
+      const dayOfWeek2 = dayOfWeekMap[dateObj2.getDay()];
+
+      // スタッフをフィルタリング
+      const filteredStaff = activeStaff.filter((staff) => {
+        // 休暇中のスタッフを除外
+        const vacationList = staffVacations.get(staff.id) || [];
+        if (vacationList.length > 0) {
+          return false;
+        }
+
+        // シフト未登録のスタッフを除外
+        const shiftList = staffShifts.get(staff.id) || [];
+        if (shiftList.length === 0) {
+          return false;
+        }
+
+        // 指定曜日のシフトがないスタッフを除外
+        const hasShiftToday = shiftList.some((s) => s.dayOfWeek === dayOfWeek2 && s.isActive);
+        return hasShiftToday;
+      });
+
+      // フィルタリング後のスタッフを使用
+      activeStaff.length = 0;
+      activeStaff.push(...filteredStaff);
+
+      // フィルタリング後にスタッフが0人の場合
+      if (activeStaff.length === 0) {
+        const slots: TimeSlot[] = allTimeSlots.map((time) => ({
+          time,
+          available: false,
+        }));
+        return successResponse<AvailableSlots>({ date, slots });
+      }
+    }
+
     const allReservations = await prisma.bookingReservation.findMany({
       where: {
         tenantId: TENANT_ID,
@@ -203,9 +341,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 指定日の曜日を取得（シフトチェック用）
+    const dateObj = new Date(date);
+    const dayOfWeekMap = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayOfWeek = dayOfWeekMap[dateObj.getDay()];
+
     // Check if any staff is available for each time slot
     const slots: TimeSlot[] = allTimeSlots.map((time) => {
       for (const [sid, reservations] of reservationsByStaff.entries()) {
+        // シフト管理がONの場合、シフト内の時間かチェック
+        if (enableShiftManagement) {
+          const shifts = staffShifts.get(sid) || [];
+          if (!isStaffWorkingAtTime(time, shifts, dayOfWeek)) {
+            continue; // シフト外の時間はスキップ
+          }
+        }
+
+        // 予約可能かチェック
         if (isSlotAvailable(time, reservations, menu.duration)) {
           return { time, available: true, staffId: sid };
         }

@@ -183,7 +183,8 @@ function BookingContent() {
         headers: {
           'Content-Type': 'application/json',
           // TODO: Replace with actual authenticated user ID
-          'x-user-id': 'temp-user-id',
+          // 暫定的にシードデータの最初のユーザーID（山田 太郎）を使用
+          'x-user-id': '550e8400-e29b-41d4-a716-446655440031',
         },
         body: JSON.stringify(reservationData),
       });
@@ -304,6 +305,7 @@ function BookingContent() {
                             key={day}
                             onClick={() => handleDateClick(day)}
                             disabled={isPast}
+                            data-day={day}
                             className={`
                               aspect-square rounded-lg p-2 text-sm font-medium transition-colors
                               ${isPast ? 'cursor-not-allowed text-gray-300' : ''}
@@ -345,6 +347,7 @@ function BookingContent() {
                               key={slot.time}
                               onClick={() => slot.available && handleTimeClick(slot.time, slot.staffId)}
                               disabled={!slot.available}
+                              data-testid="time-slot"
                               className={`
                                 rounded-lg border px-4 py-3 text-sm font-medium transition-colors
                                 ${selectedTime === slot.time ? 'bg-blue-500 text-white border-blue-500' : ''}
