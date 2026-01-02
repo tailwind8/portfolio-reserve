@@ -23,6 +23,7 @@ model BookingUser {
   name      String?
   phone     String?
   memo      String?  @default("") // 顧客メモ（500文字以内）
+  role      UserRole @default(CUSTOMER) // ユーザーロール（CUSTOMER, ADMIN, SUPER_ADMIN）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -30,6 +31,7 @@ model BookingUser {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([role]) // ロール検索用インデックス
   @@map("booking_users")
 }
 
@@ -172,6 +174,32 @@ model BookingStaffVacation {
 }
 
 // ========================================
+// Feature Flags Model
+// ========================================
+
+model FeatureFlag {
+  id       String @id @default(uuid())
+  tenantId String @unique @default("demo-booking") @map("tenant_id")
+
+  // オプション機能のフラグ（10種類）
+  enableStaffSelection       Boolean @default(false) @map("enable_staff_selection") // スタッフ指名機能 (+8,000円)
+  enableStaffShiftManagement Boolean @default(false) @map("enable_staff_shift_management") // スタッフシフト管理 (+10,000円)
+  enableCustomerManagement   Boolean @default(true) @map("enable_customer_management") // 顧客管理・メモ機能 (+12,000円) ※既に実装済み
+  enableReservationUpdate    Boolean @default(false) @map("enable_reservation_update") // 予約変更機能 (+5,000円)
+  enableReminderEmail        Boolean @default(true) @map("enable_reminder_email") // リマインダーメール (+8,000円) ※一部実装済み
+  enableManualReservation    Boolean @default(true) @map("enable_manual_reservation") // 予約手動追加 (+6,000円) ※既に実装済み
+  enableAnalyticsReport      Boolean @default(true) @map("enable_analytics_report") // 分析レポート (+15,000円) ※一部実装済み
+  enableRepeatRateAnalysis   Boolean @default(false) @map("enable_repeat_rate_analysis") // リピート率分析 (+12,000円)
+  enableCouponFeature        Boolean @default(false) @map("enable_coupon_feature") // クーポン機能 (+18,000円)
+  enableLineNotification     Boolean @default(false) @map("enable_line_notification") // LINE通知連携 (+20,000円)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("feature_flags")
+}
+
+// ========================================
 // Enums
 // ========================================
 
@@ -191,4 +219,10 @@ enum DayOfWeek {
   FRIDAY // 金曜日
   SATURDAY // 土曜日
   SUNDAY // 日曜日
+}
+
+enum UserRole {
+  CUSTOMER // 一般ユーザー（顧客）
+  ADMIN // 店舗管理者
+  SUPER_ADMIN // スーパー管理者（開発者）
 }

@@ -6,11 +6,15 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import type { Menu, Staff, TimeSlot } from '@/types/api';
 
 function BookingContent() {
   const searchParams = useSearchParams();
   const preselectedMenuId = searchParams.get('menuId');
+
+  // 機能フラグを取得
+  const { flags: featureFlags } = useFeatureFlags();
 
   // State
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -27,6 +31,7 @@ function BookingContent() {
   const [selectedMenuId, setSelectedMenuId] = useState<string>(preselectedMenuId || '');
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [couponCode, setCouponCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -414,27 +419,30 @@ function BookingContent() {
                       </select>
                     </div>
 
-                    <div>
-                      <label htmlFor="staff" className="mb-1 block text-sm font-medium text-gray-700">
-                        担当者
-                      </label>
-                      <select
-                        id="staff"
-                        value={selectedStaffId}
-                        onChange={(e) => {
-                          setSelectedStaffId(e.target.value);
-                          setSelectedTime(null);
-                        }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">指名なし</option>
-                        {staff.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} {s.role && `（${s.role}）`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* スタッフ選択（機能フラグで制御） */}
+                    {featureFlags?.enableStaffSelection && (
+                      <div>
+                        <label htmlFor="staff" className="mb-1 block text-sm font-medium text-gray-700">
+                          担当者
+                        </label>
+                        <select
+                          id="staff"
+                          value={selectedStaffId}
+                          onChange={(e) => {
+                            setSelectedStaffId(e.target.value);
+                            setSelectedTime(null);
+                          }}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">指名なし</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} {s.role && `（${s.role}）`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     <div>
                       <label htmlFor="notes" className="mb-1 block text-sm font-medium text-gray-700">
@@ -451,6 +459,25 @@ function BookingContent() {
                       />
                       <p className="mt-1 text-xs text-gray-500">{notes.length}/500文字</p>
                     </div>
+
+                    {/* クーポン入力（機能フラグで制御） */}
+                    {featureFlags?.enableCouponFeature && (
+                      <div>
+                        <label htmlFor="coupon" className="mb-1 block text-sm font-medium text-gray-700">
+                          クーポンコード（任意）
+                        </label>
+                        <input
+                          id="coupon"
+                          type="text"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          placeholder="クーポンコードを入力"
+                          maxLength={50}
+                          data-testid="coupon-input"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
 
                     {selectedMenu && (
                       <div className="border-t pt-4">

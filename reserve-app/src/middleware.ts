@@ -139,7 +139,29 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. 管理画面への認証チェック
+  // 3. スーパー管理者画面への認証チェック
+  if (pathname.startsWith('/super-admin/')) {
+    // ログインページは除外
+    if (!pathname.startsWith('/super-admin/login')) {
+      // E2Eテスト環境では認証をスキップ
+      const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
+      if (!skipAuthInTest) {
+        const isAuthenticated = checkAuthentication(request);
+        if (!isAuthenticated) {
+          // 未ログイン時は/super-admin/loginへリダイレクト
+          const loginUrl = new URL('/super-admin/login', request.url);
+          loginUrl.searchParams.set('redirect', pathname);
+          loginUrl.searchParams.set('message', 'ログインが必要です');
+          console.log('[Auth] Unauthorized access to super admin page, redirecting to login');
+          return NextResponse.redirect(loginUrl);
+        }
+        // NOTE: SUPER_ADMINロールの検証はEdge RuntimeでPrismaが使えないため、
+        // 各ページコンポーネントまたはAPIルートで実装する必要があります。
+      }
+    }
+  }
+
+  // 4. 管理画面への認証チェック
   if (pathname.startsWith('/admin/')) {
     // E2Eテスト環境では認証をスキップ
     const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
@@ -156,7 +178,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. 一般ユーザー向け保護ページへの認証チェック
+  // 5. 一般ユーザー向け保護ページへの認証チェック
   const protectedPaths = ['/mypage', '/booking/confirm', '/reservations'];
   const isProtectedPath = protectedPaths.some((path) => pathname.startsWith(path));
 
@@ -181,10 +203,12 @@ export async function middleware(request: NextRequest) {
     '/api/',
     '/_next/',
     '/favicon.ico',
+    '/super-admin/', // スーパー管理者画面（認証済み）
     '/admin/', // 管理画面（認証済み）
     '/maintenance', // メンテナンスページ自体
     '/login', // ログインページ
     '/admin/login', // 管理者ログインページ
+    '/super-admin/login', // スーパー管理者ログインページ
     '/register', // 登録ページ
   ];
 
@@ -193,7 +217,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 5. 公開状態チェック
+  // 6. 公開状態チェック
   const isPublic = await getPublicStatus(request);
 
   if (!isPublic) {
@@ -202,7 +226,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(maintenanceUrl);
   }
 
-  // 6. セキュリティヘッダーの追加（SameSite Cookie設定）
+  // 7. セキュリティヘッダーの追加（SameSite Cookie設定）
   const response = NextResponse.next();
 
   // SameSite=Lax属性をCookieに設定（CSRF対策）
