@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { adminCreateReservationSchema, adminReservationsQuerySchema } from '@/lib/validations';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { checkAdminAuthHeader } from '@/lib/auth';
+import { requireFeatureFlag } from '@/lib/api-feature-flag';
 
 /**
  * GET /api/admin/reservations
@@ -171,13 +172,14 @@ export async function GET(request: NextRequest) {
  * - notes: 備考 (オプション)
  */
 export async function POST(request: NextRequest) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  return requireFeatureFlag('enableManualReservation', async () => {
+    // 管理者権限チェック
+    const authResult = checkAdminAuthHeader(request);
+    if (typeof authResult !== 'string') {
+      return authResult; // 401または403エラー
+    }
 
-  try {
+    try {
     const body = await request.json();
 
     // バリデーション
@@ -307,14 +309,15 @@ export async function POST(request: NextRequest) {
       updatedAt: reservation.updatedAt.toISOString(),
     };
 
-    return successResponse(formattedReservation, 201);
-  } catch (error) {
-    console.error('Error creating reservation:', error);
-    return errorResponse(
-      'Failed to create reservation',
-      500,
-      'CREATE_ERROR',
-      error instanceof Error ? error.message : 'Unknown error'
-    );
-  }
+      return successResponse(formattedReservation, 201);
+    } catch (error) {
+      console.error('Error creating reservation:', error);
+      return errorResponse(
+        'Failed to create reservation',
+        500,
+        'CREATE_ERROR',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+    }
+  });
 }

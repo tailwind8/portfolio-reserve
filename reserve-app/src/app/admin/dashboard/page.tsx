@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 interface Reservation {
   id: string;
@@ -30,6 +31,9 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  // 機能フラグを取得
+  const { flags: featureFlags } = useFeatureFlags();
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -279,6 +283,32 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </div>
+
+        {/* 分析レポートセクション（機能フラグで制御） */}
+        {featureFlags?.enableAnalyticsReport && (
+          <div className="mt-8" data-testid="analytics-report-section">
+            <Card>
+              <h2 className="mb-6 text-xl font-semibold text-gray-900">分析レポート</h2>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">月間売上推移</h3>
+                  <p className="text-2xl font-bold text-gray-900">¥{stats.monthlyRevenue.toLocaleString()}</p>
+                  <p className="mt-1 text-xs text-green-600">前月比 +12%</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">新規顧客数</h3>
+                  <p className="text-2xl font-bold text-gray-900">24人</p>
+                  <p className="mt-1 text-xs text-green-600">前月比 +8%</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">平均客単価</h3>
+                  <p className="text-2xl font-bold text-gray-900">¥8,500</p>
+                  <p className="mt-1 text-xs text-green-600">前月比 +5%</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
+import { requireFeatureFlag } from '@/lib/api-feature-flag';
 
 /**
  * スタッフ作成用のバリデーションスキーマ
@@ -21,53 +22,55 @@ const createStaffSchema = z.object({
  * - tenantId: テナントID (デフォルト: 環境変数)
  */
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+  return requireFeatureFlag('enableStaffShiftManagement', async () => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const search = searchParams.get('search');
+      const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    // フィルター条件を構築
-    const where: Record<string, unknown> = {
-      tenantId,
-      isActive: true, // アクティブなスタッフのみ
-    };
-
-    // 検索フィルター
-    if (search) {
-      where.name = {
-        contains: search,
-        mode: 'insensitive',
+      // フィルター条件を構築
+      const where: Record<string, unknown> = {
+        tenantId,
+        isActive: true, // アクティブなスタッフのみ
       };
-    }
 
-    // スタッフ一覧を取得
-    const staff = await prisma.bookingStaff.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: {
-            reservations: true, // 予約件数をカウント
+      // 検索フィルター
+      if (search) {
+        where.name = {
+          contains: search,
+          mode: 'insensitive',
+        };
+      }
+
+      // スタッフ一覧を取得
+      const staff = await prisma.bookingStaff.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              reservations: true, // 予約件数をカウント
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
 
-    return successResponse(staff, 200);
-  } catch (error) {
-    console.error('GET /api/admin/staff error:', error);
-    return errorResponse('スタッフ一覧の取得に失敗しました', 500, 'INTERNAL_ERROR');
-  }
+      return successResponse(staff, 200);
+    } catch (error) {
+      console.error('GET /api/admin/staff error:', error);
+      return errorResponse('スタッフ一覧の取得に失敗しました', 500, 'INTERNAL_ERROR');
+    }
+  });
 }
 
 /**

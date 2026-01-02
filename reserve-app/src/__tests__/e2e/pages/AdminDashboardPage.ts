@@ -64,6 +64,12 @@ export class AdminDashboardPage {
     activityIcon: '[data-testid="activity-icon"]',
     activityAction: '[data-testid="activity-action"]',
     activityTime: '[data-testid="activity-time"]',
+
+    // 機能フラグ制御（サイドバー）
+    sidebarCustomersLink: 'a[href="/admin/customers"]',
+
+    // 機能フラグ制御（分析レポート）
+    analyticsReportSection: '[data-testid="analytics-report-section"]',
   };
 
   constructor(page: Page) {
@@ -356,5 +362,33 @@ export class AdminDashboardPage {
    */
   async clickViewAll(): Promise<void> {
     await this.page.locator(this.selectors.viewAllButton).click();
+  }
+
+  /**
+   * サイドバーに顧客管理メニューが表示されることを確認する（機能フラグ有効時）
+   */
+  async expectCustomersMenuVisible(): Promise<void> {
+    await expect(this.page.locator(this.selectors.sidebarCustomersLink)).toBeVisible();
+  }
+
+  /**
+   * サイドバーに顧客管理メニューが表示されないことを確認する（機能フラグ無効時）
+   */
+  async expectCustomersMenuNotVisible(): Promise<void> {
+    await expect(this.page.locator(this.selectors.sidebarCustomersLink)).not.toBeVisible();
+  }
+
+  /**
+   * 分析レポートセクションが表示されることを確認する（機能フラグ有効時）
+   */
+  async expectAnalyticsReportVisible(): Promise<void> {
+    await expect(this.page.locator(this.selectors.analyticsReportSection)).toBeVisible();
+  }
+
+  /**
+   * 分析レポートセクションが表示されないことを確認する（機能フラグ無効時）
+   */
+  async expectAnalyticsReportNotVisible(): Promise<void> {
+    await expect(this.page.locator(this.selectors.analyticsReportSection)).not.toBeVisible();
   }
 }

@@ -25,6 +25,7 @@ export class BookingPage {
     featureEmail: 'text=確認メール送信',
     featureReminder: 'text=リマインダー',
     characterCounter: 'text=/\\/500文字/',
+    couponInput: '[data-testid="coupon-input"]',
   };
 
   /**
@@ -244,5 +245,26 @@ export class BookingPage {
    */
   async expectCharacterCounterVisible() {
     await expect(this.page.locator(this.selectors.characterCounter)).toBeVisible();
+  }
+
+  /**
+   * スタッフ選択フィールドが表示されないことを検証（機能フラグ無効時）
+   */
+  async expectStaffSelectNotVisible() {
+    await expect(this.page.locator(this.selectors.staffSelect)).not.toBeVisible();
+  }
+
+  /**
+   * クーポン入力フィールドが表示されることを検証（機能フラグ有効時）
+   */
+  async expectCouponInputVisible() {
+    await expect(this.page.locator(this.selectors.couponInput)).toBeVisible();
+  }
+
+  /**
+   * クーポン入力フィールドが表示されないことを検証（機能フラグ無効時）
+   */
+  async expectCouponInputNotVisible() {
+    await expect(this.page.locator(this.selectors.couponInput)).not.toBeVisible();
   }
 }

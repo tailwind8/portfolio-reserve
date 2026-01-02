@@ -4,6 +4,7 @@ import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-res
 import { updateReservationSchema, cancelReservationSchema } from '@/lib/validations';
 import { sendReservationUpdateEmail, sendReservationCancellationEmail } from '@/lib/email';
 import type { Reservation } from '@/types/api';
+import { requireFeatureFlag } from '@/lib/api-feature-flag';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
@@ -73,7 +74,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  return withErrorHandling(async () => {
+  return requireFeatureFlag('enableReservationUpdate', async () => {
+    return withErrorHandling(async () => {
     const { id } = await params;
     const userId = request.headers.get('x-user-id');
 
@@ -259,6 +261,7 @@ export async function PATCH(
     });
 
     return successResponse<Reservation>(formattedReservation);
+    });
   });
 }
 
