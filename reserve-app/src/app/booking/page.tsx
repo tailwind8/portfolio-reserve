@@ -37,7 +37,16 @@ function BookingContent() {
 
   // 週間カレンダー用state
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    // 月曜日を週の開始として計算
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const weekStart = new Date(today);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+    return weekStart;
+  });
   const [weeklySlots, setWeeklySlots] = useState<Map<string, TimeSlot[]>>(new Map());
   const [loadingWeeklySlots, setLoadingWeeklySlots] = useState(false);
 
@@ -47,14 +56,6 @@ function BookingContent() {
     if (savedMode === 'monthly' || savedMode === 'weekly') {
       setViewMode(savedMode);
     }
-
-    // currentWeekStartを月曜日に初期化
-    const today = new Date();
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 月曜日を週の開始
-    const weekStart = new Date(today);
-    weekStart.setDate(diff);
-    setCurrentWeekStart(weekStart);
   }, []);
 
   // viewModeが変更されたらLocalStorageに保存

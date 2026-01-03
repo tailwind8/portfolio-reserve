@@ -24,14 +24,20 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
       const url = new URL(route.request().url());
       const date = url.searchParams.get('date');
 
-      // 簡易的なモックデータ（後で拡張）
-      const mockSlots = [
-        { time: '09:00', available: true },
-        { time: '10:00', available: false },
-        { time: '11:00', available: true },
-        { time: '14:00', available: true },
-        { time: '15:00', available: true },
-      ];
+      // 30分刻みで全スロットを提供（09:00-20:00）
+      const mockSlots = [];
+      for (let hour = 9; hour < 20; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          // 10:00のみ予約済みとする（明示的にfalseを設定）
+          const available = time !== '10:00';
+          mockSlots.push({
+            time: time,
+            available: available,
+            staffId: undefined
+          });
+        }
+      }
 
       await route.fulfill({
         status: 200,
@@ -45,6 +51,10 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
 
     await bookingPage.goto();
     await bookingPage.waitForLoad();
+
+    // メニューを選択して週間スロットを取得
+    await bookingPage.selectMenu(1);
+    await bookingPage.wait(500);
   });
 
   /**
@@ -52,9 +62,7 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
    */
   test('週間カレンダーがデフォルトで表示される', async () => {
     // Given: 予約ページにアクセスする
-    // And: メニューを選択する
-    await bookingPage.selectMenu(1);
-    await bookingPage.wait(500);
+    // And: メニューを選択する（beforeEachで実施済み）
 
     // When: ページが読み込まれる
     // Then: 週間カレンダーが表示される
@@ -71,9 +79,7 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
    * Scenario: 月間表示に切り替えられる
    */
   test('月間表示に切り替えられる', async () => {
-    // Given: 予約ページにアクセスしてメニューを選択
-    await bookingPage.selectMenu(1);
-    await bookingPage.wait(500);
+    // Given: 予約ページにアクセスしてメニューを選択（beforeEachで実施済み）
 
     // And: 週間カレンダーが表示されている
     await bookingPage.expectWeeklyCalendarVisible();
@@ -95,9 +101,7 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
    * Scenario: 月間表示から週間表示に戻れる
    */
   test('月間表示から週間表示に戻れる', async () => {
-    // Given: 月間表示を表示している
-    await bookingPage.selectMenu(1);
-    await bookingPage.wait(500);
+    // Given: 月間表示を表示している（beforeEachでメニュー選択済み）
     await bookingPage.clickViewModeTab('monthly');
     await bookingPage.expectMonthlyCalendarVisible();
 
@@ -118,9 +122,7 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
    * Scenario: 表示モードがLocalStorageに保存される
    */
   test('表示モードがLocalStorageに保存される', async () => {
-    // Given: 予約ページにアクセスしてメニューを選択
-    await bookingPage.selectMenu(1);
-    await bookingPage.wait(500);
+    // Given: 予約ページにアクセスしてメニューを選択（beforeEachで実施済み）
 
     // And: 週間カレンダーが表示されている
     await bookingPage.expectWeeklyCalendarVisible();
@@ -148,9 +150,7 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
    * Scenario: 次週に移動できる
    */
   test('次週に移動できる', async () => {
-    // Given: 週間カレンダーが表示されている
-    await bookingPage.selectMenu(1);
-    await bookingPage.wait(500);
+    // Given: 週間カレンダーが表示されている（beforeEachでメニュー選択済み）
     await bookingPage.expectWeeklyCalendarVisible();
 
     // When: 「次週」ボタンをクリックする
@@ -167,9 +167,7 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
    * Scenario: 前週に移動できる
    */
   test('前週に移動できる', async () => {
-    // Given: 週間カレンダーが表示されている
-    await bookingPage.selectMenu(1);
-    await bookingPage.wait(500);
+    // Given: 週間カレンダーが表示されている（beforeEachでメニュー選択済み）
     await bookingPage.expectWeeklyCalendarVisible();
 
     // When: 「前週」ボタンをクリックする
@@ -273,6 +271,10 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
     // Given: 週間カレンダーが表示されている
     await bookingPage.expectWeeklyCalendarVisible();
 
+    // And: 未来の週に移動する（過去の日付をテストしないため）
+    await bookingPage.clickNextWeek();
+    await bookingPage.wait(500);
+
     // Then: 月曜日09:00のブロックが緑色で表示される（空き）
     await bookingPage.expectWeeklyTimeBlockAvailable(0, '09:00');
 
@@ -296,14 +298,18 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
     // Given: 週間カレンダーが表示されている
     await bookingPage.expectWeeklyCalendarVisible();
 
+    // And: 未来の週に移動する（過去の日付をテストしないため）
+    await bookingPage.clickNextWeek();
+    await bookingPage.wait(500);
+
     // When: 火曜日14:00の空きブロックをクリックする
     await bookingPage.clickWeeklyTimeBlock(1, '14:00');
 
-    // Then: 日付「2026年1月7日（火）」が選択される
+    // Then: 日付に「火曜日」が含まれる
     const selectedDateText = await bookingPage.page
       .locator('[data-testid="selected-date"]')
       .textContent();
-    expect(selectedDateText).toContain('2026年1月7日（火）');
+    expect(selectedDateText).toContain('（火）');
 
     // And: 時間「14:00」が選択される
     const selectedTimeText = await bookingPage.page
@@ -321,6 +327,10 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
   test('予約済みの時間はクリックできない', async () => {
     // Given: 週間カレンダーが表示されている
     await bookingPage.expectWeeklyCalendarVisible();
+
+    // And: 未来の週に移動する（過去の日付をテストしないため）
+    await bookingPage.clickNextWeek();
+    await bookingPage.wait(500);
 
     // When: 月曜日10:00の予約済みブロックをクリックする
     // Then: クリックできない（disabledなのでクリックイベントが発火しない）
