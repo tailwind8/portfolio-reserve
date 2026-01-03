@@ -16,12 +16,16 @@ import { MyPage } from './pages/MyPage';
  * 対応Gherkin: reserve-app/features/security/session-management.feature
  */
 
+// E2E用の管理者認証情報を環境変数から取得
+const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@example.com';
+const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin123';
+
 test.describe('セッション管理', () => {
   test('ログアウト後の管理画面アクセス防止', async ({ page }) => {
-    // 管理者でログイン
+    // 管理者でログイン（環境変数から認証情報を取得）
     const loginPage = new LoginPage(page);
     await loginPage.goto('/admin/login');
-    await loginPage.login('admin@example.com', 'admin123');
+    await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
     await expect(page).toHaveURL('/admin/dashboard');
 
     // ダッシュボードが表示される
@@ -146,10 +150,10 @@ test.describe('セッション管理', () => {
   });
 
   test('管理者は全ての予約にアクセスできる', async ({ page }) => {
-    // 管理者でログイン
+    // 管理者でログイン（環境変数から認証情報を取得）
     const loginPage = new LoginPage(page);
     await loginPage.goto('/admin/login');
-    await loginPage.login('admin@example.com', 'admin123');
+    await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
     await expect(page).toHaveURL('/admin/dashboard');
 
     // 任意のユーザーの予約にアクセス

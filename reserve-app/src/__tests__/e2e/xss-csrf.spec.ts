@@ -18,6 +18,10 @@ import { AdminSettingsPage } from './pages/AdminSettingsPage';
  * 対応Gherkin: reserve-app/features/security/xss-csrf.feature
  */
 
+// E2E用の管理者認証情報を環境変数から取得
+const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@example.com';
+const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin123';
+
 test.describe('XSS・CSRF攻撃防止', () => {
   // ===== XSS攻撃防止（スクリプトタグ） =====
 
@@ -56,7 +60,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
   test('メニュー説明にスクリプトタグを入力してもエスケープされる', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto('/admin/login');
-    await loginPage.login('admin@example.com', 'admin123');
+    await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
 
     await page.goto('/admin/menus/new');
 
@@ -146,7 +150,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
   test('iframeタグを含む入力がエスケープされる', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto('/admin/login');
-    await loginPage.login('admin@example.com', 'admin123');
+    await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
 
     const settingsPage = new AdminSettingsPage(page);
     await settingsPage.goto();
@@ -215,7 +219,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
   test('検索機能でのSQLインジェクション防止', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto('/admin/login');
-    await loginPage.login('admin@example.com', 'admin123');
+    await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
 
     await page.goto('/admin/customers');
 

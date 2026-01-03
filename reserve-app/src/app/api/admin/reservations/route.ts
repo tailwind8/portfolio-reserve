@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
 
     // クエリパラメータのバリデーション
     const queryValidation = adminReservationsQuerySchema.safeParse({
-      status: searchParams.get('status'),
-      dateRange: searchParams.get('dateRange'),
-      search: searchParams.get('search'),
-      tenantId: searchParams.get('tenantId'),
+      status: searchParams.get('status') || undefined,
+      dateRange: searchParams.get('dateRange') || undefined,
+      search: searchParams.get('search') || undefined,
+      tenantId: searchParams.get('tenantId') || undefined,
     });
 
     if (!queryValidation.success) {

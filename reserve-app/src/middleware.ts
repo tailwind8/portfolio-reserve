@@ -163,17 +163,20 @@ export async function middleware(request: NextRequest) {
 
   // 4. 管理画面への認証チェック
   if (pathname.startsWith('/admin/')) {
-    // E2Eテスト環境では認証をスキップ
-    const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
-    if (!skipAuthInTest) {
-      const isAuthenticated = checkAuthentication(request);
-      if (!isAuthenticated) {
-        // 未ログイン時は/admin/loginへリダイレクト（元のURLをクエリパラメータに保存）
-        const loginUrl = new URL('/admin/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        loginUrl.searchParams.set('message', 'ログインが必要です');
-        console.log('[Auth] Unauthorized access to admin page, redirecting to login');
-        return NextResponse.redirect(loginUrl);
+    // ログインページは除外
+    if (!pathname.startsWith('/admin/login')) {
+      // E2Eテスト環境では認証をスキップ
+      const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
+      if (!skipAuthInTest) {
+        const isAuthenticated = checkAuthentication(request);
+        if (!isAuthenticated) {
+          // 未ログイン時は/admin/loginへリダイレクト（元のURLをクエリパラメータに保存）
+          const loginUrl = new URL('/admin/login', request.url);
+          loginUrl.searchParams.set('redirect', pathname);
+          loginUrl.searchParams.set('message', 'ログインが必要です');
+          console.log('[Auth] Unauthorized access to admin page, redirecting to login');
+          return NextResponse.redirect(loginUrl);
+        }
       }
     }
   }

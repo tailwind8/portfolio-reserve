@@ -46,6 +46,41 @@ export class AdminReservationsPage {
     nextPageButton: '[data-testid="next-page-button"]',
     prevPageButton: '[data-testid="prev-page-button"]',
 
+    // 週間カレンダー表示切り替え
+    listViewTab: '[data-testid="list-view-tab"]',
+    calendarViewTab: '[data-testid="calendar-view-tab"]',
+
+    // 週間カレンダー
+    weeklyCalendar: '[data-testid="weekly-calendar"]',
+    weekTitle: '[data-testid="week-title"]',
+    prevWeekButton: '[data-testid="prev-week-button"]',
+    nextWeekButton: '[data-testid="next-week-button"]',
+
+    // 週間カレンダー - タイムブロック
+    timeBlock: '[data-testid="time-block"]',
+    availableBlock: '[data-testid="available-block"]',
+    reservedBlock: '[data-testid="reserved-block"]',
+    breakBlock: '[data-testid="break-block"]',
+    closedBlock: '[data-testid="closed-block"]',
+
+    // 週間カレンダー - フィルター
+    staffFilter: '[data-testid="staff-filter"]',
+    menuFilter: '[data-testid="menu-filter"]',
+    statusFilterCalendar: '[data-testid="status-filter-calendar"]',
+
+    // 予約詳細モーダル（カレンダーから）
+    reservationDetailModal: '[data-testid="reservation-detail-modal"]',
+    detailModalTitle: '[data-testid="detail-modal-title"]',
+    detailModalCustomer: '[data-testid="detail-modal-customer"]',
+    detailModalMenu: '[data-testid="detail-modal-menu"]',
+    detailModalStaff: '[data-testid="detail-modal-staff"]',
+    detailModalStatus: '[data-testid="detail-modal-status"]',
+    detailModalDate: '[data-testid="detail-modal-date"]',
+    detailModalTime: '[data-testid="detail-modal-time"]',
+    detailModalEditButton: '[data-testid="detail-modal-edit-button"]',
+    detailModalCancelButton: '[data-testid="detail-modal-cancel-button"]',
+    detailModalCloseButton: '[data-testid="detail-modal-close-button"]',
+
     // 新規予約追加モーダル
     addModal: '[data-testid="add-reservation-modal"]',
     addModalTitle: '[data-testid="add-modal-title"]',
@@ -494,5 +529,260 @@ export class AdminReservationsPage {
    */
   async goToPrevPage(): Promise<void> {
     await this.page.locator(this.selectors.prevPageButton).click();
+  }
+
+  // ===== 週間カレンダー表示 =====
+
+  /**
+   * カレンダー表示タブをクリックする
+   */
+  async clickCalendarViewTab(): Promise<void> {
+    await this.page.locator(this.selectors.calendarViewTab).click();
+  }
+
+  /**
+   * 一覧表示タブをクリックする
+   */
+  async clickListViewTab(): Promise<void> {
+    await this.page.locator(this.selectors.listViewTab).click();
+  }
+
+  /**
+   * 週間カレンダーが表示されていることを確認する
+   */
+  async expectWeeklyCalendarVisible(): Promise<void> {
+    await expect(this.page.locator(this.selectors.weeklyCalendar)).toBeVisible();
+  }
+
+  /**
+   * 週間カレンダーが非表示であることを確認する
+   */
+  async expectWeeklyCalendarHidden(): Promise<void> {
+    await expect(this.page.locator(this.selectors.weeklyCalendar)).not.toBeVisible();
+  }
+
+  /**
+   * 予約一覧が非表示であることを確認する
+   */
+  async expectTableHidden(): Promise<void> {
+    await expect(this.page.locator(this.selectors.reservationsTable)).not.toBeVisible();
+  }
+
+  /**
+   * 表示モードがアクティブであることを確認する
+   */
+  async expectViewModeActive(mode: 'list' | 'calendar'): Promise<void> {
+    const selector = mode === 'list' ? this.selectors.listViewTab : this.selectors.calendarViewTab;
+    const tab = this.page.locator(selector);
+    await expect(tab).toHaveClass(/active|bg-blue/);
+  }
+
+  /**
+   * 週のタイトルを確認する
+   */
+  async expectWeekTitle(title: string): Promise<void> {
+    const weekTitle = this.page.locator(this.selectors.weekTitle);
+    await expect(weekTitle).toContainText(title);
+  }
+
+  /**
+   * 前週ボタンをクリックする
+   */
+  async clickPrevWeek(): Promise<void> {
+    await this.page.locator(this.selectors.prevWeekButton).click();
+  }
+
+  /**
+   * 次週ボタンをクリックする
+   */
+  async clickNextWeek(): Promise<void> {
+    await this.page.locator(this.selectors.nextWeekButton).click();
+  }
+
+  // ===== 週間カレンダー - タイムブロック =====
+
+  /**
+   * 特定のタイムブロックを取得する
+   * @param day 曜日（0=月曜日, 6=日曜日）
+   * @param time 時刻（例: "09:00"）
+   */
+  private getTimeBlock(day: number, time: string) {
+    return this.page.locator(`[data-testid="time-block"][data-day="${day}"][data-time="${time}"]`);
+  }
+
+  /**
+   * タイムブロックに予約情報が表示されていることを確認する
+   */
+  async expectTimeBlockReservation(day: number, time: string, customer: string, menu: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    await expect(block).toBeVisible();
+    await expect(block).toContainText(customer);
+    await expect(block).toContainText(menu);
+  }
+
+  /**
+   * タイムブロックが指定色で表示されていることを確認する
+   */
+  async expectTimeBlockColor(day: number, time: string, color: 'green' | 'blue' | 'yellow' | 'red' | 'gray'): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    const colorMap = {
+      green: /bg-green/,
+      blue: /bg-blue/,
+      yellow: /bg-yellow/,
+      red: /bg-red/,
+      gray: /bg-gray/,
+    };
+    await expect(block).toHaveClass(colorMap[color]);
+  }
+
+  /**
+   * タイムブロックに「[空]」と表示されていることを確認する
+   */
+  async expectTimeBlockAvailable(day: number, time: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    await expect(block).toBeVisible();
+    await expect(block).toContainText('[空]');
+    await this.expectTimeBlockColor(day, time, 'green');
+  }
+
+  /**
+   * タイムブロックをクリックする
+   */
+  async clickTimeBlock(day: number, time: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    await block.click();
+  }
+
+  /**
+   * タイムブロックに「休憩時間」と表示されていることを確認する
+   */
+  async expectTimeBlockBreak(day: number, time: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    await expect(block).toContainText('休憩時間');
+    await this.expectTimeBlockColor(day, time, 'gray');
+  }
+
+  /**
+   * タイムブロックに「[休]」と表示されていることを確認する（定休日）
+   */
+  async expectTimeBlockClosed(day: number, time: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    await expect(block).toContainText('[休]');
+    await this.expectTimeBlockColor(day, time, 'gray');
+  }
+
+  /**
+   * タイムブロックがクリックできないことを確認する
+   */
+  async expectTimeBlockDisabled(day: number, time: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    await expect(block).toBeDisabled();
+  }
+
+  // ===== 週間カレンダー - フィルター =====
+
+  /**
+   * スタッフフィルターで選択する
+   */
+  async filterByStaff(staff: string): Promise<void> {
+    await this.page.locator(this.selectors.staffFilter).selectOption(staff);
+  }
+
+  /**
+   * メニューフィルターで選択する
+   */
+  async filterByMenu(menu: string): Promise<void> {
+    await this.page.locator(this.selectors.menuFilter).selectOption(menu);
+  }
+
+  /**
+   * ステータスフィルター（カレンダー用）で選択する
+   */
+  async filterByStatusCalendar(status: string): Promise<void> {
+    await this.page.locator(this.selectors.statusFilterCalendar).selectOption(status);
+  }
+
+  /**
+   * タイムブロックが表示されないことを確認する
+   */
+  async expectTimeBlockNotVisible(day: number, time: string, customer: string): Promise<void> {
+    const block = this.getTimeBlock(day, time);
+    const isVisible = await block.isVisible();
+    if (isVisible) {
+      const text = await block.textContent();
+      expect(text).not.toContain(customer);
+    }
+  }
+
+  // ===== 予約詳細モーダル（カレンダーから） =====
+
+  /**
+   * 予約詳細モーダルが表示されていることを確認する
+   */
+  async expectReservationDetailModalVisible(): Promise<void> {
+    const modal = this.page.locator(this.selectors.reservationDetailModal);
+    await expect(modal).toBeVisible();
+  }
+
+  /**
+   * 予約詳細モーダルに情報が表示されていることを確認する
+   */
+  async expectReservationDetailModalContent(data: {
+    customer: string;
+    menu: string;
+    staff: string;
+    status: string;
+  }): Promise<void> {
+    await expect(this.page.locator(this.selectors.detailModalCustomer)).toContainText(data.customer);
+    await expect(this.page.locator(this.selectors.detailModalMenu)).toContainText(data.menu);
+    await expect(this.page.locator(this.selectors.detailModalStaff)).toContainText(data.staff);
+    await expect(this.page.locator(this.selectors.detailModalStatus)).toContainText(data.status);
+  }
+
+  /**
+   * 予約詳細モーダルのボタンが表示されていることを確認する
+   */
+  async expectDetailModalButtonsVisible(): Promise<void> {
+    await expect(this.page.locator(this.selectors.detailModalEditButton)).toBeVisible();
+    await expect(this.page.locator(this.selectors.detailModalCancelButton)).toBeVisible();
+  }
+
+  /**
+   * 予約詳細モーダルを閉じる
+   */
+  async closeDetailModal(): Promise<void> {
+    await this.page.locator(this.selectors.detailModalCloseButton).click();
+  }
+
+  /**
+   * 予約詳細モーダルが閉じていることを確認する
+   */
+  async expectDetailModalClosed(): Promise<void> {
+    await expect(this.page.locator(this.selectors.reservationDetailModal)).not.toBeVisible();
+  }
+
+  // ===== 新規予約モーダル（日時自動入力） =====
+
+  /**
+   * 新規予約モーダルの日付フィールドの値を確認する
+   */
+  async expectAddModalDatePreFilled(date: string): Promise<void> {
+    const datePicker = this.page.locator(this.selectors.addModalDatePicker);
+    await expect(datePicker).toHaveValue(date);
+  }
+
+  /**
+   * 新規予約モーダルの時間フィールドの値を確認する
+   */
+  async expectAddModalTimePreFilled(time: string): Promise<void> {
+    const timeSelect = this.page.locator(this.selectors.addModalTimeSelect);
+    await expect(timeSelect).toHaveValue(time);
+  }
+
+  /**
+   * ページをリロードする
+   */
+  async reload(): Promise<void> {
+    await this.page.reload();
   }
 }
