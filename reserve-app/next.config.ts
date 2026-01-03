@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // ビルド時の環境変数チェック
 // SKIP_AUTH_IN_TESTがproduction環境で有効になっていないか警告
@@ -89,4 +90,41 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/**
+ * Sentry設定オプション
+ *
+ * ソースマップのアップロードやビルド時の設定を行います。
+ *
+ * 参考:
+ * - https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+ */
+const sentryWebpackPluginOptions = {
+  // Sentryプロジェクト設定（環境変数から取得）
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // ソースマップアップロード用の認証トークン
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // CI環境以外ではSentryのログを抑制
+  silent: !process.env.CI,
+
+  // ソースマップを自動的にアップロード
+  widenClientFileUpload: true,
+
+  // Sentryリクエストをサーバー経由でルーティング（広告ブロッカー回避）
+  tunnelRoute: '/monitoring',
+
+  // 本番ビルドでのログ削除（バンドルサイズ削減）
+  hideSourceMaps: true,
+
+  // デバッグログの削除（バンドルサイズ削減）
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+};
+
+// SentryでNext.js設定をラップ
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
