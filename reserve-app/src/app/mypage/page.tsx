@@ -42,14 +42,8 @@ export default function MyPage() {
       setLoading(true);
       setError(null);
 
-      // TODO: 実際の認証実装後は、セッションからユーザーIDを取得
-      const userId = 'mock-user-id'; // 仮のユーザーID
-
-      const response = await fetch('/api/reservations', {
-        headers: {
-          'x-user-id': userId,
-        },
-      });
+      // Supabaseセッションは自動的にCookieで送信される
+      const response = await fetch('/api/reservations');
 
       if (!response.ok) {
         throw new Error('予約一覧の取得に失敗しました');

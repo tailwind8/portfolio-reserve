@@ -5,6 +5,7 @@ import { updateReservationSchema, cancelReservationSchema } from '@/lib/validati
 import { sendReservationUpdateEmail, sendReservationCancellationEmail } from '@/lib/email';
 import type { Reservation } from '@/types/api';
 import { requireFeatureFlag } from '@/lib/api-feature-flag';
+import { requireAuthAndGetBookingUser } from '@/lib/auth';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
@@ -18,11 +19,8 @@ export async function GET(
 ) {
   return withErrorHandling(async () => {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
-
-    if (!userId) {
-      return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
-    }
+    // Supabaseセッションから認証済みユーザーを取得
+    const bookingUser = await requireAuthAndGetBookingUser();
 
     // 予約の存在確認（横断アクセス検出のため、userIdフィルタなし）
     const reservation = await prisma.bookingReservation.findFirst({
@@ -42,7 +40,7 @@ export async function GET(
     }
 
     // 横断アクセス防止: 他のユーザーの予約へのアクセスを拒否
-    if (reservation.userId !== userId) {
+    if (reservation.userId !== bookingUser.id) {
       return errorResponse('この予約にアクセスする権限がありません', 403, 'FORBIDDEN');
     }
 
@@ -77,11 +75,8 @@ export async function PATCH(
   return requireFeatureFlag('enableReservationUpdate', async () => {
     return withErrorHandling(async () => {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
-
-    if (!userId) {
-      return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
-    }
+    // Supabaseセッションから認証済みユーザーを取得
+    const bookingUser = await requireAuthAndGetBookingUser();
 
     const body = await request.json();
     const validation = updateReservationSchema.safeParse(body);
@@ -108,7 +103,7 @@ export async function PATCH(
     }
 
     // 横断アクセス防止: 他のユーザーの予約を編集できない
-    if (existingReservation.userId !== userId) {
+    if (existingReservation.userId !== bookingUser.id) {
       return errorResponse('この予約を編集する権限がありません', 403, 'FORBIDDEN');
     }
 
@@ -275,11 +270,8 @@ export async function DELETE(
 ) {
   return withErrorHandling(async () => {
     const { id } = await params;
-    const userId = request.headers.get('x-user-id');
-
-    if (!userId) {
-      return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
-    }
+    // Supabaseセッションから認証済みユーザーを取得
+    const bookingUser = await requireAuthAndGetBookingUser();
 
     // 既存予約取得（横断アクセス検出のため、userIdフィルタなし）
     const existingReservation = await prisma.bookingReservation.findFirst({
@@ -299,7 +291,7 @@ export async function DELETE(
     }
 
     // 横断アクセス防止: 他のユーザーの予約を削除できない
-    if (existingReservation.userId !== userId) {
+    if (existingReservation.userId !== bookingUser.id) {
       return errorResponse('この予約を削除する権限がありません', 403, 'FORBIDDEN');
     }
 

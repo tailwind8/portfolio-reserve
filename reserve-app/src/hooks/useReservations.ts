@@ -18,11 +18,8 @@ export function useReservations(): UseReservationsReturn {
     setError(null);
 
     try {
-      const response = await fetch('/api/reservations', {
-        headers: {
-          'x-user-id': 'temp-user-id', // TODO: 実際の認証トークンに置き換え
-        },
-      });
+      // Supabaseセッションは自動的にCookieで送信される
+      const response = await fetch('/api/reservations');
 
       if (!response.ok) {
         throw new Error('予約情報の取得に失敗しました');

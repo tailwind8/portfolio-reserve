@@ -24,11 +24,11 @@ export default function CancellationDialog({
     setError(null);
 
     try {
+      // Supabaseセッションは自動的にCookieで送信される
       const response = await fetch(`/api/reservations/${reservation.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'temp-user-id',
         },
         body: JSON.stringify({ cancellationReason }),
       });

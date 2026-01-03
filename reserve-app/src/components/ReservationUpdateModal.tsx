@@ -147,11 +147,11 @@ export default function ReservationUpdateModal({
     setSuccessMessage(null);
 
     try {
+      // Supabaseセッションは自動的にCookieで送信される
       const response = await fetch(`/api/reservations/${reservation.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'temp-user-id',
         },
         body: JSON.stringify(formData),
       });

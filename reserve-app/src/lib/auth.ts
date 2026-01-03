@@ -110,6 +110,68 @@ export async function requireAuth() {
 }
 
 /**
+ * APIルートでSupabaseセッションから認証済みユーザーとBookingUserを取得
+ * 認証されていない場合はnullを返す
+ *
+ * @returns Supabase AuthユーザーとPrismaのBookingUser、または両方null
+ */
+export async function getAuthenticatedBookingUser(): Promise<{
+  authUser: User | null;
+  bookingUser: Awaited<ReturnType<typeof getOrCreateBookingUser>> | null;
+}> {
+  const session = await getServerSession();
+
+  if (!session?.user) {
+    return { authUser: null, bookingUser: null };
+  }
+
+  const authUser = session.user;
+
+  // Prismaから対応するBookingUserを取得または作成
+  const bookingUser = await getOrCreateBookingUser(
+    authUser.id,
+    authUser.email || '',
+    authUser.user_metadata?.name,
+    authUser.user_metadata?.phone
+  );
+
+  return { authUser, bookingUser };
+}
+
+/**
+ * APIルートで認証を必須とし、BookingUserを返す
+ * 認証されていない場合はエラーをスロー
+ *
+ * @throws Error 認証されていない場合
+ * @returns PrismaのBookingUser
+ */
+export async function requireAuthAndGetBookingUser() {
+  // E2Eテスト環境では認証をスキップしてテスト用ユーザーを返す
+  const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
+  if (skipAuthInTest) {
+    // テスト用の既存ユーザー（シードデータの山田 太郎）を返す
+    const testUser = await prisma.bookingUser.findFirst({
+      where: {
+        email: 'yamada@example.com',
+      },
+    });
+    if (testUser) {
+      return testUser;
+    }
+    // テストユーザーが見つからない場合はエラー
+    throw new Error('Test user not found');
+  }
+
+  const { authUser, bookingUser } = await getAuthenticatedBookingUser();
+
+  if (!authUser || !bookingUser) {
+    throw new Error('Unauthorized');
+  }
+
+  return bookingUser;
+}
+
+/**
  * APIルートで管理者権限チェックを行うヘルパー
  * 管理者でない場合は403エラーを返す
  */

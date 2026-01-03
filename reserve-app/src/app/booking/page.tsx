@@ -311,13 +311,11 @@ function BookingContent() {
         notes: notes || undefined,
       };
 
+      // Supabaseセッションは自動的にCookieで送信される
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Replace with actual authenticated user ID
-          // 暫定的にシードデータの最初のユーザーID（山田 太郎）を使用
-          'x-user-id': '550e8400-e29b-41d4-a716-446655440031',
         },
         body: JSON.stringify(reservationData),
       });

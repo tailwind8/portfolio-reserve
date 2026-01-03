@@ -4,6 +4,7 @@ import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-res
 import { createReservationSchema } from '@/lib/validations';
 import { sendReservationConfirmationEmail } from '@/lib/email';
 import { getFeatureFlags } from '@/lib/api-feature-flag';
+import { requireAuthAndGetBookingUser } from '@/lib/auth';
 import type { Reservation } from '@/types/api';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -41,18 +42,13 @@ const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
  */
 export async function GET(request: NextRequest) {
   return withErrorHandling(async () => {
-    // TODO: Get userId from authenticated session
-    // For now, using a temporary mock userId
-    const userId = request.headers.get('x-user-id');
-
-    if (!userId) {
-      return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
-    }
+    // Supabaseセッションから認証済みユーザーを取得
+    const bookingUser = await requireAuthAndGetBookingUser();
 
     const reservations = await prisma.bookingReservation.findMany({
       where: {
         tenantId: TENANT_ID,
-        userId,
+        userId: bookingUser.id,
       },
       include: {
         user: {
@@ -145,13 +141,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   return withErrorHandling(async () => {
-    // TODO: Get userId from authenticated session
-    // For now, using a temporary mock userId
-    const userId = request.headers.get('x-user-id');
-
-    if (!userId) {
-      return errorResponse('User not authenticated', 401, 'UNAUTHORIZED');
-    }
+    // Supabaseセッションから認証済みユーザーを取得
+    const bookingUser = await requireAuthAndGetBookingUser();
 
     const body = await request.json();
     const validation = createReservationSchema.safeParse(body);
@@ -259,7 +250,7 @@ export async function POST(request: NextRequest) {
       const userReservations = await tx.bookingReservation.findMany({
         where: {
           tenantId: TENANT_ID,
-          userId,
+          userId: bookingUser.id,
           reservedDate: new Date(reservedDate),
           status: { in: ['PENDING', 'CONFIRMED'] },
         },
@@ -361,7 +352,7 @@ export async function POST(request: NextRequest) {
         status: 'PENDING';
       } = {
         tenantId: TENANT_ID,
-        userId,
+        userId: bookingUser.id,
         menuId,
         reservedDate: new Date(reservedDate),
         reservedTime,
