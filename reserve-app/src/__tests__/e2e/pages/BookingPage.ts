@@ -26,6 +26,16 @@ export class BookingPage {
     featureReminder: 'text=リマインダー',
     characterCounter: 'text=/\\/500文字/',
     couponInput: '[data-testid="coupon-input"]',
+    // 週間カレンダー用セレクタ
+    viewModeTabWeekly: '[data-testid="view-mode-tab-weekly"]',
+    viewModeTabMonthly: '[data-testid="view-mode-tab-monthly"]',
+    weeklyCalendar: '[data-testid="weekly-calendar"]',
+    monthlyCalendar: '[data-testid="monthly-calendar"]',
+    weeklyTimeBlock: '[data-testid="weekly-time-block"]',
+    weekRangeTitle: '[data-testid="week-range-title"]',
+    previousWeekButton: '[data-testid="previous-week-button"]',
+    nextWeekButton: '[data-testid="next-week-button"]',
+    breakTimeBlock: '[data-testid="break-time-block"]',
   };
 
   /**
@@ -267,5 +277,167 @@ export class BookingPage {
    */
   async expectCouponInputNotVisible() {
     await expect(this.page.locator(this.selectors.couponInput)).not.toBeVisible();
+  }
+
+  // ========== 週間カレンダー用メソッド ==========
+
+  /**
+   * 週間カレンダーが表示されることを検証
+   */
+  async expectWeeklyCalendarVisible() {
+    await expect(this.page.locator(this.selectors.weeklyCalendar)).toBeVisible();
+  }
+
+  /**
+   * 月間カレンダーが表示されることを検証
+   */
+  async expectMonthlyCalendarVisible() {
+    await expect(this.page.locator(this.selectors.monthlyCalendar)).toBeVisible();
+  }
+
+  /**
+   * 週間カレンダーが非表示であることを検証
+   */
+  async expectWeeklyCalendarNotVisible() {
+    await expect(this.page.locator(this.selectors.weeklyCalendar)).not.toBeVisible();
+  }
+
+  /**
+   * 月間カレンダーが非表示であることを検証
+   */
+  async expectMonthlyCalendarNotVisible() {
+    await expect(this.page.locator(this.selectors.monthlyCalendar)).not.toBeVisible();
+  }
+
+  /**
+   * 表示モードタブがアクティブであることを検証
+   */
+  async expectViewModeActive(mode: 'weekly' | 'monthly') {
+    const selector = mode === 'weekly'
+      ? this.selectors.viewModeTabWeekly
+      : this.selectors.viewModeTabMonthly;
+
+    const tab = this.page.locator(selector);
+    await expect(tab).toHaveClass(/active|bg-blue-500|text-blue-600/);
+  }
+
+  /**
+   * 表示モードタブをクリック
+   */
+  async clickViewModeTab(mode: 'weekly' | 'monthly') {
+    const selector = mode === 'weekly'
+      ? this.selectors.viewModeTabWeekly
+      : this.selectors.viewModeTabMonthly;
+
+    await this.page.locator(selector).click();
+  }
+
+  /**
+   * 週の範囲タイトルを取得
+   */
+  async getWeekRangeTitle(): Promise<string | null> {
+    return await this.page.locator(this.selectors.weekRangeTitle).textContent();
+  }
+
+  /**
+   * 週の範囲が表示されることを検証
+   */
+  async expectWeekRange(expectedText: string) {
+    await expect(this.page.locator(this.selectors.weekRangeTitle)).toContainText(expectedText);
+  }
+
+  /**
+   * 次週ボタンをクリック
+   */
+  async clickNextWeek() {
+    await this.page.locator(this.selectors.nextWeekButton).click();
+  }
+
+  /**
+   * 前週ボタンをクリック
+   */
+  async clickPreviousWeek() {
+    await this.page.locator(this.selectors.previousWeekButton).click();
+  }
+
+  /**
+   * 週間カレンダーの特定の時間ブロックを取得
+   * @param dayIndex 曜日のインデックス（0=月, 1=火, ..., 6=日）
+   * @param time 時間（例: "09:00", "14:00"）
+   */
+  private getWeeklyTimeBlock(dayIndex: number, time: string) {
+    return this.page.locator(this.selectors.weeklyTimeBlock)
+      .filter({ has: this.page.locator(`[data-day="${dayIndex}"][data-time="${time}"]`) })
+      .first();
+  }
+
+  /**
+   * 週間カレンダーの時間ブロックをクリック
+   * @param dayIndex 曜日のインデックス（0=月, 1=火, ..., 6=日）
+   * @param time 時間（例: "09:00", "14:00"）
+   */
+  async clickWeeklyTimeBlock(dayIndex: number, time: string) {
+    const block = this.page.locator(
+      `${this.selectors.weeklyTimeBlock}[data-day="${dayIndex}"][data-time="${time}"]`
+    );
+    await block.click();
+  }
+
+  /**
+   * 週間カレンダーの時間ブロックが緑色（空き）で表示されることを検証
+   */
+  async expectWeeklyTimeBlockAvailable(dayIndex: number, time: string) {
+    const block = this.page.locator(
+      `${this.selectors.weeklyTimeBlock}[data-day="${dayIndex}"][data-time="${time}"]`
+    );
+    await expect(block).toBeVisible();
+    await expect(block).toHaveClass(/bg-green-100|bg-green-50/);
+  }
+
+  /**
+   * 週間カレンダーの時間ブロックがグレーアウト（予約済み）で表示されることを検証
+   */
+  async expectWeeklyTimeBlockUnavailable(dayIndex: number, time: string) {
+    const block = this.page.locator(
+      `${this.selectors.weeklyTimeBlock}[data-day="${dayIndex}"][data-time="${time}"]`
+    );
+    await expect(block).toBeVisible();
+    await expect(block).toHaveClass(/bg-gray-100|bg-gray-50/);
+    await expect(block).toBeDisabled();
+  }
+
+  /**
+   * 休憩時間ブロックが表示されることを検証
+   */
+  async expectBreakTimeVisible(time: string) {
+    const breakBlock = this.page.locator(this.selectors.breakTimeBlock)
+      .filter({ hasText: time });
+    await expect(breakBlock).toBeVisible();
+    await expect(breakBlock).toContainText('休憩時間');
+  }
+
+  /**
+   * LocalStorageの値を取得
+   */
+  async getLocalStorage(key: string): Promise<string | null> {
+    return await this.page.evaluate((k) => localStorage.getItem(k), key);
+  }
+
+  /**
+   * LocalStorageに値を設定
+   */
+  async setLocalStorage(key: string, value: string) {
+    await this.page.evaluate(
+      ({ k, v }) => localStorage.setItem(k, v),
+      { k: key, v: value }
+    );
+  }
+
+  /**
+   * ページをリロード
+   */
+  async reload() {
+    await this.page.reload();
+    await this.waitForLoad();
   }
 }
