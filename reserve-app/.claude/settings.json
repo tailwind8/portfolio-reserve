@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)",
+      "Read(**/.ssh/**)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(**/.aws/credentials)",
+      "Read(**/.config/gcloud/**)",
+      "Bash(diskutil eraseDisk:*)",
+      "Bash(mkfs:*)",
+      "Bash(fdisk:*)",
+      "Bash(parted:*)",
+      "Bash(dd:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(rm -rf /*:*)",
+      "Bash(chmod -R /:*)",
+      "Bash(chown -R /:*)",
+      "Bash(chmod 777 /:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git reflog expire:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker volume prune:*)",
+      "Bash(docker network prune:*)",
+      "Bash(dropdb:*)",
+      "Bash(rm -rf node_modules:*)",
+      "Bash(rm -rf .git:*)",
+      "Bash(rm -rf dist:*)",
+      "Bash(rm -rf build:*)"
+    ]
+  }
+}
