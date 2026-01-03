@@ -1,17 +1,17 @@
 # GitHub Issues 一覧
 
-**最終更新**: 2026-01-01
+**最終更新**: 2026-01-03
 
 このドキュメントは、GitHub Issueの完全リストと進捗状況を管理するドキュメントです。
 
 ## 📊 進捗サマリー
 
-- **実装済み (CLOSED)**: 44件 (81.5%)
-- **未実装 (OPEN)**: 11件 (18.5%)
+- **実装済み (CLOSED)**: 51件 (94.4%)
+- **未実装 (OPEN)**: 3件 (5.6%)
 - **合計**: 54件
 
 **Phase 1（基本機能）完了率**: 100% ✅
-**Phase 2（拡張機能）完了率**: 75%
+**Phase 2（拡張機能）完了率**: 92%
 
 ---
 
@@ -421,7 +421,7 @@ Feature: 予約キャンセル
 
 ---
 
-## 📦 Sprint 3: 管理機能（店舗側） ⚠️ 一部未完了
+## 📦 Sprint 3: 管理機能（店舗側） ✅ 完了
 
 ### #15 [FEATURE] 管理者ダッシュボード（統計表示） ✅ CLOSED
 **Labels**: `feature`, `sprint-3`, `priority-high`
@@ -571,21 +571,42 @@ So that I don't forget my reservation
 
 ---
 
-### #26 [FEATURE] 分析レポート（予約推移） ⚠️ OPEN
+### #26 [FEATURE] 分析レポート（予約推移） ✅ CLOSED
 **Labels**: `feature`, `sprint-4`, `priority-low`
+**完了日**: 2026-01-03
+
+**概要**: 予約推移のグラフ表示機能を実装
 
 **実装タスク**:
-- [ ] 予約件数推移グラフ（日別/週別/月別）
-- [ ] グラフ表示UI（Chart.js or Recharts）
+- [x] 予約件数推移グラフ（日別/週別/月別タブ切り替え）
+- [x] Rechartsによるグラフ表示UI（BarChart）
+- [x] 分析API (`/api/admin/analytics`)
+- [x] E2Eテスト（analytics.spec.ts）
+
+**成果物**:
+- `reserve-app/src/app/admin/analytics/page.tsx`
+- `reserve-app/src/app/api/admin/analytics/route.ts`
+- `reserve-app/src/__tests__/e2e/analytics.spec.ts`
 
 ---
 
-### #27 [FEATURE] リピート率分析 ⚠️ OPEN
+### #27 [FEATURE] リピート率分析 ✅ CLOSED
 **Labels**: `feature`, `sprint-4`, `priority-low`
+**完了日**: 2026-01-03
+
+**概要**: リピート率分析機能を実装
 
 **実装タスク**:
-- [ ] リピート率計算ロジック
-- [ ] 分析結果表示UI
+- [x] リピート率計算ロジック（新規 vs リピーター）
+- [x] 全体リピート率の表示
+- [x] 円グラフ（PieChart）による顧客タイプ可視化
+- [x] リピート率推移グラフ（LineChart、過去6ヶ月）
+- [x] 分析API (`/api/admin/analytics`)
+- [x] E2Eテスト（analytics.spec.ts）
+
+**成果物**:
+- `reserve-app/src/app/admin/analytics/page.tsx` - リピート率セクション含む
+- `reserve-app/src/app/api/admin/analytics/route.ts`
 
 ---
 
@@ -608,12 +629,13 @@ So that I don't forget my reservation
 
 ---
 
-### #30 [DOCS] API仕様書作成 ⚠️ OPEN (実質完了)
+### #30 [DOCS] API仕様書作成 ✅ CLOSED
 **Labels**: `docs`, `sprint-4`, `priority-low`
+**完了日**: 2026-01-03
 
 **概要**: 全APIエンドポイントの仕様書作成（OpenAPI or Markdown）
 
-**補足**: `documents/api/API設計書.md` として既に作成済み（最終更新: 2026-01-01）。Issueクローズを推奨。
+**成果物**: `documents/api/API設計書.md` として作成済み（最終更新: 2026-01-01）
 
 ---
 
@@ -661,7 +683,7 @@ So that I don't forget my reservation
 
 ---
 
-## 📦 Sprint 6: セキュリティ強化 ⚠️ 一部未完了
+## 📦 Sprint 6: セキュリティ強化 ✅ 完了
 
 ### #62 【セキュリティ】セキュリティヘッダーの追加 ✅ CLOSED
 **Labels**: `feature`, `security`, `priority-high`
@@ -696,13 +718,23 @@ So that I don't forget my reservation
 
 ---
 
-### #67 【セキュリティ】セキュリティイベントのログ記録実装 ⚠️ OPEN
+### #67 【セキュリティ】セキュリティイベントのログ記録実装 ✅ CLOSED
 **Labels**: `feature`, `security`, `priority-medium`
+**完了日**: 2026-01-03
+
+**概要**: セキュリティイベントのログ記録機能を実装
 
 **実装タスク**:
-- [ ] ログイン試行ログ
-- [ ] 不正アクセス検知ログ
-- [ ] セキュリティイベント監視
+- [x] ログイン試行ログ（LOGIN_SUCCESS, LOGIN_FAILED）
+- [x] 不正アクセス検知ログ（UNAUTHORIZED_ACCESS）
+- [x] レート制限超過ログ（RATE_LIMIT_EXCEEDED）
+- [x] SecurityLogモデル（Prismaスキーマ）
+- [x] security-logger.ts ユーティリティ
+
+**成果物**:
+- `reserve-app/prisma/schema.prisma` - SecurityLogモデル
+- `reserve-app/src/lib/security-logger.ts` - ロギングユーティリティ
+- `reserve-app/src/__tests__/unit/security-logger.test.ts` - 単体テスト
 
 ---
 
@@ -740,7 +772,7 @@ So that I don't forget my reservation
 
 ---
 
-## 📦 Sprint 8: ドキュメント・設定機能拡張 ⚠️ 一部未完了
+## 📦 Sprint 8: ドキュメント・設定機能拡張 ✅ 完了
 
 ### #75 docs: プロジェクトドキュメントを拡充 ✅ CLOSED
 **Labels**: `docs`, `priority-medium`
@@ -749,21 +781,43 @@ So that I don't forget my reservation
 
 ---
 
-### #77 【設定機能】スタッフ指名機能のON/OFF設定 ⚠️ OPEN
+### #77 【設定機能】スタッフ指名機能のON/OFF設定 ✅ CLOSED
 **Labels**: `feature`, `settings`, `priority-low`
+**完了日**: 2026-01-03
+**マージコミット**: 41fd4d1
+
+**概要**: スタッフ指名機能のON/OFF制御をFeatureFlagで実装
 
 **実装タスク**:
-- [ ] 設定画面にトグルスイッチ追加
-- [ ] スタッフ指名フィールドの表示/非表示制御
+- [x] FeatureFlagモデルに `enableStaffSelection` フラグ追加
+- [x] SUPER_ADMIN用の機能フラグ管理画面 (`/super-admin/feature-flags`)
+- [x] 予約画面でのスタッフ指名フィールドの表示/非表示制御
+- [x] useFeatureFlagsフック実装
+- [x] E2Eテスト（feature-flag-integration.spec.ts）
+
+**成果物**:
+- `reserve-app/prisma/schema.prisma` - FeatureFlagモデル
+- `reserve-app/src/app/super-admin/feature-flags/page.tsx`
+- `reserve-app/src/hooks/useFeatureFlags.ts`
 
 ---
 
-### #78 【設定機能】スタッフシフト管理のON/OFF設定 ⚠️ OPEN
+### #78 【設定機能】スタッフシフト管理のON/OFF設定 ✅ CLOSED
 **Labels**: `feature`, `settings`, `priority-low`
+**完了日**: 2026-01-03
+**マージコミット**: 41fd4d1
+
+**概要**: スタッフシフト管理機能のON/OFF制御をFeatureFlagで実装
 
 **実装タスク**:
-- [ ] 設定画面にトグルスイッチ追加
-- [ ] シフト管理機能の有効/無効制御
+- [x] FeatureFlagモデルに `enableStaffShiftManagement` フラグ追加
+- [x] SUPER_ADMIN用の機能フラグ管理画面での制御
+- [x] シフト管理機能の有効/無効制御
+- [x] E2Eテスト
+
+**成果物**:
+- `reserve-app/prisma/schema.prisma` - FeatureFlagモデル
+- `reserve-app/src/app/super-admin/feature-flags/page.tsx`
 
 ---
 
@@ -820,39 +874,33 @@ Backlog → In Progress → Review → Done
 |--------|------|--------|
 | Sprint 1: 基盤構築 | ✅ 完了 | 100% (7/7) |
 | Sprint 2: 予約機能（ユーザー側） | ✅ 完了 | 100% (7/7) |
-| Sprint 3: 管理機能（店舗側） | ⚠️ 一部未完了 | 83% (5/6) |
-| Sprint 4: 拡張機能 | ⚠️ 一部未完了 | 60% (3/5) |
+| Sprint 3: 管理機能（店舗側） | ✅ 完了 | 100% (6/6) |
+| Sprint 4: 拡張機能 | ⚠️ 一部未完了 | 80% (4/5) |
 | Sprint 5: テスト品質向上 | ✅ 完了 | 100% (8/8) |
-| Sprint 6: セキュリティ強化 | ⚠️ 一部未完了 | 83% (5/6) |
+| Sprint 6: セキュリティ強化 | ✅ 完了 | 100% (6/6) |
 | Sprint 7: パフォーマンス最適化 | ⚠️ 一部未完了 | 50% (2/4) |
-| Sprint 8: ドキュメント・設定機能拡張 | ⚠️ 一部未完了 | 60% (3/5) |
+| Sprint 8: ドキュメント・設定機能拡張 | ✅ 完了 | 100% (5/5) |
 
 ### 未完了Issue一覧（優先順位順）
 
-**優先度: 中〜高**
-- #67: セキュリティイベントのログ記録実装
-- #70: トランザクションの実装
-- #71: 検索フィルターのDB最適化
+**優先度: 中**
+- #70: トランザクションの実装（パフォーマンス・データ整合性）
+- #71: 検索フィルターのDB最適化（パフォーマンス）
 
 **優先度: 低**
-- #26: 分析レポート（予約推移）
-- #27: リピート率分析
-- #29: コンポーネント整理
-- #30: API仕様書作成（実質完了）
-- #77: スタッフ指名機能のON/OFF設定
-- #78: スタッフシフト管理のON/OFF設定
+- #29: コンポーネント整理（リファクタリング・技術的負債）
 
 ---
 
 ## 🎯 次のステップ
 
 ### 推奨タスク優先順位
-1. **Issue #30をクローズ**: API設計書は既に完成
+1. ~~**Issue #30をクローズ**: API設計書は既に完成~~ ✅ 完了
 2. ~~**顧客管理機能の実装** (#19, #20): ポートフォリオ価値向上~~ ✅ 完了
-3. **分析レポート機能の実装** (#26, #27): データ可視化スキルのアピール
+3. ~~**分析レポート機能の実装** (#26, #27): データ可視化スキルのアピール~~ ✅ 完了
 4. **パフォーマンス強化** (#70, #71): システムの完成度向上
 5. **コンポーネント整理** (#29): 技術的負債の解消
 
 ---
 
-**最終更新**: 2026-01-01
+**最終更新**: 2026-01-03
