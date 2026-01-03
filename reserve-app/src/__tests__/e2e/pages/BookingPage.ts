@@ -411,7 +411,8 @@ export class BookingPage {
    */
   async expectBreakTimeVisible(time: string) {
     const breakBlock = this.page.locator(this.selectors.breakTimeBlock)
-      .filter({ hasText: time });
+      .filter({ hasText: time })
+      .first(); // 週間カレンダーは7日分あるため、最初の1つをチェック
     await expect(breakBlock).toBeVisible();
     await expect(breakBlock).toContainText('休憩時間');
   }

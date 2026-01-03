@@ -196,22 +196,107 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
       const date = url.searchParams.get('date');
 
       // 日付ごとのモックデータ
+      // 実際にリクエストされる日付: 2025-12-28週と2026-01-04週
       const mockDataByDate: Record<string, { success: boolean; data: { slots: { time: string; available: boolean }[] } }> = {
-        '2026-01-06': {
-          // 月曜日
+        // 2025-12-28週（初期表示） - すべて過去なので空き・予約済み混在
+        '2025-12-28': {
           success: true,
           data: {
             slots: [
               { time: '09:00', available: true },
-              { time: '10:00', available: false }, // 予約済み
+              { time: '10:00', available: true },
               { time: '11:00', available: true },
               { time: '14:00', available: true },
               { time: '15:00', available: true },
             ],
           },
         },
-        '2026-01-07': {
-          // 火曜日
+        '2025-12-29': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2025-12-30': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2025-12-31': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-01': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-02': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-03': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        // 2026-01-04週（次週ボタンクリック後） - テストで使用
+        '2026-01-04': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: false }, // 予約済み（テストで確認）
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-05': {
           success: true,
           data: {
             slots: [
@@ -223,8 +308,95 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
             ],
           },
         },
+        '2026-01-06': {
+          // 水曜日（次週の2026-01-04週のdayIndex=2）
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true }, // 空き（テストで確認）
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-07': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
         '2026-01-08': {
-          // 水曜日
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-09': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-10': {
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-13': {
+          // 月曜日（次週）- テストで使用
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: false }, // 予約済み
+              { time: '11:00', available: true },
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-14': {
+          // 火曜日（次週）
+          success: true,
+          data: {
+            slots: [
+              { time: '09:00', available: true },
+              { time: '10:00', available: true },
+              { time: '11:00', available: false }, // 予約済み
+              { time: '14:00', available: true },
+              { time: '15:00', available: true },
+            ],
+          },
+        },
+        '2026-01-15': {
+          // 水曜日（次週）
           success: true,
           data: {
             slots: [
@@ -242,11 +414,11 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
         success: true,
         data: {
           slots: [
-            { time: '09:00', available: true },
-            { time: '10:00', available: true },
-            { time: '11:00', available: true },
-            { time: '14:00', available: true },
-            { time: '15:00', available: true },
+            { time: '09:00', available: false }, // デフォルトは予約済みにして区別しやすくする
+            { time: '10:00', available: false },
+            { time: '11:00', available: false },
+            { time: '14:00', available: false },
+            { time: '15:00', available: false },
           ],
         },
       };

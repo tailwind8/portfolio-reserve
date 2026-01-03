@@ -40,15 +40,20 @@ function BookingContent() {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     // 月曜日を週の開始として計算
     const today = new Date();
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const day = today.getDay(); // 0 (日) ～ 6 (土)
+    // 月曜日までの日数を計算
+    const diff = (day === 0 ? -6 : 1) - day;
     const weekStart = new Date(today);
-    weekStart.setDate(diff);
+    weekStart.setDate(today.getDate() + diff);
     weekStart.setHours(0, 0, 0, 0);
     return weekStart;
   });
   const [weeklySlots, setWeeklySlots] = useState<Map<string, TimeSlot[]>>(new Map());
   const [loadingWeeklySlots, setLoadingWeeklySlots] = useState(false);
+
+  // 休憩時間設定（将来的にはAPIから取得）
+  const breakTimeStart = '12:00';
+  const breakTimeEnd = '13:00';
 
   // LocalStorageから表示モードを読み込む（初回のみ）
   useEffect(() => {
@@ -188,14 +193,6 @@ function BookingContent() {
 
   // 週間カレンダー用ヘルパー関数
 
-  // 週の開始日（月曜日）を取得
-  function getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // 月曜日を週の開始
-    return new Date(d.setDate(diff));
-  }
-
   // 週の範囲テキストを生成（例: "2026/01/06 - 2026/01/12"）
   function getWeekRangeText(weekStart: Date): string {
     const weekEnd = new Date(weekStart);
@@ -210,6 +207,20 @@ function BookingContent() {
       date.setDate(weekStart.getDate() + i);
       return date;
     });
+  }
+
+  // 休憩時間かどうかを判定
+  function isBreakTime(time: string): boolean {
+    const [hour, minute] = time.split(':').map(Number);
+    const timeMinutes = hour * 60 + minute;
+
+    const [breakStartHour, breakStartMinute] = breakTimeStart.split(':').map(Number);
+    const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
+
+    const [breakEndHour, breakEndMinute] = breakTimeEnd.split(':').map(Number);
+    const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
+
+    return timeMinutes >= breakStartMinutes && timeMinutes < breakEndMinutes;
   }
 
   // 時間スロットを生成（30分刻み）
@@ -597,6 +608,17 @@ function BookingContent() {
                                 <tr key={time}>
                                   <td className="border p-2 text-sm font-medium text-gray-700">{time}</td>
                                   {getWeekDates(currentWeekStart).map((date, dayIndex) => {
+                                    // 休憩時間の場合は専用セルを表示
+                                    if (isBreakTime(time)) {
+                                      return (
+                                        <td key={dayIndex} className="border p-1 bg-gray-200" data-testid="break-time-block" data-time={time}>
+                                          <div className="text-xs text-gray-500 text-center py-3">
+                                            {time} 休憩時間
+                                          </div>
+                                        </td>
+                                      );
+                                    }
+
                                     const dateStr = date.toISOString().split('T')[0];
                                     const slots = weeklySlots.get(dateStr) || [];
                                     const slot = slots.find((s) => s.time === time);
