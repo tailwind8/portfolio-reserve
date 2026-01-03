@@ -31,6 +31,17 @@ export default function AdminSidebar() {
       ),
     },
     {
+      name: '予約ブロック',
+      href: '/admin/blocked-times',
+      requiresFeature: null, // 常に表示
+      testId: 'nav-link-予約ブロック',
+      icon: (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+      ),
+    },
+    {
       name: '顧客管理',
       href: '/admin/customers',
       requiresFeature: 'enableCustomerManagement', // 機能フラグで制御
