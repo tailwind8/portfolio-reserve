@@ -228,6 +228,32 @@ enum UserRole {
 }
 
 // ========================================
+// Reservation Blocking Model
+// ========================================
+// ホットペッパーや電話予約など、システム外で受け付けた予約に対応し、
+// 該当時間帯をオンライン予約から除外できるようにする
+
+model BookingBlockedTimeSlot {
+  id            String   @id @default(uuid())
+  tenantId      String   @default("demo-booking") @map("tenant_id")
+
+  startDateTime DateTime @map("start_date_time") // ブロック開始日時
+  endDateTime   DateTime @map("end_date_time")   // ブロック終了日時
+
+  reason        String?  // 理由（例: "ホットペッパー予約", "電話予約", "臨時休業"）
+  description   String?  // 詳細説明（任意）
+
+  createdBy     String?  @map("created_by") // 作成者（管理者ID）
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([startDateTime, endDateTime]) // 時間範囲検索用
+  @@index([tenantId, startDateTime, endDateTime]) // 空き時間確認時の複合インデックス
+  @@map("booking_blocked_time_slots")
+}
+
+// ========================================
 // Security Logging Model
 // ========================================
 
