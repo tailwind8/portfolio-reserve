@@ -18,6 +18,10 @@ import { RegisterPage } from './pages/RegisterPage';
  * 対応Gherkin: reserve-app/features/validation/boundary-values.feature
  */
 
+// E2E用の管理者認証情報を環境変数から取得
+const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@example.com';
+const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin123';
+
 test.describe('入力値の境界値テスト', () => {
   // ===== メニュー価格の境界値テスト =====
 
@@ -25,7 +29,7 @@ test.describe('入力値の境界値テスト', () => {
     test.beforeEach(async ({ page }) => {
       const loginPage = new LoginPage(page);
       await loginPage.goto('/admin/login');
-      await loginPage.login('admin@example.com', 'admin123');
+      await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
       await expect(page).toHaveURL('/admin/dashboard');
     });
 
@@ -91,7 +95,7 @@ test.describe('入力値の境界値テスト', () => {
     test.beforeEach(async ({ page }) => {
       const loginPage = new LoginPage(page);
       await loginPage.goto('/admin/login');
-      await loginPage.login('admin@example.com', 'admin123');
+      await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
       await expect(page).toHaveURL('/admin/dashboard');
     });
 
@@ -201,7 +205,7 @@ test.describe('入力値の境界値テスト', () => {
     test.beforeEach(async ({ page }) => {
       const loginPage = new LoginPage(page);
       await loginPage.goto('/admin/login');
-      await loginPage.login('admin@example.com', 'admin123');
+      await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
       await expect(page).toHaveURL('/admin/dashboard');
     });
 

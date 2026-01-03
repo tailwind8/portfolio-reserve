@@ -17,6 +17,10 @@ import { MyPage } from './pages/MyPage';
  * 対応Gherkin: reserve-app/features/error-handling/network-errors.feature
  */
 
+// E2E用の管理者認証情報を環境変数から取得
+const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@example.com';
+const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin123';
+
 test.describe('ネットワークエラーハンドリング', () => {
   test.beforeEach(async ({ page }) => {
     const loginPage = new LoginPage(page);
@@ -378,7 +382,7 @@ test.describe('ネットワークエラーハンドリング', () => {
 
     const loginPage = new LoginPage(page);
     await loginPage.goto('/admin/login');
-    await loginPage.login('admin@example.com', 'admin123');
+    await loginPage.login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
     await expect(page).toHaveURL('/admin/dashboard');
 
     // 統計データAPIのみ失敗させる

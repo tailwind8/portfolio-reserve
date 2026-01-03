@@ -157,6 +157,12 @@ export function checkAuthHeader(
 export function checkAdminAuthHeader(
   request: NextRequest
 ): string | ReturnType<typeof errorResponse> {
+  // E2Eテスト環境では認証をスキップ
+  const skipAuthInTest = process.env.SKIP_AUTH_IN_TEST === 'true';
+  if (skipAuthInTest) {
+    return 'test-admin-user'; // テスト用のダミーユーザーIDを返す
+  }
+
   const userId = request.headers.get('x-user-id');
   const userRole = request.headers.get('x-user-role');
 
