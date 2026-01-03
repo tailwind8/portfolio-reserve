@@ -198,7 +198,7 @@ test.describe('週間カレンダーの空き時間表示 (#107)', () => {
       const date = url.searchParams.get('date');
 
       // 日付ごとのモックデータ
-      const mockDataByDate: { [key: string]: any } = {
+      const mockDataByDate: Record<string, { success: boolean; data: { slots: { time: string; available: boolean }[] } }> = {
         '2026-01-06': {
           // 月曜日
           success: true,

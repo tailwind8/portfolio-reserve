@@ -35,6 +35,33 @@ function BookingContent() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // 週間カレンダー用state
+  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
+  const [weeklySlots, setWeeklySlots] = useState<Map<string, TimeSlot[]>>(new Map());
+  const [loadingWeeklySlots, setLoadingWeeklySlots] = useState(false);
+
+  // LocalStorageから表示モードを読み込む（初回のみ）
+  useEffect(() => {
+    const savedMode = localStorage.getItem('booking-calendar-view-mode');
+    if (savedMode === 'monthly' || savedMode === 'weekly') {
+      setViewMode(savedMode);
+    }
+
+    // currentWeekStartを月曜日に初期化
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 月曜日を週の開始
+    const weekStart = new Date(today);
+    weekStart.setDate(diff);
+    setCurrentWeekStart(weekStart);
+  }, []);
+
+  // viewModeが変更されたらLocalStorageに保存
+  useEffect(() => {
+    localStorage.setItem('booking-calendar-view-mode', viewMode);
+  }, [viewMode]);
+
   // Fetch menus and staff on mount
   useEffect(() => {
     async function fetchData() {
@@ -107,6 +134,100 @@ function BookingContent() {
 
     fetchSlots();
   }, [selectedDate, selectedMenuId, selectedStaffId]);
+
+  // 週間カレンダー用の空き時間データを取得
+  useEffect(() => {
+    if (viewMode !== 'weekly' || !selectedMenuId) {
+      setWeeklySlots(new Map());
+      return;
+    }
+
+    async function fetchWeeklySlots() {
+      setLoadingWeeklySlots(true);
+      try {
+        const weekDates = getWeekDates(currentWeekStart);
+        const promises = weekDates.map(async (date) => {
+          const dateStr = date.toISOString().split('T')[0];
+          const params = new URLSearchParams({
+            date: dateStr,
+            menuId: selectedMenuId,
+          });
+
+          if (selectedStaffId) {
+            params.append('staffId', selectedStaffId);
+          }
+
+          const response = await fetch(`/api/available-slots?${params}`);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || '空き時間の取得に失敗しました');
+          }
+
+          return { dateStr, slots: data.data.slots };
+        });
+
+        const results = await Promise.all(promises);
+        const slotsMap = new Map<string, TimeSlot[]>();
+        results.forEach(({ dateStr, slots }) => {
+          slotsMap.set(dateStr, slots);
+        });
+
+        setWeeklySlots(slotsMap);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+        setWeeklySlots(new Map());
+      } finally {
+        setLoadingWeeklySlots(false);
+      }
+    }
+
+    fetchWeeklySlots();
+  }, [currentWeekStart, selectedMenuId, selectedStaffId, viewMode]);
+
+  // 週間カレンダー用ヘルパー関数
+
+  // 週の開始日（月曜日）を取得
+  function getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // 月曜日を週の開始
+    return new Date(d.setDate(diff));
+  }
+
+  // 週の範囲テキストを生成（例: "2026/01/06 - 2026/01/12"）
+  function getWeekRangeText(weekStart: Date): string {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return `${weekStart.getFullYear()}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')}/${weekStart.getDate().toString().padStart(2, '0')} - ${weekEnd.getFullYear()}/${(weekEnd.getMonth() + 1).toString().padStart(2, '0')}/${weekEnd.getDate().toString().padStart(2, '0')}`;
+  }
+
+  // 7日分の日付配列を生成
+  function getWeekDates(weekStart: Date): Date[] {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      return date;
+    });
+  }
+
+  // 時間スロットを生成（30分刻み）
+  function generateTimeSlots(openTime: string, closeTime: string): string[] {
+    const [openHour, openMinute] = openTime.split(':').map(Number);
+    const [closeHour, closeMinute] = closeTime.split(':').map(Number);
+
+    const slots: string[] = [];
+    const startMinutes = openHour * 60 + openMinute;
+    const endMinutes = closeHour * 60 + closeMinute;
+
+    for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+      const hour = Math.floor(minutes / 60);
+      const minute = minutes % 60;
+      slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+    }
+
+    return slots;
+  }
 
   // Calendar utilities
   const year = currentDate.getFullYear();
@@ -260,7 +381,36 @@ function BookingContent() {
               {/* Calendar Section */}
               <div className="lg:col-span-2">
                 <Card>
-                  <div className="mb-6">
+                  {/* 表示モード切り替えタブ */}
+                  <div className="mb-6 flex gap-2 border-b">
+                    <button
+                      data-testid="view-mode-tab-weekly"
+                      onClick={() => setViewMode('weekly')}
+                      className={`px-4 py-2 font-medium transition-colors ${
+                        viewMode === 'weekly'
+                          ? 'border-b-2 border-blue-500 text-blue-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      週間
+                    </button>
+                    <button
+                      data-testid="view-mode-tab-monthly"
+                      onClick={() => setViewMode('monthly')}
+                      className={`px-4 py-2 font-medium transition-colors ${
+                        viewMode === 'monthly'
+                          ? 'border-b-2 border-blue-500 text-blue-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      月間
+                    </button>
+                  </div>
+
+                  {/* 月間カレンダー（既存） */}
+                  {viewMode === 'monthly' && (
+                    <div data-testid="monthly-calendar">
+                      <div className="mb-6">
                     <div className="mb-4 flex items-center justify-between">
                       <h2 className="text-xl font-semibold text-gray-900">{monthStr}</h2>
                       <div className="flex gap-2">
@@ -378,6 +528,123 @@ function BookingContent() {
                       </p>
                     </div>
                   )}
+                    </div>
+                  )}
+
+                  {/* 週間カレンダー */}
+                  {viewMode === 'weekly' && (
+                    <div data-testid="weekly-calendar">
+                      <div className="mb-4 flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-gray-900" data-testid="week-range-title">
+                          {getWeekRangeText(currentWeekStart)}
+                        </h2>
+                        <div className="flex gap-2">
+                          <button
+                            data-testid="previous-week-button"
+                            onClick={() => {
+                              const newWeekStart = new Date(currentWeekStart);
+                              newWeekStart.setDate(currentWeekStart.getDate() - 7);
+                              setCurrentWeekStart(newWeekStart);
+                            }}
+                            className="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
+                          >
+                            ← 前週
+                          </button>
+                          <button
+                            data-testid="next-week-button"
+                            onClick={() => {
+                              const newWeekStart = new Date(currentWeekStart);
+                              newWeekStart.setDate(currentWeekStart.getDate() + 7);
+                              setCurrentWeekStart(newWeekStart);
+                            }}
+                            className="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
+                          >
+                            次週 →
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Loading State */}
+                      {loadingWeeklySlots && (
+                        <div className="flex justify-center py-12">
+                          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                        </div>
+                      )}
+
+                      {/* Weekly Calendar Grid */}
+                      {!loadingWeeklySlots && selectedMenuId && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr>
+                                <th className="border p-2 text-sm font-semibold text-gray-600">時間</th>
+                                {['月', '火', '水', '木', '金', '土', '日'].map((day, index) => {
+                                  const date = getWeekDates(currentWeekStart)[index];
+                                  return (
+                                    <th key={day} className="border p-2 text-sm font-semibold text-gray-600">
+                                      {day}<br />
+                                      <span className="text-xs text-gray-500">
+                                        {date.getMonth() + 1}/{date.getDate()}
+                                      </span>
+                                    </th>
+                                  );
+                                })}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {generateTimeSlots('09:00', '20:00').map((time) => (
+                                <tr key={time}>
+                                  <td className="border p-2 text-sm font-medium text-gray-700">{time}</td>
+                                  {getWeekDates(currentWeekStart).map((date, dayIndex) => {
+                                    const dateStr = date.toISOString().split('T')[0];
+                                    const slots = weeklySlots.get(dateStr) || [];
+                                    const slot = slots.find((s) => s.time === time);
+                                    const isAvailable = slot?.available ?? false;
+                                    const isPast = date < today;
+
+                                    return (
+                                      <td key={dayIndex} className="border p-1">
+                                        <button
+                                          data-testid="weekly-time-block"
+                                          data-day={dayIndex}
+                                          data-time={time}
+                                          disabled={!isAvailable || isPast}
+                                          onClick={() => {
+                                            if (isAvailable && !isPast) {
+                                              setSelectedDate(date);
+                                              setSelectedTime(time);
+                                              if (slot?.staffId && !selectedStaffId) {
+                                                setSelectedStaffId(slot.staffId);
+                                              }
+                                            }
+                                          }}
+                                          className={`
+                                            w-full rounded px-2 py-3 text-xs transition-colors
+                                            ${isAvailable && !isPast ? 'bg-green-100 hover:bg-green-200 cursor-pointer' : ''}
+                                            ${!isAvailable || isPast ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
+                                            ${selectedDate?.toISOString().split('T')[0] === dateStr && selectedTime === time ? 'ring-2 ring-blue-500' : ''}
+                                          `}
+                                        >
+                                          {isAvailable && !isPast ? '○' : '×'}
+                                        </button>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* No Menu Selected */}
+                      {!selectedMenuId && (
+                        <div className="py-8 text-center text-gray-500">
+                          メニューを選択してください
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </Card>
               </div>
 
@@ -392,9 +659,9 @@ function BookingContent() {
                         日時
                       </label>
                       <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-900">
-                        {selectedDateStr}
+                        <span data-testid="selected-date">{selectedDateStr}</span>
                         <br />
-                        <span className="text-gray-500">
+                        <span className="text-gray-500" data-testid="selected-time">
                           {selectedTime || '時間未選択'}
                         </span>
                       </div>
