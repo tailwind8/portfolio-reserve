@@ -49,9 +49,8 @@ describe('useReservations', () => {
     // 取得成功
     expect(result.current.reservations).toEqual(mockReservations);
     expect(result.current.error).toBeNull();
-    expect(global.fetch).toHaveBeenCalledWith('/api/reservations', {
-      headers: { 'x-user-id': 'temp-user-id' },
-    });
+    // Supabaseセッションは自動的にCookieで送信されるため、ヘッダー不要
+    expect(global.fetch).toHaveBeenCalledWith('/api/reservations');
   });
 
   it.skip('should handle fetch error', async () => {

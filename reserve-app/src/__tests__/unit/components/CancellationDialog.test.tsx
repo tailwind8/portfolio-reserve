@@ -108,11 +108,11 @@ describe('CancellationDialog', () => {
       expect(mockOnSuccess).toHaveBeenCalledTimes(1);
     });
 
+    // Supabaseセッションは自動的にCookieで送信されるため、x-user-idヘッダー不要
     expect(global.fetch).toHaveBeenCalledWith('/api/reservations/1', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': 'temp-user-id',
       },
       body: JSON.stringify({ cancellationReason: '' }),
     });
@@ -139,11 +139,11 @@ describe('CancellationDialog', () => {
     fireEvent.click(cancelButton);
 
     await waitFor(() => {
+      // Supabaseセッションは自動的にCookieで送信されるため、x-user-idヘッダー不要
       expect(global.fetch).toHaveBeenCalledWith('/api/reservations/1', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'temp-user-id',
         },
         body: JSON.stringify({ cancellationReason: '予定が変更になりました' }),
       });
