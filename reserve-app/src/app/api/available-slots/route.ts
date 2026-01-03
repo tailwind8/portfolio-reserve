@@ -66,6 +66,28 @@ function isStaffWorkingAtTime(
 }
 
 /**
+ * Issue #110: 指定時間がブロックされているかチェック
+ */
+function isTimeBlocked(
+  time: string,
+  date: string,
+  blockedSlots: { startDateTime: Date; endDateTime: Date }[]
+): boolean {
+  const [hour, minute] = time.split(':').map(Number);
+  const slotDateTime = new Date(date);
+  slotDateTime.setHours(hour, minute, 0, 0);
+
+  for (const blocked of blockedSlots) {
+    // ブロック期間内かチェック（開始時刻以降、終了時刻未満）
+    if (slotDateTime >= blocked.startDateTime && slotDateTime < blocked.endDateTime) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Check if a time slot is available for a staff member
  */
 function isSlotAvailable(
@@ -173,6 +195,19 @@ export async function GET(request: NextRequest) {
       menu.duration
     );
 
+    // Issue #110: ブロックされた時間帯を取得
+    const blockedSlots = await prisma.bookingBlockedTimeSlot.findMany({
+      where: {
+        tenantId: TENANT_ID,
+        startDateTime: { lte: new Date(date + 'T23:59:59Z') },
+        endDateTime: { gte: new Date(date + 'T00:00:00Z') },
+      },
+      select: {
+        startDateTime: true,
+        endDateTime: true,
+      },
+    });
+
     // If staffId is provided, check availability for that specific staff
     if (staffId) {
       const reservations = await prisma.bookingReservation.findMany({
@@ -188,11 +223,18 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      const slots: TimeSlot[] = allTimeSlots.map((time) => ({
-        time,
-        available: isSlotAvailable(time, reservations, menu.duration),
-        staffId,
-      }));
+      const slots: TimeSlot[] = allTimeSlots.map((time) => {
+        // ブロックされている場合は即座にfalse
+        if (isTimeBlocked(time, date, blockedSlots)) {
+          return { time, available: false, staffId };
+        }
+
+        return {
+          time,
+          available: isSlotAvailable(time, reservations, menu.duration),
+          staffId,
+        };
+      });
 
       return successResponse<AvailableSlots>({ date, slots });
     }
@@ -206,11 +248,11 @@ export async function GET(request: NextRequest) {
       select: { id: true },
     });
 
-    // スタッフが存在しない場合、全ての時間スロットを利用可能として返す
+    // スタッフが存在しない場合、全ての時間スロットを利用可能として返す（ブロック除く）
     if (activeStaff.length === 0) {
       const slots: TimeSlot[] = allTimeSlots.map((time) => ({
         time,
-        available: true,
+        available: !isTimeBlocked(time, date, blockedSlots),
       }));
       return successResponse<AvailableSlots>({ date, slots });
     }
@@ -309,11 +351,11 @@ export async function GET(request: NextRequest) {
       activeStaff.length = 0;
       activeStaff.push(...filteredStaff);
 
-      // フィルタリング後にスタッフが0人の場合
+      // フィルタリング後にスタッフが0人の場合（ブロックも考慮）
       if (activeStaff.length === 0) {
         const slots: TimeSlot[] = allTimeSlots.map((time) => ({
           time,
-          available: false,
+          available: false, // スタッフがいない、またはブロックされている
         }));
         return successResponse<AvailableSlots>({ date, slots });
       }
@@ -348,6 +390,11 @@ export async function GET(request: NextRequest) {
 
     // Check if any staff is available for each time slot
     const slots: TimeSlot[] = allTimeSlots.map((time) => {
+      // Issue #110: ブロックされている場合は即座にfalse
+      if (isTimeBlocked(time, date, blockedSlots)) {
+        return { time, available: false };
+      }
+
       for (const [sid, reservations] of reservationsByStaff.entries()) {
         // シフト管理がONの場合、シフト内の時間かチェック
         if (enableShiftManagement) {
