@@ -183,76 +183,119 @@ export async function PATCH(
       }
     }
 
-    // メニューが指定されている場合、存在確認
-    if (menuId) {
-      const menu = await prisma.bookingMenu.findFirst({
-        where: {
-          id: menuId,
-          tenantId,
-          isActive: true,
-        },
-      });
+    // トランザクション内で予約を更新（Race Condition対策）
+    const updatedReservation = await prisma.$transaction(async (tx) => {
+      // 1. メニューが指定されている場合、存在確認
+      if (menuId) {
+        const menu = await tx.bookingMenu.findFirst({
+          where: {
+            id: menuId,
+            tenantId,
+            isActive: true,
+          },
+        });
 
-      if (!menu) {
-        return errorResponse('Menu not found or inactive', 404, 'MENU_NOT_FOUND');
+        if (!menu) {
+          throw new Error('MENU_NOT_FOUND');
+        }
       }
-    }
 
-    // スタッフが指定されている場合、存在確認
-    if (staffId) {
-      const staff = await prisma.bookingStaff.findFirst({
-        where: {
-          id: staffId,
-          tenantId,
-          isActive: true,
-        },
-      });
+      // 2. スタッフが指定されている場合、存在確認
+      if (staffId) {
+        const staff = await tx.bookingStaff.findFirst({
+          where: {
+            id: staffId,
+            tenantId,
+            isActive: true,
+          },
+        });
 
-      if (!staff) {
-        return errorResponse('Staff not found or inactive', 404, 'STAFF_NOT_FOUND');
+        if (!staff) {
+          throw new Error('STAFF_NOT_FOUND');
+        }
       }
-    }
 
-    // 予約日時の重複チェック（スタッフまたは日時が変更される場合）
-    if (staffId || reservedDate || reservedTime) {
-      const checkStaffId = staffId || existingReservation.staffId;
-      const checkDate = reservedDate ? new Date(reservedDate) : existingReservation.reservedDate;
-      const checkTime = reservedTime || existingReservation.reservedTime;
+      // 3. 予約日時の重複チェック（スタッフまたは日時が変更される場合）
+      if (staffId || reservedDate || reservedTime) {
+        const checkStaffId = staffId || existingReservation.staffId;
+        const checkDate = reservedDate ? new Date(reservedDate) : existingReservation.reservedDate;
+        const checkTime = reservedTime || existingReservation.reservedTime;
 
-      const conflictingReservation = await prisma.bookingReservation.findFirst({
+        const conflictingReservation = await tx.bookingReservation.findFirst({
+          where: {
+            id: { not: id }, // 自分自身を除く
+            tenantId,
+            staffId: checkStaffId,
+            reservedDate: checkDate,
+            reservedTime: checkTime,
+            status: {
+              notIn: ['CANCELLED', 'NO_SHOW'],
+            },
+          },
+        });
+
+        if (conflictingReservation) {
+          throw new Error('TIME_SLOT_CONFLICT');
+        }
+      }
+
+      // 4. 更新データの準備
+      const updateData: Record<string, unknown> = {};
+      if (menuId !== undefined) updateData.menuId = menuId;
+      if (staffId !== undefined) updateData.staffId = staffId;
+      if (reservedDate !== undefined) updateData.reservedDate = new Date(reservedDate);
+      if (reservedTime !== undefined) updateData.reservedTime = reservedTime;
+      if (notes !== undefined) updateData.notes = notes;
+
+      // ステータス変更の場合
+      if (status !== undefined) {
+        updateData.status = status;
+      }
+
+      // 5. 予約を更新
+      return await tx.bookingReservation.update({
         where: {
-          id: { not: id }, // 自分自身を除く
-          tenantId,
-          staffId: checkStaffId,
-          reservedDate: checkDate,
-          reservedTime: checkTime,
-          status: {
-            notIn: ['CANCELLED', 'NO_SHOW'],
+          id,
+        },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          menu: {
+            select: {
+              name: true,
+              price: true,
+              duration: true,
+            },
+          },
+          staff: {
+            select: {
+              name: true,
+              role: true,
+            },
           },
         },
       });
-
-      if (conflictingReservation) {
-        return errorResponse(
-          'This time slot is already booked for the selected staff',
-          409,
-          'TIME_SLOT_CONFLICT'
-        );
+    }).catch((error) => {
+      // トランザクションエラーを適切なHTTPエラーに変換
+      if (error.message === 'MENU_NOT_FOUND') {
+        throw { statusCode: 404, message: 'Menu not found or inactive', code: 'MENU_NOT_FOUND' };
+      } else if (error.message === 'STAFF_NOT_FOUND') {
+        throw { statusCode: 404, message: 'Staff not found or inactive', code: 'STAFF_NOT_FOUND' };
+      } else if (error.message === 'TIME_SLOT_CONFLICT') {
+        throw { statusCode: 409, message: 'This time slot is already booked for the selected staff', code: 'TIME_SLOT_CONFLICT' };
       }
-    }
-
-    // 更新データの準備
-    const updateData: Record<string, unknown> = {};
-    if (menuId !== undefined) updateData.menuId = menuId;
-    if (staffId !== undefined) updateData.staffId = staffId;
-    if (reservedDate !== undefined) updateData.reservedDate = new Date(reservedDate);
-    if (reservedTime !== undefined) updateData.reservedTime = reservedTime;
-    if (notes !== undefined) updateData.notes = notes;
+      throw error;
+    });
 
     // ステータス変更の場合、成功メッセージを準備
     let successMessage = '予約を更新しました';
     if (status !== undefined) {
-      updateData.status = status;
       if (status === 'CONFIRMED') {
         successMessage = '予約を確定しました';
       } else if (status === 'COMPLETED') {
@@ -263,36 +306,6 @@ export async function PATCH(
         successMessage = '無断キャンセルとして記録しました';
       }
     }
-
-    // 予約を更新
-    const updatedReservation = await prisma.bookingReservation.update({
-      where: {
-        id,
-      },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-        menu: {
-          select: {
-            name: true,
-            price: true,
-            duration: true,
-          },
-        },
-        staff: {
-          select: {
-            name: true,
-            role: true,
-          },
-        },
-      },
-    });
 
     // レスポンス整形
     const formattedReservation = {
@@ -365,27 +378,50 @@ export async function DELETE(
       );
     }
 
-    // PENDING または CONFIRMED の予約は削除ではなくCANCELLEDに変更
-    if (
-      existingReservation.status === 'PENDING' ||
-      existingReservation.status === 'CONFIRMED'
-    ) {
-      await prisma.bookingReservation.update({
-        where: { id },
-        data: { status: 'CANCELLED' },
+    // トランザクション内で予約を削除（Race Condition対策）
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. 最新の予約情報を取得（他のリクエストによる変更をチェック）
+      const currentReservation = await tx.bookingReservation.findFirst({
+        where: {
+          id,
+          tenantId,
+        },
       });
 
-      return successResponse({ message: '予約をキャンセルしました' });
-    }
+      if (!currentReservation) {
+        throw new Error('RESERVATION_NOT_FOUND');
+      }
 
-    // CANCELLED や NO_SHOW の予約は実際に削除
-    await prisma.bookingReservation.delete({
-      where: {
-        id,
-      },
+      // 2. PENDING または CONFIRMED の予約は削除ではなくCANCELLEDに変更
+      if (
+        currentReservation.status === 'PENDING' ||
+        currentReservation.status === 'CONFIRMED'
+      ) {
+        await tx.bookingReservation.update({
+          where: { id },
+          data: { status: 'CANCELLED' },
+        });
+
+        return { deleted: false, message: '予約をキャンセルしました' };
+      }
+
+      // 3. CANCELLED や NO_SHOW の予約は実際に削除
+      await tx.bookingReservation.delete({
+        where: {
+          id,
+        },
+      });
+
+      return { deleted: true, message: 'Reservation deleted successfully' };
+    }).catch((error) => {
+      // トランザクションエラーを適切なHTTPエラーに変換
+      if (error.message === 'RESERVATION_NOT_FOUND') {
+        throw { statusCode: 404, message: 'Reservation not found', code: 'RESERVATION_NOT_FOUND' };
+      }
+      throw error;
     });
 
-    return successResponse({ message: 'Reservation deleted successfully' });
+    return successResponse({ message: result.message });
   } catch (error) {
     console.error('Error deleting reservation:', error);
     return errorResponse(
