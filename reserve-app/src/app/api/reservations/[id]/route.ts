@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-response';
 import { updateReservationSchema, cancelReservationSchema } from '@/lib/validations';
 import { sendReservationUpdateEmail, sendReservationCancellationEmail } from '@/lib/email';
-import { minutesSinceStartOfDay, parseTimeString } from '@/lib/time-utils';
+import { minutesSinceStartOfDay, parseTimeString, hasTimeOverlap } from '@/lib/time-utils';
 import type { Reservation } from '@/types/api';
 import { requireFeatureFlag } from '@/lib/api-feature-flag';
 import { requireAuthAndGetBookingUser } from '@/lib/auth';
@@ -195,11 +195,7 @@ export async function PATCH(
           const resStartMinutes = minutesSinceStartOfDay(reservation.reservedTime);
           const resEndMinutes = resStartMinutes + reservation.menu.duration;
 
-          if (
-            (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
-            (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
-            (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
-          ) {
+          if (hasTimeOverlap(newStartMinutes, newEndMinutes, resStartMinutes, resEndMinutes)) {
             throw new Error('TIME_SLOT_CONFLICT');
           }
         }

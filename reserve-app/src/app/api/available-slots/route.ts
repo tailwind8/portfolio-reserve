@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, withErrorHandling } from '@/lib/api-response';
 import { availableSlotsQuerySchema } from '@/lib/validations';
 import { getFeatureFlags } from '@/lib/api-feature-flag';
-import { minutesSinceStartOfDay, parseTimeString, formatMinutesToTime } from '@/lib/time-utils';
+import { minutesSinceStartOfDay, parseTimeString, formatMinutesToTime, hasTimeOverlap } from '@/lib/time-utils';
 import type { AvailableSlots, TimeSlot } from '@/types/api';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -94,11 +94,7 @@ function isSlotAvailable(
     const resEndMinutes = resStartMinutes + reservation.menu.duration;
 
     // Check for time slot overlap
-    if (
-      (slotStartMinutes >= resStartMinutes && slotStartMinutes < resEndMinutes) ||
-      (slotEndMinutes > resStartMinutes && slotEndMinutes <= resEndMinutes) ||
-      (slotStartMinutes <= resStartMinutes && slotEndMinutes >= resEndMinutes)
-    ) {
+    if (hasTimeOverlap(slotStartMinutes, slotEndMinutes, resStartMinutes, resEndMinutes)) {
       return false;
     }
   }

@@ -5,7 +5,7 @@ import { createReservationSchema } from '@/lib/validations';
 import { sendReservationConfirmationEmail } from '@/lib/email';
 import { getFeatureFlags } from '@/lib/api-feature-flag';
 import { requireAuthAndGetBookingUser } from '@/lib/auth';
-import { minutesSinceStartOfDay } from '@/lib/time-utils';
+import { minutesSinceStartOfDay, hasTimeOverlap } from '@/lib/time-utils';
 import type { Reservation } from '@/types/api';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -209,11 +209,7 @@ export async function POST(request: NextRequest) {
           const resEndMinutes = resStartMinutes + res.menu.duration;
 
           // 時間が重複している場合
-          if (
-            (reservedStartMinutes >= resStartMinutes && reservedStartMinutes < resEndMinutes) ||
-            (reservedEndMinutes > resStartMinutes && reservedEndMinutes <= resEndMinutes) ||
-            (reservedStartMinutes <= resStartMinutes && reservedEndMinutes >= resEndMinutes)
-          ) {
+          if (hasTimeOverlap(reservedStartMinutes, reservedEndMinutes, resStartMinutes, resEndMinutes)) {
             isAvailable = false;
             break;
           }
@@ -267,11 +263,7 @@ export async function POST(request: NextRequest) {
         const resEndMinutes = resStartMinutes + userRes.menu.duration;
 
         // Check for overlap
-        if (
-          (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
-          (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
-          (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
-        ) {
+        if (hasTimeOverlap(newStartMinutes, newEndMinutes, resStartMinutes, resEndMinutes)) {
           throw new Error('既にこの時間帯に予約があります');
         }
       }
@@ -296,11 +288,7 @@ export async function POST(request: NextRequest) {
           const resEndMinutes = resStartMinutes + staffRes.menu.duration;
 
           // Check for overlap
-          if (
-            (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
-            (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
-            (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
-          ) {
+          if (hasTimeOverlap(newStartMinutes, newEndMinutes, resStartMinutes, resEndMinutes)) {
             throw new Error('選択されたスタッフは指定時間帯に対応できません');
           }
         }
@@ -325,11 +313,7 @@ export async function POST(request: NextRequest) {
           const resStartMinutes = minutesSinceStartOfDay(res.reservedTime);
           const resEndMinutes = resStartMinutes + res.menu.duration;
 
-          if (
-            (newStartMinutes >= resStartMinutes && newStartMinutes < resEndMinutes) ||
-            (newEndMinutes > resStartMinutes && newEndMinutes <= resEndMinutes) ||
-            (newStartMinutes <= resStartMinutes && newEndMinutes >= resEndMinutes)
-          ) {
+          if (hasTimeOverlap(newStartMinutes, newEndMinutes, resStartMinutes, resEndMinutes)) {
             throw new Error('この時間は既に予約済みです');
           }
         }
