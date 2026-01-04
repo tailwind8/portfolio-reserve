@@ -197,99 +197,110 @@ export async function POST(request: NextRequest) {
     const { userId, menuId, staffId, reservedDate, reservedTime, notes } = validation.data;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    // ユーザーの存在確認
-    const user = await prisma.bookingUser.findFirst({
-      where: {
-        id: userId,
-        tenantId,
-      },
-    });
-
-    if (!user) {
-      return errorResponse('User not found', 404, 'USER_NOT_FOUND');
-    }
-
-    // メニューの存在確認
-    const menu = await prisma.bookingMenu.findFirst({
-      where: {
-        id: menuId,
-        tenantId,
-        isActive: true,
-      },
-    });
-
-    if (!menu) {
-      return errorResponse('Menu not found or inactive', 404, 'MENU_NOT_FOUND');
-    }
-
-    // スタッフの存在確認
-    const staff = await prisma.bookingStaff.findFirst({
-      where: {
-        id: staffId,
-        tenantId,
-        isActive: true,
-      },
-    });
-
-    if (!staff) {
-      return errorResponse('Staff not found or inactive', 404, 'STAFF_NOT_FOUND');
-    }
-
-    // 予約日時の重複チェック（同じスタッフ、同じ時間）
-    const existingReservation = await prisma.bookingReservation.findFirst({
-      where: {
-        tenantId,
-        staffId,
-        reservedDate: new Date(reservedDate),
-        reservedTime,
-        status: {
-          notIn: ['CANCELLED', 'NO_SHOW'],
+    // トランザクション内で予約を作成（Race Condition対策）
+    const reservation = await prisma.$transaction(async (tx) => {
+      // 1. ユーザーの存在確認
+      const user = await tx.bookingUser.findFirst({
+        where: {
+          id: userId,
+          tenantId,
         },
-      },
-    });
+      });
 
-    if (existingReservation) {
-      return errorResponse(
-        'This time slot is already booked for the selected staff',
-        409,
-        'TIME_SLOT_CONFLICT'
-      );
-    }
+      if (!user) {
+        throw new Error('USER_NOT_FOUND');
+      }
 
-    // 予約を作成
-    const reservation = await prisma.bookingReservation.create({
-      data: {
-        tenantId,
-        userId,
-        menuId,
-        staffId,
-        reservedDate: new Date(reservedDate),
-        reservedTime,
-        status: 'CONFIRMED', // 管理者が作成する場合は自動的に確定
-        notes,
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
+      // 2. メニューの存在確認
+      const menu = await tx.bookingMenu.findFirst({
+        where: {
+          id: menuId,
+          tenantId,
+          isActive: true,
+        },
+      });
+
+      if (!menu) {
+        throw new Error('MENU_NOT_FOUND');
+      }
+
+      // 3. スタッフの存在確認
+      const staff = await tx.bookingStaff.findFirst({
+        where: {
+          id: staffId,
+          tenantId,
+          isActive: true,
+        },
+      });
+
+      if (!staff) {
+        throw new Error('STAFF_NOT_FOUND');
+      }
+
+      // 4. 予約日時の重複チェック（同じスタッフ、同じ時間）
+      const existingReservation = await tx.bookingReservation.findFirst({
+        where: {
+          tenantId,
+          staffId,
+          reservedDate: new Date(reservedDate),
+          reservedTime,
+          status: {
+            notIn: ['CANCELLED', 'NO_SHOW'],
           },
         },
-        menu: {
-          select: {
-            name: true,
-            price: true,
-            duration: true,
+      });
+
+      if (existingReservation) {
+        throw new Error('TIME_SLOT_CONFLICT');
+      }
+
+      // 5. 予約を作成
+      return await tx.bookingReservation.create({
+        data: {
+          tenantId,
+          userId,
+          menuId,
+          staffId,
+          reservedDate: new Date(reservedDate),
+          reservedTime,
+          status: 'CONFIRMED', // 管理者が作成する場合は自動的に確定
+          notes,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          menu: {
+            select: {
+              name: true,
+              price: true,
+              duration: true,
+            },
+          },
+          staff: {
+            select: {
+              name: true,
+              role: true,
+            },
           },
         },
-        staff: {
-          select: {
-            name: true,
-            role: true,
-          },
-        },
-      },
+      });
+    }).catch((error) => {
+      // トランザクションエラーを適切なHTTPエラーに変換
+      if (error.message === 'USER_NOT_FOUND') {
+        throw { statusCode: 404, message: 'User not found', code: 'USER_NOT_FOUND' };
+      } else if (error.message === 'MENU_NOT_FOUND') {
+        throw { statusCode: 404, message: 'Menu not found or inactive', code: 'MENU_NOT_FOUND' };
+      } else if (error.message === 'STAFF_NOT_FOUND') {
+        throw { statusCode: 404, message: 'Staff not found or inactive', code: 'STAFF_NOT_FOUND' };
+      } else if (error.message === 'TIME_SLOT_CONFLICT') {
+        throw { statusCode: 409, message: 'This time slot is already booked for the selected staff', code: 'TIME_SLOT_CONFLICT' };
+      }
+      throw error;
     });
 
     // レスポンス整形
