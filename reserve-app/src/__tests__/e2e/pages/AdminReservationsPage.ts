@@ -247,7 +247,10 @@ export class AdminReservationsPage {
    * 新規予約追加ボタンをクリックする
    */
   async clickAddReservation(): Promise<void> {
-    await this.page.locator(this.selectors.addReservationButton).click();
+    const button = this.page.locator(this.selectors.addReservationButton);
+    await button.waitFor({ state: 'visible', timeout: 10000 });
+    await button.scrollIntoViewIfNeeded();
+    await button.click({ timeout: 10000 });
   }
 
   /**
@@ -341,7 +344,10 @@ export class AdminReservationsPage {
    */
   async clickEdit(index: number): Promise<void> {
     const row = this.page.locator(this.selectors.reservationRow).nth(index);
-    await row.locator(this.selectors.editButton).click();
+    const button = row.locator(this.selectors.editButton);
+    await button.waitFor({ state: 'visible', timeout: 10000 });
+    await button.scrollIntoViewIfNeeded();
+    await button.click({ timeout: 10000 });
   }
 
   /**
@@ -420,7 +426,10 @@ export class AdminReservationsPage {
    */
   async clickDelete(index: number): Promise<void> {
     const row = this.page.locator(this.selectors.reservationRow).nth(index);
-    await row.locator(this.selectors.deleteButton).click();
+    const button = row.locator(this.selectors.deleteButton);
+    await button.waitFor({ state: 'visible', timeout: 10000 });
+    await button.scrollIntoViewIfNeeded();
+    await button.click({ timeout: 10000 });
   }
 
   /**

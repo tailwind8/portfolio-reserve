@@ -18,6 +18,11 @@ test.describe('管理者向け予約管理 (#17, #18)', () => {
   let reservationsPage: AdminReservationsPage;
 
   test.beforeEach(async ({ page }) => {
+    // LocalStorageをクリア（表示モードを常にデフォルトの'list'で開始）
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+
     // MSW API モックをセットアップ
     await setupMSW(page);
 
@@ -281,7 +286,7 @@ test.describe('管理者向け予約管理 (#17, #18)', () => {
     await reservationsPage.expectEditModalVisible();
 
     // When: ステータスを変更
-    await reservationsPage.changeStatus('confirmed');
+    await reservationsPage.changeStatus('CONFIRMED');
 
     // And: 更新する
     await reservationsPage.submitEditReservation();

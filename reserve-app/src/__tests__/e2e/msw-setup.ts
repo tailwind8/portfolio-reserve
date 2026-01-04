@@ -933,6 +933,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
       // オプション: 大量データを返す（ページネーション用）
       if (options.adminReservationsLarge) {
         const largeData = [];
+        const menuIds = ['550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440003'];
+        const staffIds = ['550e8400-e29b-41d4-a716-446655440011', '550e8400-e29b-41d4-a716-446655440012', '550e8400-e29b-41d4-a716-446655440013'];
         for (let i = 1; i <= 25; i++) {
           const futureDate = new Date();
           futureDate.setDate(futureDate.getDate() + i);
@@ -945,6 +947,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
             staffName: ['田中太郎', '佐藤花子', '鈴木一郎'][i % 3],
             status: ['CONFIRMED', 'PENDING', 'CONFIRMED'][i % 3] as 'CONFIRMED' | 'PENDING',
             notes: i % 5 === 0 ? `備考${i}` : undefined,
+            menuId: menuIds[i % 3],
+            staffId: staffIds[i % 3],
           });
         }
 
@@ -987,6 +991,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
               staffName: '田中',
               status: 'CONFIRMED',
               notes: 'よろしくお願いします',
+              menuId: '550e8400-e29b-41d4-a716-446655440001',
+              staffId: '550e8400-e29b-41d4-a716-446655440011',
             },
             {
               id: '550e8400-e29b-41d4-a716-446655440502',
@@ -996,6 +1002,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
               menuName: 'カラー',
               staffName: '佐藤',
               status: 'PENDING',
+              menuId: '550e8400-e29b-41d4-a716-446655440002',
+              staffId: '550e8400-e29b-41d4-a716-446655440012',
             },
             {
               id: '550e8400-e29b-41d4-a716-446655440503',
@@ -1005,6 +1013,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
               menuName: 'パーマ',
               staffName: '鈴木',
               status: 'CONFIRMED',
+              menuId: '550e8400-e29b-41d4-a716-446655440003',
+              staffId: '550e8400-e29b-41d4-a716-446655440013',
             },
             {
               id: '550e8400-e29b-41d4-a716-446655440504',
@@ -1014,6 +1024,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
               menuName: 'カット',
               staffName: '田中',
               status: 'CONFIRMED',
+              menuId: '550e8400-e29b-41d4-a716-446655440001',
+              staffId: '550e8400-e29b-41d4-a716-446655440011',
             },
             {
               id: '550e8400-e29b-41d4-a716-446655440505',
@@ -1023,6 +1035,8 @@ export async function setupMSW(page: Page, options: MSWOptions = {}) {
               menuName: 'カラー',
               staffName: '佐藤',
               status: 'PENDING',
+              menuId: '550e8400-e29b-41d4-a716-446655440002',
+              staffId: '550e8400-e29b-41d4-a716-446655440012',
             },
           ],
           timestamp: new Date().toISOString(),
