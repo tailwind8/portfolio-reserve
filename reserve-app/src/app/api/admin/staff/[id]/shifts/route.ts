@@ -112,19 +112,7 @@ export async function POST(
 
     const { shifts } = validation.data;
 
-    // スタッフの存在確認
-    const staff = await prisma.bookingStaff.findFirst({
-      where: {
-        id: staffId,
-        tenantId,
-      },
-    });
-
-    if (!staff) {
-      return errorResponse('スタッフが見つかりません', 404, 'STAFF_NOT_FOUND');
-    }
-
-    // 時間の妥当性チェック
+    // 時間の妥当性チェック（トランザクション前に実行）
     for (const shift of shifts) {
       const startMinutes = timeToMinutes(shift.startTime);
       const endMinutes = timeToMinutes(shift.endTime);
@@ -138,55 +126,77 @@ export async function POST(
       }
     }
 
-    // 既存のシフトを削除（上書き保存）
-    await prisma.bookingStaffShift.deleteMany({
-      where: {
-        staffId,
-        tenantId,
-      },
-    });
+    // トランザクションでシフト削除→作成を不可分に実行
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. スタッフの存在確認
+      const staff = await tx.bookingStaff.findFirst({
+        where: {
+          id: staffId,
+          tenantId,
+        },
+      });
 
-    // 新しいシフトを作成
-    const createdShifts = await prisma.bookingStaffShift.createMany({
-      data: shifts.map((shift) => ({
-        tenantId,
-        staffId,
-        dayOfWeek: shift.dayOfWeek,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        isActive: shift.isActive ?? true,
-      })),
-    });
+      if (!staff) {
+        throw new Error('STAFF_NOT_FOUND');
+      }
 
-    // 作成されたシフトを取得して返す
-    const savedShifts = await prisma.bookingStaffShift.findMany({
-      where: {
-        staffId,
-        tenantId,
-      },
-      select: {
-        id: true,
-        dayOfWeek: true,
-        startTime: true,
-        endTime: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: {
-        dayOfWeek: 'asc',
-      },
-    });
+      // 2. 既存のシフトを削除（上書き保存）
+      await tx.bookingStaffShift.deleteMany({
+        where: {
+          staffId,
+          tenantId,
+        },
+      });
 
-    return successResponse(
-      {
+      // 3. 新しいシフトを作成
+      const createdShifts = await tx.bookingStaffShift.createMany({
+        data: shifts.map((shift) => ({
+          tenantId,
+          staffId,
+          dayOfWeek: shift.dayOfWeek,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          isActive: shift.isActive ?? true,
+        })),
+      });
+
+      // 4. 作成されたシフトを取得して返す
+      const savedShifts = await tx.bookingStaffShift.findMany({
+        where: {
+          staffId,
+          tenantId,
+        },
+        select: {
+          id: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          dayOfWeek: 'asc',
+        },
+      });
+
+      return {
         count: createdShifts.count,
         shifts: savedShifts,
-      },
-      201
-    );
+      };
+    });
+
+    return successResponse(result, 201);
   } catch (error) {
     console.error('POST /api/admin/staff/[id]/shifts error:', error);
+
+    // トランザクション内でスローされたエラーを処理
+    if (error instanceof Error) {
+      if (error.message === 'STAFF_NOT_FOUND') {
+        return errorResponse('スタッフが見つかりません', 404, 'STAFF_NOT_FOUND');
+      }
+    }
+
     return errorResponse('シフトの設定に失敗しました', 500, 'INTERNAL_ERROR');
   }
 }

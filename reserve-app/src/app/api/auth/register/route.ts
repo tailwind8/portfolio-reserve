@@ -4,7 +4,7 @@ import { supabase, getSupabaseAdmin } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { checkRateLimit, registerRateLimit } from '@/lib/rate-limit';
-import { logSecurityEvent, getClientIp, getUserAgent } from '@/lib/security-logger';
+import { getClientIp, getUserAgent } from '@/lib/security-logger';
 
 /**
  * POST /api/auth/register
@@ -72,32 +72,44 @@ export async function POST(request: NextRequest) {
       return errorResponse('Failed to create user', 500);
     }
 
-    // Create user profile in database
-    try {
-      const user = await prisma.bookingUser.create({
-        data: {
-          tenantId,
-          authId: authData.user.id,
-          email,
-          name,
-          phone: phone || null,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          phone: true,
-          createdAt: true,
-        },
-      });
+    // TypeScript用に変数に格納（トランザクション内で使用するため）
+    const authUserId = authData.user.id;
 
-      // ユーザー登録をログに記録
-      await logSecurityEvent({
-        eventType: 'USER_REGISTER',
-        userId: user.id,
-        ipAddress,
-        userAgent,
-        metadata: { email: user.email },
+    // Create user profile in database with transaction
+    // トランザクションでDBユーザー作成とセキュリティログ記録を不可分に実行
+    try {
+      const user = await prisma.$transaction(async (tx) => {
+        // 1. DBにユーザープロフィール作成
+        const newUser = await tx.bookingUser.create({
+          data: {
+            tenantId,
+            authId: authUserId,
+            email,
+            name,
+            phone: phone || null,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            phone: true,
+            createdAt: true,
+          },
+        });
+
+        // 2. ユーザー登録をセキュリティログに記録
+        await tx.securityLog.create({
+          data: {
+            tenantId,
+            eventType: 'USER_REGISTER',
+            userId: newUser.id,
+            ipAddress: ipAddress || 'unknown',
+            userAgent: userAgent || 'unknown',
+            metadata: { email: newUser.email },
+          },
+        });
+
+        return newUser;
       });
 
       return successResponse(
@@ -109,9 +121,8 @@ export async function POST(request: NextRequest) {
         201
       );
     } catch (dbError) {
-      // If database creation fails, we should ideally delete the Supabase Auth user
-      // but for now we'll just log the error and return a message
-      console.error('Database error:', dbError);
+      // トランザクション失敗時、Supabase Authユーザーをクリーンアップ
+      console.error('Database transaction error:', dbError);
 
       // Clean up: Try to delete the auth user if profile creation fails
       try {
