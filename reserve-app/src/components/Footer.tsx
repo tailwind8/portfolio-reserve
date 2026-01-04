@@ -21,7 +21,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/booking" className="hover:text-blue-500 transition-colors">
+                <Link href="/" className="hover:text-blue-500 transition-colors">
                   予約
                 </Link>
               </li>

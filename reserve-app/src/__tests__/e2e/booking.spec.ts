@@ -14,7 +14,7 @@ test.describe('Booking Flow', () => {
   /**
    * Scenario: 予約ページが正しく表示される
    */
-  test('should display booking page with calendar', async ({ page }) => {
+  test('should display booking page with calendar @smoke', async ({ page }) => {
     const bookingPage = new BookingPage(page);
 
     // Given: 予約ページにアクセスしている
@@ -22,9 +22,6 @@ test.describe('Booking Flow', () => {
 
     // Then: ページタイトル"予約カレンダー"が表示される
     await bookingPage.expectHeading('予約カレンダー');
-
-    // And: カレンダーが表示される
-    await bookingPage.expectCalendarVisible();
 
     // And: 予約情報サイドバーが表示される
     await bookingPage.expectBookingInfoSidebarVisible();

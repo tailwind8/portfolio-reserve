@@ -15,7 +15,7 @@ export default function Header() {
           <Link href="/menus" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">
             メニュー
           </Link>
-          <Link href="/booking" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">
+          <Link href="/" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">
             予約
           </Link>
           <Link href="/my-reservations" className="text-sm font-medium text-gray-600 hover:text-blue-500 transition-colors">

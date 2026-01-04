@@ -88,6 +88,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  /**
+   * リダイレクト設定
+   *
+   * 旧URLから新URLへの永続的なリダイレクトを設定します。
+   * /booking は / に統合されたため、既存のブックマーク対策として301リダイレクトを設定。
+   *
+   * 参考:
+   * - https://nextjs.org/docs/app/api-reference/next-config-js/redirects
+   */
+  async redirects() {
+    return [
+      {
+        source: '/booking',
+        destination: '/',
+        permanent: true, // 301リダイレクト
+      },
+    ];
+  },
 };
 
 /**

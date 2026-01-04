@@ -12,7 +12,7 @@ describe('Footer', () => {
     render(<Footer />);
 
     expect(screen.getByRole('link', { name: 'メニュー' })).toHaveAttribute('href', '/menus');
-    expect(screen.getByRole('link', { name: '予約' })).toHaveAttribute('href', '/booking');
+    expect(screen.getByRole('link', { name: '予約' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'マイページ' })).toHaveAttribute('href', '/mypage');
   });
 

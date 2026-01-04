@@ -75,7 +75,7 @@ test.describe.serial('予約ブロック管理', () => {
     await blockedTimesPage.expectSuccessMessage('予約ブロックを追加しました');
 
     // ユーザーとして予約ページにアクセス
-    await page.goto('/booking');
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     // メニューを選択
@@ -201,7 +201,7 @@ test.describe.serial('予約ブロック管理', () => {
     await blockedTimesPage.expectSuccessMessage('予約ブロックを追加しました');
 
     // ユーザーとして予約ページにアクセス
-    await page.goto('/booking');
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     // メニューを選択

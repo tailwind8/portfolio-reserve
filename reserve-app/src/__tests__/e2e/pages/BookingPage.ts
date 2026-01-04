@@ -42,14 +42,14 @@ export class BookingPage {
    * 予約ページに移動
    */
   async goto() {
-    await this.page.goto('/booking');
+    await this.page.goto('/');
   }
 
   /**
    * クエリパラメータ付きで予約ページに移動
    */
   async gotoWithQuery(queryString: string) {
-    await this.page.goto(`/booking?${queryString}`);
+    await this.page.goto(`/?${queryString}`);
   }
 
   /**

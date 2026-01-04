@@ -89,7 +89,7 @@ test.describe('セッション管理', () => {
     await page.context().clearCookies();
 
     // 予約ページに移動しようとする
-    await page.goto('/booking');
+    await page.goto('/');
 
     // ログインページにリダイレクトされる
     await expect(page).toHaveURL('/login');

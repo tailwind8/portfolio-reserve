@@ -111,7 +111,7 @@ export default function MenusPage() {
                               </div>
                             </div>
 
-                            <Link href={`/booking?menuId=${menu.id}`}>
+                            <Link href={`/?menuId=${menu.id}`}>
                               <Button fullWidth data-testid="menu-book-button">
                                 このメニューで予約
                               </Button>

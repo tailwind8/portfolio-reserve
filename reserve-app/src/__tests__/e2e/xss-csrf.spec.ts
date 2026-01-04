@@ -360,13 +360,13 @@ test.describe('XSS・CSRF攻撃防止', () => {
   });
 
   test('内部URLへのリダイレクトは許可される', async ({ page }) => {
-    await page.goto('/login?redirect=/booking');
+    await page.goto('/login?redirect=/');
 
     const loginPage = new LoginPage(page);
     await loginPage.login('tanaka@example.com', 'password123');
 
     // 内部ページにリダイレクトされる
-    await expect(page).toHaveURL('/booking');
+    await expect(page).toHaveURL('/');
   });
 
   // ===== SameSite Cookie =====
