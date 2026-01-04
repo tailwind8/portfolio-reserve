@@ -359,13 +359,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Group reservations by staff
+    // 【パフォーマンス改善】O(n×m) → O(n)でグループ化
+    // 従来: 各スタッフに対してfilter()を実行 = O(スタッフ数 × 予約数)
+    // 改善: 1回のループでスタッフIDをキーにグループ化 = O(予約数)
     const reservationsByStaff = new Map<string, typeof allReservations>();
     for (const staff of activeStaff) {
-      reservationsByStaff.set(
-        staff.id,
-        allReservations.filter((r) => r.staffId === staff.id)
-      );
+      reservationsByStaff.set(staff.id, []);
+    }
+    for (const reservation of allReservations) {
+      if (reservation.staffId && reservationsByStaff.has(reservation.staffId)) {
+        reservationsByStaff.get(reservation.staffId)!.push(reservation);
+      }
     }
 
     // 指定日の曜日を取得（シフトチェック用）

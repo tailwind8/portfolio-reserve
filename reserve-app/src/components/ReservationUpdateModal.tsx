@@ -1,8 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Button from './Button';
 import type { Reservation } from '@/types/api';
+
+// 【パフォーマンス改善】定数をコンポーネント外に定義（毎レンダリングで再生成しない）
+const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'] as const;
+
+// 時間帯生成（9:00-18:00、30分刻み）- 定数なのでコンポーネント外で1回だけ生成
+const TIME_SLOTS = (() => {
+  const slots: string[] = [];
+  for (let hour = 9; hour <= 18; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      if (hour === 18 && minute > 0) break;
+      slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+    }
+  }
+  return slots;
+})();
 
 interface ReservationUpdateModalProps {
   reservation: Reservation;
@@ -77,18 +92,10 @@ export default function ReservationUpdateModal({
     }
   };
 
-  // カレンダーの日付生成
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month - 1, 1).getDay();
-  };
-
-  const generateCalendarDays = () => {
-    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
-    const firstDay = getFirstDayOfMonth(selectedYear, selectedMonth);
+  // 【パフォーマンス改善】カレンダー日付をuseMemoでメモ化
+  const calendarDays = useMemo(() => {
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const firstDay = new Date(selectedYear, selectedMonth - 1, 1).getDay();
     const days: (number | null)[] = [];
 
     // 空白を埋める
@@ -102,43 +109,35 @@ export default function ReservationUpdateModal({
     }
 
     return days;
-  };
+  }, [selectedYear, selectedMonth]);
+
+  // 【パフォーマンス改善】今日の日付をuseMemoでメモ化（1回のみ計算）
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
 
   // 過去の日付かどうかを判定
-  const isPastDate = (day: number) => {
+  const isPastDate = useCallback((day: number) => {
     const date = new Date(selectedYear, selectedMonth - 1, day);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     return date < today;
-  };
+  }, [selectedYear, selectedMonth, today]);
 
-  // 日付選択
-  const handleSelectDay = (day: number) => {
+  // 【パフォーマンス改善】日付選択をuseCallbackでメモ化
+  const handleSelectDay = useCallback((day: number) => {
     if (isPastDate(day)) return;
 
     setSelectedDay(day);
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    setFormData({ ...formData, reservedDate: dateStr });
-  };
+    setFormData((prev) => ({ ...prev, reservedDate: dateStr }));
+  }, [selectedYear, selectedMonth, isPastDate]);
 
-  // 時間帯選択
-  const handleSelectTime = (time: string) => {
+  // 【パフォーマンス改善】時間帯選択をuseCallbackでメモ化
+  const handleSelectTime = useCallback((time: string) => {
     setSelectedTime(time);
-    setFormData({ ...formData, reservedTime: time });
-  };
-
-  // 時間帯生成（9:00-18:00、30分刻み）
-  const generateTimeSlots = () => {
-    const slots: string[] = [];
-    for (let hour = 9; hour <= 18; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        if (hour === 18 && minute > 0) break; // 18:00で終了
-        const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-        slots.push(timeStr);
-      }
-    }
-    return slots;
-  };
+    setFormData((prev) => ({ ...prev, reservedTime: time }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,9 +172,7 @@ export default function ReservationUpdateModal({
     }
   };
 
-  const calendarDays = generateCalendarDays();
-  const timeSlots = generateTimeSlots();
-  const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+  // calendarDays, TIME_SLOTS, WEEK_DAYS は上部で定義済み（パフォーマンス最適化済み）
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 overflow-y-auto" data-testid="reservation-update-modal">
@@ -252,7 +249,7 @@ export default function ReservationUpdateModal({
 
             {/* カレンダーグリッド */}
             <div className="grid grid-cols-7 gap-1">
-              {weekDays.map((day) => (
+              {WEEK_DAYS.map((day) => (
                 <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
                   {day}
                 </div>
@@ -285,7 +282,7 @@ export default function ReservationUpdateModal({
                 時間を選択
               </label>
               <div className="grid grid-cols-4 gap-2">
-                {timeSlots.map((time) => (
+                {TIME_SLOTS.map((time) => (
                   <button
                     key={time}
                     type="button"

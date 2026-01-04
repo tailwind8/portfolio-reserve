@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
     let successCount = 0;
     let failureCount = 0;
     const errors: Array<{ reservationId: string; error: string }> = [];
+    const successfulIds: string[] = []; // 【パフォーマンス改善】成功したIDを収集
 
     // 各予約にリマインダーメールを送信
     for (const reservation of reservations) {
@@ -98,12 +99,8 @@ export async function GET(request: NextRequest) {
           text: getReminderEmailText(emailData),
         });
 
-        // リマインダー送信済みフラグを立てる
-        await prisma.bookingReservation.update({
-          where: { id: reservation.id },
-          data: { reminderSent: true },
-        });
-
+        // 成功したIDを収集（後でバッチ更新）
+        successfulIds.push(reservation.id);
         successCount++;
         console.log(
           `[Reminder Cron] Email sent to ${maskEmail(reservation.user.email)} for reservation ${reservation.id}`
@@ -121,6 +118,14 @@ export async function GET(request: NextRequest) {
         );
         // エラーが発生しても処理を継続
       }
+    }
+
+    // 【パフォーマンス改善】成功した予約を一括でバッチ更新（N回→1回のクエリ）
+    if (successfulIds.length > 0) {
+      await prisma.bookingReservation.updateMany({
+        where: { id: { in: successfulIds } },
+        data: { reminderSent: true },
+      });
     }
 
     // 結果を返す
