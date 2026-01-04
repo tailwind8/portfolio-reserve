@@ -86,6 +86,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 顧客名検索フィルター（DBレベルで実行）
+    if (search) {
+      where.user = {
+        name: {
+          contains: search, // PostgreSQL LIKEクエリ
+        },
+      };
+    }
+
     // 予約一覧を取得
     const reservations = await prisma.bookingReservation.findMany({
       where,
@@ -120,16 +129,8 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    // 検索フィルター（フロントエンド側でフィルタリング用のデータも含める）
-    let filteredReservations = reservations;
-    if (search) {
-      filteredReservations = reservations.filter((reservation: typeof reservations[number]) =>
-        reservation.user?.name?.includes(search)
-      );
-    }
-
     // レスポンス整形
-    const formattedReservations = filteredReservations.map((reservation: typeof reservations[number]) => ({
+    const formattedReservations = reservations.map((reservation) => ({
       id: reservation.id,
       reservedDate: reservation.reservedDate.toISOString().split('T')[0], // YYYY-MM-DD
       reservedTime: reservation.reservedTime,
