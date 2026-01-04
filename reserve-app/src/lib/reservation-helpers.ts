@@ -66,20 +66,34 @@ export async function findAvailableStaff(
   const reservedStartMinutes = minutesSinceStartOfDay(reservedTime);
   const reservedEndMinutes = reservedStartMinutes + menuDuration;
 
+  // 【パフォーマンス改善】全スタッフの予約を1回のクエリでバッチ取得（N+1クエリ解消）
+  const staffIds = availableStaff.map((s) => s.id);
+  const allReservations = await prisma.bookingReservation.findMany({
+    where: {
+      tenantId: TENANT_ID,
+      staffId: { in: staffIds },
+      reservedDate: new Date(reservedDate),
+      status: { in: ['PENDING', 'CONFIRMED'] },
+    },
+    include: {
+      menu: { select: { duration: true } },
+    },
+  });
+
+  // スタッフIDごとに予約をグループ化（O(n)で処理）
+  const reservationsByStaff = new Map<string, typeof allReservations>();
+  for (const staffId of staffIds) {
+    reservationsByStaff.set(staffId, []);
+  }
+  for (const reservation of allReservations) {
+    if (reservation.staffId) {
+      reservationsByStaff.get(reservation.staffId)?.push(reservation);
+    }
+  }
+
   // 各スタッフの予約状況を確認し、空いているスタッフを見つける
   for (const staff of availableStaff) {
-    // スタッフの既存予約を確認
-    const staffReservations = await prisma.bookingReservation.findMany({
-      where: {
-        tenantId: TENANT_ID,
-        staffId: staff.id,
-        reservedDate: new Date(reservedDate),
-        status: { in: ['PENDING', 'CONFIRMED'] },
-      },
-      include: {
-        menu: { select: { duration: true } },
-      },
-    });
+    const staffReservations = reservationsByStaff.get(staff.id) || [];
 
     // 時間重複チェック
     let isAvailable = true;
