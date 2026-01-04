@@ -11,24 +11,42 @@ import type { PrismaClient } from '@prisma/client';
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
 /**
+ * スタッフ検索結果の型
+ *
+ * @property found - スタッフが見つかったかどうか
+ * @property staffId - 見つかった場合のスタッフID
+ * @property reason - 見つからなかった場合の理由
+ */
+export type FindAvailableStaffResult =
+  | { found: true; staffId: string }
+  | { found: false; reason: 'NO_ACTIVE_STAFF' | 'NO_AVAILABLE_STAFF' };
+
+/**
  * 利用可能なスタッフを自動割り当て
  *
  * @param reservedDate - 予約日
  * @param reservedTime - 予約時刻（HH:MM形式）
  * @param menuDuration - メニュー所要時間（分）
- * @returns 割り当てられたスタッフID、見つからない場合はnull
+ * @returns 検索結果（スタッフID または 見つからなかった理由）
  *
  * @example
- * const staffId = await findAvailableStaff('2025-01-20', '14:00', 60);
- * if (!staffId) {
- *   throw new Error('空いているスタッフが見つかりません');
+ * const result = await findAvailableStaff('2025-01-20', '14:00', 60);
+ * if (!result.found) {
+ *   if (result.reason === 'NO_ACTIVE_STAFF') {
+ *     // システム設定の問題（スタッフが登録されていない）
+ *     return errorResponse('...', 404, 'NO_STAFF_AVAILABLE');
+ *   } else {
+ *     // 時間帯の問題（全スタッフが予約済み）
+ *     return errorResponse('...', 409, 'NO_STAFF_AVAILABLE_FOR_TIME');
+ *   }
  * }
+ * const staffId = result.staffId;
  */
 export async function findAvailableStaff(
   reservedDate: string,
   reservedTime: string,
   menuDuration: number
-): Promise<string | null> {
+): Promise<FindAvailableStaffResult> {
   // 利用可能なスタッフを検索
   const availableStaff = await prisma.bookingStaff.findMany({
     where: {
@@ -41,7 +59,7 @@ export async function findAvailableStaff(
   });
 
   if (availableStaff.length === 0) {
-    return null;
+    return { found: false, reason: 'NO_ACTIVE_STAFF' };
   }
 
   // 予約時間帯を計算
@@ -78,12 +96,12 @@ export async function findAvailableStaff(
 
     // 空いているスタッフが見つかった
     if (isAvailable) {
-      return staff.id;
+      return { found: true, staffId: staff.id };
     }
   }
 
-  // 空いているスタッフが見つからなかった
-  return null;
+  // スタッフは存在するが、指定時間帯は全員予約済み
+  return { found: false, reason: 'NO_AVAILABLE_STAFF' };
 }
 
 /**

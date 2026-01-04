@@ -46,18 +46,18 @@ describe('reservation-helpers', () => {
 
       const result = await findAvailableStaff('2025-01-20', '16:00', 60);
 
-      expect(result).toBe('staff-2');
+      expect(result).toEqual({ found: true, staffId: 'staff-2' });
     });
 
-    it('利用可能なスタッフがいない場合、nullを返す', async () => {
+    it('アクティブなスタッフがいない場合、NO_ACTIVE_STAFF理由を返す', async () => {
       mockBookingStaffFindMany.mockResolvedValue([] as never);
 
       const result = await findAvailableStaff('2025-01-20', '14:00', 60);
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ found: false, reason: 'NO_ACTIVE_STAFF' });
     });
 
-    it('全スタッフが予約済みの場合、nullを返す', async () => {
+    it('全スタッフが予約済みの場合、NO_AVAILABLE_STAFF理由を返す', async () => {
       mockBookingStaffFindMany.mockResolvedValue([
         { id: 'staff-1' },
       ] as never);
@@ -73,7 +73,7 @@ describe('reservation-helpers', () => {
       // 14:30-15:30の予約を試みる（重複する）
       const result = await findAvailableStaff('2025-01-20', '14:30', 60);
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ found: false, reason: 'NO_AVAILABLE_STAFF' });
     });
 
     it('時間が重複しないスタッフを見つける', async () => {
@@ -96,7 +96,7 @@ describe('reservation-helpers', () => {
       const result = await findAvailableStaff('2025-01-20', '15:00', 60);
 
       // staff-1の予約は14:00-15:00なので、15:00-16:00は空いている
-      expect(result).toBe('staff-1');
+      expect(result).toEqual({ found: true, staffId: 'staff-1' });
     });
   });
 
@@ -259,7 +259,7 @@ describe('reservation-helpers', () => {
 
       const result = await findAvailableStaff('2025-01-20', '14:00', 60);
 
-      expect(result).toBe('staff-1');
+      expect(result).toEqual({ found: true, staffId: 'staff-1' });
     });
 
     it('checkUserReservationConflicts: 複数の予約があるが、いずれも重複しない場合', async () => {

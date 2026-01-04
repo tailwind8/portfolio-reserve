@@ -174,11 +174,18 @@ export async function POST(request: NextRequest) {
 
     // Issue #77: スタッフ指名機能がOFFの場合、スタッフを自動割り当て
     if (featureFlags && !featureFlags.enableStaffSelection && !staffId) {
-      staffId = await findAvailableStaff(reservedDate, reservedTime, menu.duration);
+      const staffResult = await findAvailableStaff(reservedDate, reservedTime, menu.duration);
 
-      if (!staffId) {
-        return errorResponse('No available staff for the selected time', 409, 'NO_STAFF_AVAILABLE_FOR_TIME');
+      if (!staffResult.found) {
+        if (staffResult.reason === 'NO_ACTIVE_STAFF') {
+          // アクティブなスタッフが一人もいない（システム設定の問題）
+          return errorResponse('No staff available in the system', 404, 'NO_STAFF_AVAILABLE');
+        } else {
+          // スタッフはいるが、指定時間帯は全員予約済み
+          return errorResponse('No available staff for the selected time', 409, 'NO_STAFF_AVAILABLE_FOR_TIME');
+        }
       }
+      staffId = staffResult.staffId;
     }
 
     // Check if staff exists and is active (only if staffId is provided)
