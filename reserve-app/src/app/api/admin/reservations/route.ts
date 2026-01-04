@@ -15,6 +15,8 @@ import { requireFeatureFlag } from '@/lib/api-feature-flag';
  * - dateRange: 日付範囲フィルター ('all' | 'this-week' | 'this-month')
  * - search: 顧客名で検索
  * - tenantId: テナントID (デフォルト: 環境変数)
+ * - page: ページ番号 (デフォルト: 1)
+ * - limit: 1ページあたりの件数 (デフォルト: 20, 最大: 100)
  */
 export async function GET(request: NextRequest) {
   const admin = await requireAdminApiAuth(request);
@@ -29,6 +31,8 @@ export async function GET(request: NextRequest) {
       dateRange: searchParams.get('dateRange') || undefined,
       search: searchParams.get('search') || undefined,
       tenantId: searchParams.get('tenantId') || undefined,
+      page: searchParams.get('page') || undefined,
+      limit: searchParams.get('limit') || undefined,
     });
 
     if (!queryValidation.success) {
@@ -40,8 +44,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { status, dateRange, search, tenantId } = queryValidation.data;
+    const { status, dateRange, search, tenantId, page, limit } = queryValidation.data;
     const finalTenantId = tenantId || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+
+    // ページング計算
+    const skip = (page - 1) * limit;
 
     // フィルター条件を構築
     const where: Record<string, unknown> = {
@@ -93,39 +100,44 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // 予約一覧を取得
-    const reservations = await prisma.bookingReservation.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
+    // 予約一覧と総件数を並列取得
+    const [reservations, total] = await Promise.all([
+      prisma.bookingReservation.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          menu: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              duration: true,
+            },
+          },
+          staff: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+            },
           },
         },
-        menu: {
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            duration: true,
-          },
-        },
-        staff: {
-          select: {
-            id: true,
-            name: true,
-            role: true,
-          },
-        },
-      },
-      orderBy: [
-        { reservedDate: 'desc' },
-        { reservedTime: 'asc' },
-      ],
-    });
+        orderBy: [
+          { reservedDate: 'desc' },
+          { reservedTime: 'asc' },
+        ],
+        take: limit,
+        skip,
+      }),
+      prisma.bookingReservation.count({ where }),
+    ]);
 
     // レスポンス整形
     const formattedReservations = reservations.map((reservation) => ({
@@ -146,7 +158,16 @@ export async function GET(request: NextRequest) {
       updatedAt: reservation.updatedAt.toISOString(),
     }));
 
-    return successResponse(formattedReservations);
+    // ページネーション情報を含むレスポンス
+    return successResponse({
+      data: formattedReservations,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching admin reservations:', error);
     return errorResponse(

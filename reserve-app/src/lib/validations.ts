@@ -187,6 +187,8 @@ export const adminReservationsQuerySchema = z.object({
   dateRange: z.enum(['all', 'this-week', 'this-month']).optional(),
   search: z.string().optional(),
   tenantId: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
 export type AdminReservationsQuery = z.infer<typeof adminReservationsQuerySchema>;
