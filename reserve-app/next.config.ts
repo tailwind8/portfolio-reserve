@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { getCspHeaderValue } from "./src/lib/csp";
 
 // ビルド時の環境変数チェック
 // SKIP_AUTH_IN_TESTがproduction環境で有効になっていないか警告
@@ -34,6 +35,7 @@ const nextConfig: NextConfig = {
    * - https://owasp.org/www-project-secure-headers/
    */
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
     return [
       {
         // 全てのパスに対してセキュリティヘッダーを適用
@@ -71,18 +73,10 @@ const nextConfig: NextConfig = {
           },
           {
             // XSS攻撃を防止するためのContent Security Policy
-            // 開発環境での動作を考慮し、unsafe-inline, unsafe-evalを許可
-            // 本番環境では厳格化を推奨
+            // 開発: デバッグ容易性のため unsafe-eval を許可
+            // 本番: unsafe-eval を削除して被害を抑制
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
-              "font-src 'self' data:",
-              "connect-src 'self'",
-              "frame-ancestors 'none'",
-            ].join('; '),
+            value: getCspHeaderValue({ isDev }),
           },
         ],
       },

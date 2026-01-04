@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * 顧客メモ更新用のバリデーションスキーマ
@@ -14,9 +16,12 @@ const updateMemoSchema = z.object({
  * 顧客メモを更新
  */
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const body = await request.json();

@@ -2,6 +2,8 @@ import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
 import { DayOfWeek } from '@prisma/client';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * シフト設定用のバリデーションスキーマ
@@ -26,9 +28,12 @@ const createShiftsSchema = z.object({
  * スタッフのシフト一覧を取得
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id: staffId } = await params;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -90,9 +95,12 @@ export async function GET(
  * }
  */
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id: staffId } = await params;
     const body = await request.json();

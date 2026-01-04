@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * 店舗設定更新用のバリデーションスキーマ
@@ -39,7 +41,10 @@ const updateSettingsSchema = z.object({
  * GET /api/admin/settings
  * 店舗設定を取得
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -79,7 +84,10 @@ export async function GET(request: Request) {
  * PATCH /api/admin/settings
  * 店舗設定を更新
  */
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const body = await request.json();
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';

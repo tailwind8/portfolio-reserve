@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAdminAuthHeader } from '@/lib/auth';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * GET /api/admin/dashboard
@@ -9,18 +9,15 @@ import { checkAdminAuthHeader } from '@/lib/auth';
  * 一般ユーザーがアクセスすると403エラーを返します。
  */
 export async function GET(request: NextRequest) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
 
   // 管理者ダッシュボードの基本情報を返す
   return NextResponse.json({
     success: true,
     data: {
       message: '管理者ダッシュボードへようこそ',
-      adminUserId: authResult,
+      adminUserId: admin.userId,
     },
   });
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { checkAdminAuthHeader } from '@/lib/auth';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 import { requireFeatureFlag } from '@/lib/api-feature-flag';
 
 /**
@@ -13,11 +13,8 @@ import { requireFeatureFlag } from '@/lib/api-feature-flag';
  */
 export async function GET(request: NextRequest) {
   return requireFeatureFlag('enableRepeatRateAnalysis', async () => {
-    // 管理者権限チェック
-    const authResult = checkAdminAuthHeader(request);
-    if (typeof authResult !== 'string') {
-      return authResult; // 401または403エラー
-    }
+    const admin = await requireAdminApiAuth(request);
+    if (admin instanceof Response) return admin;
 
     try {
       const { searchParams } = new URL(request.url);

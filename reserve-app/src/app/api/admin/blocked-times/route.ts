@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
@@ -11,6 +12,9 @@ const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
  * - to: 終了日（YYYY-MM-DD形式）
  */
 export async function GET(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { searchParams } = new URL(request.url);
     const fromDate = searchParams.get('from');
@@ -63,6 +67,9 @@ export async function GET(request: NextRequest) {
  * 新しい予約ブロックを追加
  */
 export async function POST(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const body = await request.json();
     const { startDateTime, endDateTime, reason, description } = body;

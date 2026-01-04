@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * GET /api/admin/analytics
@@ -23,7 +25,10 @@ import { prisma } from '@/lib/prisma';
  *   }
  * }
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';

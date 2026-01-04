@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * メニュー更新用のバリデーションスキーマ
@@ -19,9 +21,12 @@ const updateMenuSchema = z.object({
  * 特定のメニューの詳細を取得
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
@@ -65,9 +70,12 @@ export async function GET(
  * メニュー情報を更新
  */
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -127,9 +135,12 @@ export async function PATCH(
  * メニューを削除（論理削除）
  */
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';

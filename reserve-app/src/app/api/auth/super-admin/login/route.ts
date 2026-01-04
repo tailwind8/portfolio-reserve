@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { checkRateLimit, loginRateLimit } from '@/lib/rate-limit';
+import { maskEmail } from '@/lib/mask';
 
 /**
  * POST /api/auth/super-admin/login
@@ -78,13 +79,13 @@ export async function POST(request: NextRequest) {
     // CRITICAL: Verify SUPER_ADMIN role
     if (user.role !== 'SUPER_ADMIN') {
       console.warn(
-        `Unauthorized super admin login attempt: ${email} (role: ${user.role})`
+        `Unauthorized super admin login attempt: ${maskEmail(email)} (role: ${user.role})`
       );
       return errorResponse('スーパー管理者権限が必要です', 403);
     }
 
     // Log successful super admin login for security audit
-    console.log(`Super admin logged in: ${email} (${user.id})`);
+    console.log(`Super admin logged in: ${maskEmail(email)} (${user.id})`);
 
     return successResponse({
       user: {
