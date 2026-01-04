@@ -66,8 +66,11 @@ test.describe('予約の並行処理と重複防止', () => {
     ]);
 
     // どちらか一方のみ成功し、もう一方はエラーになることを確認
-    await page1.waitForTimeout(2000); // レスポンスを待つ
-    await page2.waitForTimeout(2000);
+    // ページ遷移を待機（成功または失敗画面へ）
+    await Promise.all([
+      page1.waitForURL(/\/(booking|mypage)/, { timeout: 10000 }),
+      page2.waitForURL(/\/(booking|mypage)/, { timeout: 10000 }),
+    ]);
 
     const url1 = page1.url();
     const url2 = page2.url();
@@ -302,11 +305,8 @@ test.describe('予約の並行処理と重複防止', () => {
       bookingPage2.submit(),
     ]);
 
-    await page1.waitForTimeout(2000);
-    await page2.waitForTimeout(2000);
-
-    // 両方とも成功することを確認
-    await expect(page1).toHaveURL('/booking/complete');
+    // 両方とも成功することを確認（遷移を待機）
+    await expect(page1).toHaveURL('/booking/complete', { timeout: 10000 });
     await expect(page2).toHaveURL('/booking/complete');
   });
 });

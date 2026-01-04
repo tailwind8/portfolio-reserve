@@ -149,8 +149,6 @@ test.describe('フロントエンド機能フラグ制御', () => {
     const dashboardPage = new AdminDashboardPage(page);
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    // 機能フラグが読み込まれるまで少し待つ
-    await page.waitForTimeout(1000);
 
     // Then: "分析レポート" セクションが表示される
     await dashboardPage.expectAnalyticsReportVisible();
@@ -197,7 +195,6 @@ test.describe('フロントエンド機能フラグ制御', () => {
     const dashboardPage = new AdminDashboardPage(page);
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Then: "分析レポート" セクションが表示されない
     await dashboardPage.expectAnalyticsReportNotVisible();

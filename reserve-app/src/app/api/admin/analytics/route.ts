@@ -374,56 +374,93 @@ async function getOverallRepeatRate(tenantId: string, now: Date) {
 
 /**
  * 月別リピート率推移を取得（過去Nヶ月）
+ * 【パフォーマンス改善】ループ内クエリを排除し、2回のクエリで全データを取得
  */
 async function getMonthlyRepeatRateTrends(tenantId: string, now: Date, months: number) {
-  const trends = [];
+  // 全期間の開始日と終了日を計算
+  const overallStart = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+  const overallEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
+  // 【1回目のクエリ】対象期間内の全予約を取得
+  const allReservations = await prisma.bookingReservation.findMany({
+    where: {
+      tenantId,
+      reservedDate: {
+        gte: overallStart,
+        lte: overallEnd,
+      },
+    },
+    select: {
+      userId: true,
+      reservedDate: true,
+    },
+  });
+
+  // 【2回目のクエリ】対象期間より前の全予約を取得（リピート判定用）
+  const allUserIds = [...new Set(allReservations.map((r) => r.userId))];
+  const pastReservations = allUserIds.length > 0
+    ? await prisma.bookingReservation.findMany({
+        where: {
+          tenantId,
+          userId: { in: allUserIds },
+          reservedDate: {
+            lt: overallStart,
+          },
+        },
+        select: {
+          userId: true,
+          reservedDate: true,
+        },
+      })
+    : [];
+
+  // 過去に予約があるユーザーIDをSetで保持（高速ルックアップ用）
+  const usersWithPastReservations = new Set(pastReservations.map((r) => r.userId));
+
+  // 各ユーザーの初回予約月を計算（対象期間内での初回）
+  const userFirstReservationMonth = new Map<string, Date>();
+  for (const reservation of allReservations) {
+    const userId = reservation.userId;
+    const reservedDate = reservation.reservedDate;
+    const existing = userFirstReservationMonth.get(userId);
+    if (!existing || reservedDate < existing) {
+      userFirstReservationMonth.set(userId, reservedDate);
+    }
+  }
+
+  // 月ごとにリピート率を計算
+  const trends = [];
   for (let i = months - 1; i >= 0; i--) {
     const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
     const monthLabel = `${monthDate.getFullYear()}/${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
 
-    // 対象月の顧客
-    const uniqueCustomersThisMonth = await prisma.bookingReservation.findMany({
-      where: {
-        tenantId,
-        reservedDate: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-      },
-      select: {
-        userId: true,
-      },
-      distinct: ['userId'],
-    });
+    // 当月に予約したユニーク顧客
+    const customersThisMonth = new Set<string>();
+    for (const reservation of allReservations) {
+      if (reservation.reservedDate >= monthStart && reservation.reservedDate <= monthEnd) {
+        customersThisMonth.add(reservation.userId);
+      }
+    }
 
-    const customerIds = uniqueCustomersThisMonth.map((r: { userId: string }) => r.userId);
+    // リピート顧客をカウント
+    let repeatCount = 0;
+    for (const userId of customersThisMonth) {
+      // 対象期間より前に予約がある、または対象期間内で当月より前に予約がある場合はリピート
+      if (usersWithPastReservations.has(userId)) {
+        repeatCount++;
+      } else {
+        const firstReservation = userFirstReservationMonth.get(userId);
+        if (firstReservation && firstReservation < monthStart) {
+          repeatCount++;
+        }
+      }
+    }
 
-    // 過去に予約があった顧客
-    const customersWithPastReservations =
-      customerIds.length > 0
-        ? await prisma.bookingReservation.findMany({
-            where: {
-              tenantId,
-              userId: { in: customerIds },
-              reservedDate: {
-                lt: monthStart,
-              },
-            },
-            select: {
-              userId: true,
-            },
-            distinct: ['userId'],
-          })
-        : [];
-
-    const repeatCustomers = customersWithPastReservations.length;
-    const rate =
-      uniqueCustomersThisMonth.length > 0
-        ? Math.round((repeatCustomers / uniqueCustomersThisMonth.length) * 100)
-        : 0;
+    const rate = customersThisMonth.size > 0
+      ? Math.round((repeatCount / customersThisMonth.size) * 100)
+      : 0;
 
     trends.push({
       month: monthLabel,

@@ -350,13 +350,9 @@ test.describe('XSS・CSRF攻撃防止', () => {
     const loginPage = new LoginPage(page);
     await loginPage.login('tanaka@example.com', 'password123');
 
-    // 外部サイトにリダイレクトされない
-    await page.waitForTimeout(1000);
-    const url = page.url();
-    expect(url).not.toContain('evil.com');
-
-    // 内部ページ（マイページ）にリダイレクトされる
-    expect(url).toContain('/mypage');
+    // 外部サイトにリダイレクトされず、内部ページ（マイページ）にリダイレクトされる
+    await expect(page).toHaveURL(/\/mypage/, { timeout: 5000 });
+    expect(page.url()).not.toContain('evil.com');
   });
 
   test('内部URLへのリダイレクトは許可される', async ({ page }) => {

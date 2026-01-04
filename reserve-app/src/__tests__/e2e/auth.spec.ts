@@ -113,7 +113,7 @@ test.describe('User Authentication', () => {
   });
 
   test.describe('User Login (#6)', () => {
-    test('should show validation errors for empty fields', async ({ page }) => {
+    test('should show validation errors for empty fields @smoke', async ({ page }) => {
       const loginPage = new LoginPage(page);
 
       // Given: ログインページにアクセスしている
@@ -143,7 +143,7 @@ test.describe('User Authentication', () => {
       await loginPage.expectError('メールアドレスまたはパスワードが正しくありません');
     });
 
-    test('should have link to registration page', async ({ page }) => {
+    test('should have link to registration page @smoke', async ({ page }) => {
       const loginPage = new LoginPage(page);
 
       // Given: ログインページにアクセスしている

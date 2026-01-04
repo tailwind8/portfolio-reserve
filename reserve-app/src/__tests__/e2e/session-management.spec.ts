@@ -248,13 +248,10 @@ test.describe('セッション管理', () => {
     // ブラウザBのセッションは有効
     await expect(pageB.locator('[data-testid="page-title"]')).toContainText('マイページ');
 
-    // ブラウザAのセッションは無効になる
+    // ブラウザAのセッションは無効になり、再ログインが要求される
     await pageA.goto('/mypage');
-    await pageA.waitForTimeout(1000);
-
-    // ブラウザAは再ログインが要求される
-    const urlA = pageA.url();
-    expect(urlA).toContain('/login');
+    await pageA.waitForURL('**/login**', { timeout: 5000 });
+    expect(pageA.url()).toContain('/login');
 
     await pageA.close();
     await pageB.close();

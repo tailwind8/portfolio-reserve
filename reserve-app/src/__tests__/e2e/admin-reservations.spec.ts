@@ -37,7 +37,7 @@ test.describe('管理者向け予約管理 (#17, #18)', () => {
    *   Then ページタイトルに「予約一覧」が表示される
    *   And 「新規予約を追加」ボタンが表示される
    */
-  test('予約一覧ページにアクセスする', async () => {
+  test('予約一覧ページにアクセスする @smoke', async () => {
     // Then: ページタイトルが表示される
     await reservationsPage.expectPageTitle('予約一覧');
 
@@ -58,7 +58,7 @@ test.describe('管理者向け予約管理 (#17, #18)', () => {
    *   And 各予約に「編集」ボタンが表示される
    *   And 各予約に「削除」ボタンが表示される
    */
-  test('すべての予約が一覧表示される', async () => {
+  test('すべての予約が一覧表示される @smoke', async () => {
     // Given: 予約が5件存在する（APIモックで提供）
 
     // When: ページが読み込まれる（beforeEachで実行済み）

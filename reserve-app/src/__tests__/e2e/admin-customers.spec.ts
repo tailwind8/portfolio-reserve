@@ -169,8 +169,7 @@ test.describe('顧客管理 (#19, #20)', () => {
     // Then: 成功メッセージが表示される
     await customersPage.expectSuccessMessage('メモを保存しました');
 
-    // And: メモが顧客詳細に表示される（ページ再読み込みを待つ）
-    await customersPage.page.waitForTimeout(500); // APIレスポンスとページ更新を待つ
+    // And: メモが顧客詳細に表示される
     await customersPage.expectMemo(memoText);
   });
 

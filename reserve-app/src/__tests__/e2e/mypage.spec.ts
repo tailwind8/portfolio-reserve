@@ -20,7 +20,7 @@ test.describe('MyPage - 予約一覧', () => {
    *   Then ページタイトルに「マイページ」が表示される
    *   And 「予約の確認・変更・キャンセルができます」という説明が表示される
    */
-  test('should display mypage with correct title', async () => {
+  test('should display mypage with correct title @smoke', async () => {
     await myPage.expectPageHeading('マイページ');
     await myPage.expectDescription();
   });
@@ -38,7 +38,7 @@ test.describe('MyPage - 予約一覧', () => {
    *   When ページの読み込みが完了する
    *   Then 予約一覧が表示される、または「予約がありません」が表示される
    */
-  test('should load and display reservations', async () => {
+  test('should load and display reservations @smoke', async () => {
     await myPage.waitForLoad();
     await myPage.waitForLoadingComplete();
     await myPage.expectReservationsOrEmptyState();
@@ -294,7 +294,6 @@ test.describe('MyPage - 予約キャンセルフロー', () => {
     const cancelButton = page.getByRole('button', { name: 'キャンセル' }).first();
     if (await cancelButton.isVisible() && (await cancelButton.isEnabled())) {
       await myPage.openCancelDialog();
-      await page.waitForTimeout(500);
       await myPage.expectReservationDetailsInDialog();
       await myPage.expectCancelWarningMessage();
     }
