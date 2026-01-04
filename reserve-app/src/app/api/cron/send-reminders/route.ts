@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { prisma } from '@/lib/prisma';
+import { isAuthorizedCronRequest, isCronAuthConfigured } from '@/lib/cron-auth';
+import { maskEmail } from '@/lib/mask';
 import {
   getReminderEmailSubject,
   getReminderEmailHtml,
@@ -24,9 +26,15 @@ export async function GET(request: NextRequest) {
   try {
     // 認証チェック（Vercel Cronからのリクエストのみ許可）
     const authHeader = request.headers.get('authorization');
-    const expectedToken = process.env.CRON_SECRET || 'test-cron-token';
+    if (process.env.NODE_ENV === 'production' && !isCronAuthConfigured()) {
+      // 本番環境でCRON_SECRETが未設定なのは危険（安全側に倒す）
+      return NextResponse.json(
+        { error: 'Cron secret is not configured' },
+        { status: 500 }
+      );
+    }
 
-    if (!authHeader || !authHeader.includes(expectedToken)) {
+    if (!isAuthorizedCronRequest(authHeader)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -97,7 +105,9 @@ export async function GET(request: NextRequest) {
         });
 
         successCount++;
-        console.log(`[Reminder Cron] Email sent to ${reservation.user.email} for reservation ${reservation.id}`);
+        console.log(
+          `[Reminder Cron] Email sent to ${maskEmail(reservation.user.email)} for reservation ${reservation.id}`
+        );
       } catch (error) {
         failureCount++;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -105,7 +115,10 @@ export async function GET(request: NextRequest) {
           reservationId: reservation.id,
           error: errorMessage,
         });
-        console.error(`[Reminder Cron] Failed to send email for reservation ${reservation.id}:`, error);
+        console.error(
+          `[Reminder Cron] Failed to send email for reservation ${reservation.id}:`,
+          error
+        );
         // エラーが発生しても処理を継続
       }
     }

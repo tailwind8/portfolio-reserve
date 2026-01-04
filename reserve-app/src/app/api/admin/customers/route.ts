@@ -1,5 +1,7 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * GET /api/admin/customers
@@ -11,7 +13,10 @@ import { successResponse, errorResponse } from '@/lib/api-response';
  * - sortOrder: ソート順 (asc | desc)
  * - tenantId: テナントID (デフォルト: 環境変数)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -66,7 +71,20 @@ export async function GET(request: Request) {
     });
 
     // 来店回数と最終来店日を計算
-    const customersWithStats = customers.map((customer) => {
+    type CustomerReservation = { status: string; reservedDate: Date };
+    type CustomerWithReservations = {
+      id: string;
+      name: string | null;
+      email: string;
+      phone: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      reservations: CustomerReservation[];
+    };
+
+    const customersTyped = customers as CustomerWithReservations[];
+
+    const customersWithStats = customersTyped.map((customer) => {
       const completedReservations = customer.reservations.filter(
         (r) => r.status === 'COMPLETED'
       );

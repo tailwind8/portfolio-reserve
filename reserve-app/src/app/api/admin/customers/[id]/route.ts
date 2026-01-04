@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * 顧客情報更新用のバリデーションスキーマ
@@ -15,9 +17,12 @@ const updateCustomerSchema = z.object({
  * 顧客詳細を取得
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
@@ -70,8 +75,20 @@ export async function GET(
       return errorResponse('顧客が見つかりません', 404, 'CUSTOMER_NOT_FOUND');
     }
 
+    type CustomerReservation = {
+      id: string;
+      reservedDate: Date;
+      reservedTime: string;
+      status: string;
+      createdAt: Date;
+      menu: { name: string; price: number; duration: number };
+      staff?: { name: string; role: string | null } | null;
+    };
+
+    const reservations = customer.reservations as CustomerReservation[];
+
     // 来店履歴（status='COMPLETED'の予約）
-    const visitHistory = customer.reservations
+    const visitHistory = reservations
       .filter((r) => r.status === 'COMPLETED')
       .map((reservation) => ({
         id: reservation.id,
@@ -85,7 +102,7 @@ export async function GET(
       }));
 
     // 予約履歴（全ステータス）
-    const reservationHistory = customer.reservations.map((reservation) => ({
+    const reservationHistory = reservations.map((reservation) => ({
       id: reservation.id,
       date: reservation.reservedDate.toISOString().split('T')[0],
       time: reservation.reservedTime,
@@ -122,9 +139,12 @@ export async function GET(
  * 顧客情報を更新
  */
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const body = await request.json();

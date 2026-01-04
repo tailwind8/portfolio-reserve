@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * メニュー作成用のバリデーションスキーマ
@@ -22,7 +24,10 @@ const createMenuSchema = z.object({
  * - category: カテゴリでフィルター
  * - tenantId: テナントID (デフォルト: 環境変数)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -82,7 +87,10 @@ export async function GET(request: Request) {
  * POST /api/admin/menus
  * 新しいメニューを作成
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const body = await request.json();
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';

@@ -220,38 +220,39 @@ export function checkAdminAuthHeader(
   request: NextRequest
 ): string | ReturnType<typeof errorResponse> {
   // E2Eテスト環境では認証をスキップ（本番環境では無効）
-  const skipAuthInTest = process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_IN_TEST === 'true';
+  const skipAuthInTest =
+    process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_IN_TEST === 'true';
   if (skipAuthInTest) {
-    return 'test-admin-user'; // テスト用のダミーユーザーIDを返す
+    // テスト用: 既存テスト互換のため、ヘッダーベースを許可
+    // NOTE: 本番では絶対に有効化しないこと（next.config.ts でも警告）
+    const userId = request.headers.get('x-user-id') || 'test-admin-user';
+    const userRole = request.headers.get('x-user-role') || 'ADMIN';
+    if (userRole !== 'admin' && userRole !== 'ADMIN') {
+      return errorResponse('管理者権限が必要です', 403, 'FORBIDDEN');
+    }
+    return userId;
   }
 
-  const userId = request.headers.get('x-user-id');
-  const userRole = request.headers.get('x-user-role');
-
-  if (!userId) {
+  // 本番/通常実行: ヘッダー自己申告(x-user-*)は信用しない
+  // Authorization: Bearer <access_token> を必須とし、Supabaseで検証 → DBロールで認可する
+  const authorization = request.headers.get('authorization');
+  if (!authorization || !authorization.startsWith('Bearer ')) {
     return errorResponse('認証が必要です', 401, 'UNAUTHORIZED');
   }
 
-  if (userRole !== 'admin' && userRole !== 'ADMIN') {
-    // 権限エラーをログに記録
-    const ipAddress = getClientIp(request);
-    const userAgent = getUserAgent(request);
-    const path = new URL(request.url).pathname;
-
-    logSecurityEvent({
-      eventType: 'UNAUTHORIZED_ACCESS',
-      userId,
-      ipAddress,
-      userAgent,
-      metadata: { path, method: request.method, reason: 'Admin role required' },
-    }).catch((error) => {
-      console.error('Failed to log security event:', error);
-    });
-
-    return errorResponse('管理者権限が必要です', 403, 'FORBIDDEN');
+  const token = authorization.slice('Bearer '.length).trim();
+  if (!token) {
+    return errorResponse('認証が必要です', 401, 'UNAUTHORIZED');
   }
 
-  return userId;
+  // NOTE: ここは同期関数だが、既存のルート実装を壊さないために
+  //       例外で非同期チェックを委譲できない。そこで「同期で返せる範囲」を超えるため、
+  //       現時点ではテスト以外のヘッダーベース認可を拒否する（安全側）。
+  //       管理者APIは順次 async の requireAdmin() へ移行する。
+  //
+  // 互換性: 既存の管理者APIは E2E では SKIP_AUTH_IN_TEST=true で動作する。
+  // 本番では、管理者APIを呼ぶクライアント側が Bearer トークンを付与するよう対応が必要。
+  return errorResponse('管理者APIは認証トークン検証が必要です', 401, 'UNAUTHORIZED');
 }
 
 /**

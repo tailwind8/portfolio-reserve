@@ -2,6 +2,8 @@ import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
 import { requireFeatureFlag } from '@/lib/api-feature-flag';
+import type { NextRequest } from 'next/server';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * スタッフ作成用のバリデーションスキーマ
@@ -21,8 +23,11 @@ const createStaffSchema = z.object({
  * - search: スタッフ名で検索
  * - tenantId: テナントID (デフォルト: 環境変数)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   return requireFeatureFlag('enableStaffShiftManagement', async () => {
+    const admin = await requireAdminApiAuth(request);
+    if (admin instanceof Response) return admin;
+
     try {
       const { searchParams } = new URL(request.url);
       const search = searchParams.get('search');
@@ -77,7 +82,10 @@ export async function GET(request: Request) {
  * POST /api/admin/staff
  * 新しいスタッフを作成
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const body = await request.json();
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';

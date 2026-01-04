@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import {
   adminUpdateReservationSchema,
   validateStatusTransition,
@@ -7,7 +8,7 @@ import {
   canDeleteReservation,
 } from '@/lib/validations';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { checkAdminAuthHeader } from '@/lib/auth';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * GET /api/admin/reservations/:id
@@ -17,11 +18,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
 
   try {
     const { id } = await params;
@@ -110,11 +108,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
 
   try {
     const { id } = await params;
@@ -184,7 +179,7 @@ export async function PATCH(
     }
 
     // トランザクション内で予約を更新（Race Condition対策）
-    const updatedReservation = await prisma.$transaction(async (tx) => {
+    const updatedReservation = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. メニューが指定されている場合、存在確認
       if (menuId) {
         const menu = await tx.bookingMenu.findFirst({
@@ -281,13 +276,14 @@ export async function PATCH(
           },
         },
       });
-    }).catch((error) => {
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : '';
       // トランザクションエラーを適切なHTTPエラーに変換
-      if (error.message === 'MENU_NOT_FOUND') {
+      if (message === 'MENU_NOT_FOUND') {
         throw { statusCode: 404, message: 'Menu not found or inactive', code: 'MENU_NOT_FOUND' };
-      } else if (error.message === 'STAFF_NOT_FOUND') {
+      } else if (message === 'STAFF_NOT_FOUND') {
         throw { statusCode: 404, message: 'Staff not found or inactive', code: 'STAFF_NOT_FOUND' };
-      } else if (error.message === 'TIME_SLOT_CONFLICT') {
+      } else if (message === 'TIME_SLOT_CONFLICT') {
         throw { statusCode: 409, message: 'This time slot is already booked for the selected staff', code: 'TIME_SLOT_CONFLICT' };
       }
       throw error;
@@ -345,11 +341,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
 
   try {
     const { id } = await params;
@@ -379,7 +372,7 @@ export async function DELETE(
     }
 
     // トランザクション内で予約を削除（Race Condition対策）
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. 最新の予約情報を取得（他のリクエストによる変更をチェック）
       const currentReservation = await tx.bookingReservation.findFirst({
         where: {
@@ -413,9 +406,10 @@ export async function DELETE(
       });
 
       return { deleted: true, message: 'Reservation deleted successfully' };
-    }).catch((error) => {
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : '';
       // トランザクションエラーを適切なHTTPエラーに変換
-      if (error.message === 'RESERVATION_NOT_FOUND') {
+      if (message === 'RESERVATION_NOT_FOUND') {
         throw { statusCode: 404, message: 'Reservation not found', code: 'RESERVATION_NOT_FOUND' };
       }
       throw error;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { checkAdminAuthHeader } from '@/lib/auth';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 /**
  * GET /api/admin/stats
@@ -17,11 +17,8 @@ import { checkAdminAuthHeader } from '@/lib/auth';
  * }
  */
 export async function GET(request: NextRequest) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
 
   try {
     const { searchParams } = new URL(request.url);

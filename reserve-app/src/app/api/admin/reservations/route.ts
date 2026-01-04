@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { adminCreateReservationSchema, adminReservationsQuerySchema } from '@/lib/validations';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { checkAdminAuthHeader } from '@/lib/auth';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 import { requireFeatureFlag } from '@/lib/api-feature-flag';
 
 /**
@@ -16,11 +17,8 @@ import { requireFeatureFlag } from '@/lib/api-feature-flag';
  * - tenantId: テナントID (デフォルト: 環境変数)
  */
 export async function GET(request: NextRequest) {
-  // 管理者権限チェック
-  const authResult = checkAdminAuthHeader(request);
-  if (typeof authResult !== 'string') {
-    return authResult; // 401または403エラー
-  }
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -173,11 +171,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   return requireFeatureFlag('enableManualReservation', async () => {
-    // 管理者権限チェック
-    const authResult = checkAdminAuthHeader(request);
-    if (typeof authResult !== 'string') {
-      return authResult; // 401または403エラー
-    }
+    const admin = await requireAdminApiAuth(request);
+    if (admin instanceof Response) return admin;
 
     try {
     const body = await request.json();
@@ -198,7 +193,7 @@ export async function POST(request: NextRequest) {
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // トランザクション内で予約を作成（Race Condition対策）
-    const reservation = await prisma.$transaction(async (tx) => {
+    const reservation = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. ユーザーの存在確認
       const user = await tx.bookingUser.findFirst({
         where: {
@@ -289,15 +284,16 @@ export async function POST(request: NextRequest) {
           },
         },
       });
-    }).catch((error) => {
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : '';
       // トランザクションエラーを適切なHTTPエラーに変換
-      if (error.message === 'USER_NOT_FOUND') {
+      if (message === 'USER_NOT_FOUND') {
         throw { statusCode: 404, message: 'User not found', code: 'USER_NOT_FOUND' };
-      } else if (error.message === 'MENU_NOT_FOUND') {
+      } else if (message === 'MENU_NOT_FOUND') {
         throw { statusCode: 404, message: 'Menu not found or inactive', code: 'MENU_NOT_FOUND' };
-      } else if (error.message === 'STAFF_NOT_FOUND') {
+      } else if (message === 'STAFF_NOT_FOUND') {
         throw { statusCode: 404, message: 'Staff not found or inactive', code: 'STAFF_NOT_FOUND' };
-      } else if (error.message === 'TIME_SLOT_CONFLICT') {
+      } else if (message === 'TIME_SLOT_CONFLICT') {
         throw { statusCode: 409, message: 'This time slot is already booked for the selected staff', code: 'TIME_SLOT_CONFLICT' };
       }
       throw error;

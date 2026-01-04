@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
@@ -11,6 +12,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -71,6 +75,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const admin = await requireAdminApiAuth(request);
+  if (admin instanceof Response) return admin;
+
   try {
     const { id } = await params;
 
