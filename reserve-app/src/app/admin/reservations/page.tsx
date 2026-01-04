@@ -324,7 +324,7 @@ export default function AdminReservationsPage() {
 
   // 一覧表示用にフィルタリングされた予約
   const filteredReservations = reservations.filter((reservation) => {
-    if (statusFilter !== 'all' && reservation.status !== statusFilter) {
+    if (statusFilter !== 'all' && reservation.status !== statusFilter.toUpperCase()) {
       return false;
     }
 
