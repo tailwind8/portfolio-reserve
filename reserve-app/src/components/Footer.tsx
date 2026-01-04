@@ -57,6 +57,30 @@ export default function Footer() {
               営業時間: 10:00 - 18:00
             </p>
           </div>
+
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-gray-900">法的情報</h4>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li>
+                <Link
+                  href="/privacy"
+                  className="hover:text-blue-500 transition-colors"
+                  data-testid="footer-privacy-link"
+                >
+                  プライバシーポリシー
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="hover:text-blue-500 transition-colors"
+                  data-testid="footer-terms-link"
+                >
+                  利用規約
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="mt-8 border-t pt-8 text-center text-sm text-gray-600">

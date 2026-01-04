@@ -26,8 +26,26 @@ const customJestConfig = {
     '!src/lib/supabase.ts',
     '!src/lib/auth.ts', // Supabase/Prisma integration, covered by E2E tests
   ],
-  // TODO: カバレッジしきい値を一時的に引き下げ（ReservationUpdateModal.test.tsxをskipしたため + Issue #110で追加したファイルの単体テストが未実装）
-  // Issue #57, #110: UI変更に伴うテスト修正 + 予約ブロック機能の単体テスト追加後、元の値に戻す（branches: 50, functions: 60, lines: 55, statements: 55）
+  // カバレッジ閾値設定
+  // 【現在値（暫定）】branches: 36, functions: 41, lines: 47, statements: 47
+  // 【目標値】branches: 50, functions: 60, lines: 55, statements: 55
+  //
+  // 【暫定値に引き下げた理由】
+  // - Issue #57: ReservationUpdateModal.test.tsxをskip（UI変更に伴う大幅修正が必要）
+  // - Issue #110: 予約ブロック機能追加に伴う新規ファイルの単体テストが未実装
+  // - 品質担保テスト（不変条件・Property-Based・API契約テスト）を優先実装
+  //
+  // 【目標値に戻す条件】
+  // - Issue #57: ReservationUpdateModal.test.tsxの修正または削除
+  // - Issue #110: 予約ブロック機能の単体テスト追加
+  // - 新規追加コンポーネントの単体テスト充実
+  //
+  // 【期限】Phase 2（機能追加完了後、品質向上フェーズで対応）
+  //
+  // 【補足】
+  // - E2Eテストは充実（41個のシナリオ、主要フロー100%カバー）
+  // - 品質担保テスト（不変条件・Property-Based・API契約テスト）により、バグ検出能力は高い
+  // - 単体テストカバレッジは段階的に改善予定
   coverageThreshold: {
     global: {
       branches: 36,

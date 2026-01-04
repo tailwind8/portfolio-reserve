@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'プライバシーポリシー - 予約システム',
@@ -7,7 +8,8 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="container mx-auto px-4 py-8 max-w-4xl">
+    <>
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
       <h1
         className="text-3xl font-bold mb-6"
         data-testid="privacy-policy-title"
@@ -405,6 +407,8 @@ export default function PrivacyPage() {
           </p>
         </div>
       </div>
-    </main>
+      </main>
+      <Footer />
+    </>
   );
 }
