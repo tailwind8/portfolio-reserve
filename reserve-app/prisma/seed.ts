@@ -1,10 +1,15 @@
-import { PrismaClient, DayOfWeek, UserRole } from '@prisma/client';
+import { PrismaClient, DayOfWeek } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// .env.localファイルを読み込む
-dotenv.config({ path: '.env.local' });
+// .env.localファイルが存在する場合のみ読み込む（CI環境では環境変数から取得）
+const envLocalPath = path.join(process.cwd(), '.env.local');
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
 
 // Prisma Client with PostgreSQL Driver Adapter
 const connectionString = process.env.DATABASE_URL;
@@ -16,9 +21,11 @@ if (!connectionString) {
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
+// CI環境ではログを抑制
+const isCI = process.env.CI === 'true';
 const prisma = new PrismaClient({
   adapter,
-  log: ['query', 'info', 'warn', 'error'],
+  log: isCI ? ['warn', 'error'] : ['query', 'info', 'warn', 'error'],
 });
 
 async function main() {

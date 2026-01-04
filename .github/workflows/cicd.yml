@@ -6,9 +6,34 @@ on:
   pull_request:
     branches: [main, master]
 
+# 共通の環境変数
+env:
+  DATABASE_URL: postgresql://test:test@localhost:5432/reserve_test
+  NEXT_PUBLIC_TENANT_ID: demo-booking
+  # Sentryを無効化（テスト環境）
+  NEXT_PUBLIC_SENTRY_DSN: ""
+  # テスト用認証スキップ
+  SKIP_AUTH_IN_TEST: "true"
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+
+    # PostgreSQLサービスコンテナ
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: reserve_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     defaults:
       run:
@@ -35,9 +60,13 @@ jobs:
         run: npm run lint
 
       - name: Type check and build
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npm run build:ci
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed test database
+        run: npx tsx prisma/seed.ts
 
       - name: Run unit tests with coverage
         run: npm run test:coverage
@@ -56,14 +85,10 @@ jobs:
       - name: Run E2E smoke tests (PR only)
         if: github.event_name == 'pull_request'
         run: npm run test:e2e:smoke
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run full E2E tests (main branch only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm run test:e2e:full
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Upload E2E test results
         if: always()

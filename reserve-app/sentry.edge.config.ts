@@ -9,22 +9,28 @@ import * as Sentry from '@sentry/nextjs';
  * - https://docs.sentry.io/platforms/javascript/guides/nextjs/
  */
 
-Sentry.init({
-  // Sentry DSN（Data Source Name）
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || '',
+// DSNが設定されている場合のみSentryを初期化
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
-  // 環境の設定
-  environment: process.env.NEXT_PUBLIC_ENVIRONMENT || process.env.NODE_ENV || 'development',
+// DSN未設定の場合はSentryを初期化しない
+if (dsn) {
+  Sentry.init({
+    // Sentry DSN（Data Source Name）
+    dsn,
 
-  // リリースバージョン
-  release: process.env.NEXT_PUBLIC_SENTRY_RELEASE || undefined,
+    // 環境の設定
+    environment: process.env.NEXT_PUBLIC_ENVIRONMENT || process.env.NODE_ENV || 'development',
 
-  // トレースサンプルレート
-  tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.1,
+    // リリースバージョン
+    release: process.env.NEXT_PUBLIC_SENTRY_RELEASE || undefined,
 
-  // デバッグモード（開発環境のみ）
-  debug: process.env.NODE_ENV === 'development',
+    // トレースサンプルレート
+    tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.1,
 
-  // エッジランタイムでは個人情報を送信しない
-  sendDefaultPii: false,
-});
+    // デバッグモード（開発環境のみ、CIでは無効）
+    debug: process.env.NODE_ENV === 'development',
+
+    // エッジランタイムでは個人情報を送信しない
+    sendDefaultPii: false,
+  });
+}
