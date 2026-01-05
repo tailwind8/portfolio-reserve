@@ -62,7 +62,7 @@ test.describe('機能フラグ連動 - 予約フォーム', () => {
     bookingPage = new BookingPage(page);
   });
 
-  test('スタッフ指名機能がONの場合、予約フォームにスタッフ選択が表示される', async ({ page }) => {
+  test('スタッフ指名機能がONの場合、予約フォームにスタッフ選択が表示される', async () => {
     // データベースでenableStaffSelection = trueの状態を前提
     await bookingPage.goto();
     await bookingPage.waitForLoad();
@@ -120,7 +120,7 @@ test.describe('機能フラグ連動 - 管理者ダッシュボード', () => {
     }
   });
 
-  test('管理者ダッシュボードにアクセスできる', async ({ page }) => {
+  test('管理者ダッシュボードにアクセスできる', async () => {
     await adminDashboard.goto();
     await adminDashboard.waitForLoad();
 
@@ -256,7 +256,7 @@ test.describe('機能フラグ連動 - エラーハンドリング', () => {
 });
 
 test.describe('機能フラグ連動 - リアルタイム更新', () => {
-  test.skip('機能フラグが変更されたらページをリロードすると反映される', async ({ page, request }) => {
+  test.skip('機能フラグが変更されたらページをリロードすると反映される', async ({ page }) => {
     // TODO: Phase 4実装後に有効化
     const bookingPage = new BookingPage(page);
     await bookingPage.goto();

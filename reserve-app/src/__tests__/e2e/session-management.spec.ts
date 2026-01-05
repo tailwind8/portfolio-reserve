@@ -1,7 +1,6 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/LoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
-import { MyPage } from './pages/MyPage';
 
 /**
  * E2Eテスト: セッション管理
@@ -80,7 +79,6 @@ test.describe('セッション管理', () => {
     await expect(page).toHaveURL('/mypage');
 
     // マイページにアクセス
-    const myPage = new MyPage(page);
     await expect(page.locator('[data-testid="page-title"]')).toContainText('マイページ');
 
     // セッションの有効期限を操作（実際には30分待つ代わりにCookieを操作）
@@ -96,7 +94,7 @@ test.describe('セッション管理', () => {
     await expect(page.locator('text=セッションがタイムアウトしました')).toBeVisible();
   });
 
-  test('他のユーザーの予約への横断アクセス防止（表示）', async ({ page, request }) => {
+  test('他のユーザーの予約への横断アクセス防止（表示）', async ({ page }) => {
     // ユーザー「田中太郎」でログイン
     const loginPage = new LoginPage(page);
     await loginPage.goto();

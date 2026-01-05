@@ -1,7 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { BookingPage } from './pages/BookingPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
-import { SuperAdminLoginPage } from './pages/SuperAdminLoginPage';
 
 /**
  * E2Eテスト: フロントエンド機能フラグ制御

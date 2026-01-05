@@ -118,7 +118,7 @@ export class BlockedTimesPage {
   /**
    * 特定のブロックが表示されることを検証
    */
-  async expectBlockedTimeVisible(startDateTime: string, endDateTime: string) {
+  async expectBlockedTimeVisible(startDateTime: string, _endDateTime: string) {
     const card = this.page.locator(this.selectors.blockedTimeCard).filter({
       has: this.page.locator(this.selectors.startDateTime, { hasText: startDateTime }),
     });

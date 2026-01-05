@@ -46,7 +46,7 @@ const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
  *   "timestamp": "2025-01-20T12:00:00.000Z"
  * }
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   return withErrorHandling(async () => {
     // Supabaseセッションから認証済みユーザーを取得
     const bookingUser = await requireAuthAndGetBookingUser();

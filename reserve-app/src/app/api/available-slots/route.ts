@@ -251,10 +251,8 @@ export async function GET(request: NextRequest) {
     const staffVacations: Map<string, { startDate: Date; endDate: Date }[]> = new Map();
 
     if (enableShiftManagement) {
-      // 指定日の曜日を取得
-      const dateObj = new Date(date);
+      // 曜日マップを定義（シフトチェック用）
       const dayOfWeekMap = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-      const dayOfWeek = dayOfWeekMap[dateObj.getDay()];
 
       // 全スタッフのシフト情報を取得
       const shifts = await prisma.bookingStaffShift.findMany({
