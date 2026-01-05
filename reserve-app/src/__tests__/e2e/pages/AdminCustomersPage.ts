@@ -157,8 +157,8 @@ export class AdminCustomersPage {
    */
   async search(query: string): Promise<void> {
     await this.page.locator(this.selectors.searchBox).fill(query);
-    // 検索は自動実行されるため、少し待つ
-    await this.page.waitForTimeout(500);
+    // 検索結果の更新を待機
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
