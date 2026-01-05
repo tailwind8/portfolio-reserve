@@ -29,6 +29,8 @@ export default function BlockedTimeForm({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  // blockedTimeの変更に応じてフォーム初期値を設定
+  /* eslint-disable react-hooks/set-state-in-effect -- フォーム初期化のため同期的な更新が必要 */
   useEffect(() => {
     if (blockedTime) {
       // 編集モード: 既存のデータをセット
@@ -44,9 +46,8 @@ export default function BlockedTimeForm({
       setDescription('');
     }
     setError('');
-    // formatDateTimeForInputは変更されないため、依存配列には含めない
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockedTime]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

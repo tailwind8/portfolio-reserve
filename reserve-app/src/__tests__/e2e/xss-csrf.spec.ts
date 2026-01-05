@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/LoginPage';
 import { BookingPage } from './pages/BookingPage';
-import { AdminMenuPage } from './pages/AdminMenuPage';
-import { AdminSettingsPage } from './pages/AdminSettingsPage';
 
 /**
  * E2Eテスト: XSS・CSRF攻撃防止
@@ -52,7 +50,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
     expect(notesText).toContain('&lt;/script&gt;');
 
     // スクリプトが実行されないことを確認（alertが表示されない）
-    page.on('dialog', async dialog => {
+    page.on('dialog', async () => {
       throw new Error('Unexpected alert dialog');
     });
   });
@@ -79,7 +77,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
     expect(descriptionText).toContain('&lt;script&gt;');
 
     // スクリプトが実行されない
-    page.on('dialog', async dialog => {
+    page.on('dialog', async () => {
       throw new Error('Unexpected alert dialog');
     });
   });
@@ -111,7 +109,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
     expect(notesText).toContain('onerror');
 
     // スクリプトが実行されない
-    page.on('dialog', async dialog => {
+    page.on('dialog', async () => {
       throw new Error('Unexpected alert dialog');
     });
   });
@@ -195,7 +193,7 @@ test.describe('XSS・CSRF攻撃防止', () => {
     expect(notesText).toContain('&lt;svg');
 
     // スクリプトが実行されない
-    page.on('dialog', async dialog => {
+    page.on('dialog', async () => {
       throw new Error('Unexpected alert dialog');
     });
   });

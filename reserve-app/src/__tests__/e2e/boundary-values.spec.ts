@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/LoginPage';
-import { AdminMenuPage } from './pages/AdminMenuPage';
 import { BookingPage } from './pages/BookingPage';
 import { RegisterPage } from './pages/RegisterPage';
 

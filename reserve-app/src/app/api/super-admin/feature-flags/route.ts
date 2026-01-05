@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { supabase } from '@/lib/supabase';
-import { FeatureFlagKey } from '@/lib/feature-flags-config';
+import type { FeatureFlagKey } from '@/lib/feature-flags-config';
 
 /**
  * スーパー管理者のロールをチェック

@@ -60,7 +60,7 @@ test.describe('予約の並行処理と重複防止', () => {
     await bookingPage2.selectAvailableTimeSlot(); // 14:00を選択
 
     // 同時に予約を送信（Promise.allで並行実行）
-    const [result1, result2] = await Promise.allSettled([
+    await Promise.allSettled([
       bookingPage1.submit(),
       bookingPage2.submit(),
     ]);

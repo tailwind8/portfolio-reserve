@@ -21,9 +21,6 @@ test.describe('週間カレンダー表示での予約 (#107)', () => {
 
     // 空き時間APIのモック
     await page.route('**/api/available-slots*', async (route) => {
-      const url = new URL(route.request().url());
-      const date = url.searchParams.get('date');
-
       // 30分刻みで全スロットを提供（09:00-20:00）
       const mockSlots = [];
       for (let hour = 9; hour < 20; hour++) {

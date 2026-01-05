@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { AdminStaffPage } from './pages/AdminStaffPage';
 import { LoginPage } from './pages/LoginPage';
-import { SuperAdminLoginPage } from './pages/SuperAdminLoginPage';
-import { FeatureFlagsPage } from './pages/FeatureFlagsPage';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -21,14 +19,10 @@ const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 test.describe('Issue #78: スタッフシフト管理のON/OFF設定', () => {
   let adminStaffPage: AdminStaffPage;
   let loginPage: LoginPage;
-  let superAdminLoginPage: SuperAdminLoginPage;
-  let featureFlagsPage: FeatureFlagsPage;
 
   test.beforeEach(async ({ page }) => {
     adminStaffPage = new AdminStaffPage(page);
     loginPage = new LoginPage(page);
-    superAdminLoginPage = new SuperAdminLoginPage(page);
-    featureFlagsPage = new FeatureFlagsPage(page);
 
     // 管理者としてログイン
     if (process.env.SKIP_AUTH_IN_TEST !== 'true') {

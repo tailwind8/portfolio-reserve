@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/LoginPage';
 import { AdminReservationsPage } from './pages/AdminReservationsPage';
-import { BookingPage } from './pages/BookingPage';
 
 /**
  * E2Eテスト: 予約ステータス遷移の制御

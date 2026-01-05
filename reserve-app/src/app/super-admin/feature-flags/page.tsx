@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -30,15 +30,10 @@ export default function FeatureFlagsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // 初期データ読み込み
-  useEffect(() => {
-    loadFeatureFlags();
-  }, [tenantId]);
-
   /**
    * 機能フラグをAPIから取得
    */
-  const loadFeatureFlags = async () => {
+  const loadFeatureFlags = useCallback(async () => {
     setIsLoading(true);
     setSuccessMessage('');
     setErrorMessage('');
@@ -77,7 +72,12 @@ export default function FeatureFlagsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tenantId]);
+
+  // 初期データ読み込み
+  useEffect(() => {
+    loadFeatureFlags();
+  }, [loadFeatureFlags]);
 
   /**
    * 機能フラグのトグル
