@@ -129,19 +129,18 @@ export class MyPage {
    * 予約一覧または空状態が表示されることを検証
    */
   async expectReservationsOrEmptyState() {
-    // Wait for either reservations or empty state to appear
-    await this.page.waitForTimeout(2000);
+    // ローディングが完了するまで待機
+    await this.page.waitForLoadState('networkidle');
+
+    // 予約カードまたは空状態メッセージのいずれかが表示されるまで待機
+    await Promise.race([
+      this.page.locator(this.selectors.editButton).first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      this.page.getByText('予約がありません').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+    ]);
 
     const hasReservations = (await this.page.locator(this.selectors.editButton).count()) > 0;
     const emptyStateCount = await this.page.getByText('予約がありません').count();
     const hasEmptyState = emptyStateCount > 0;
-
-    // Debug: log what we found
-    if (!hasReservations && !hasEmptyState) {
-      console.log('Neither reservations nor empty state found');
-      console.log('Edit button count:', await this.page.locator(this.selectors.editButton).count());
-      console.log('Empty state count:', emptyStateCount);
-    }
 
     // Either reservations or empty state should be visible
     expect(hasReservations || hasEmptyState).toBeTruthy();
@@ -184,7 +183,8 @@ export class MyPage {
     const tabsContainer = this.page.locator('.border-b.border-gray-200');
     const tab = tabsContainer.getByRole('button', { name: new RegExp(tabName) });
     await tab.click();
-    await this.page.waitForTimeout(500);
+    // タブ切り替え後のコンテンツ更新を待機
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -296,7 +296,8 @@ export class MyPage {
    * 過去の日付が無効化されていることを検証
    */
   async expectPastDatesDisabled() {
-    await this.page.waitForTimeout(1000);
+    // カレンダーが表示されるまで待機
+    await this.page.waitForSelector('button:has-text("月")', { timeout: 5000 });
     const disabledDates = this.page.locator('button:disabled:has-text("1"), button:disabled:has-text("2")');
     const count = await disabledDates.count();
     expect(count).toBeGreaterThanOrEqual(0);
