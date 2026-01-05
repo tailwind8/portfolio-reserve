@@ -9,8 +9,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 4 : undefined,
-  reporter: 'html',
+  // CI環境ではシャーディングで並列化するため、各シャード内は1ワーカー
+  workers: process.env.CI ? 1 : undefined,
+  // CI環境ではblobレポーターを使用（シャードマージ用）
+  reporter: process.env.CI
+    ? [['blob', { outputDir: 'blob-report' }]]
+    : [['html']],
 
   use: {
     baseURL: 'http://localhost:3000',
