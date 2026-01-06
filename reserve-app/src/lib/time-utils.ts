@@ -150,3 +150,59 @@ export function hasTimeOverlap(
     (start1Minutes <= start2Minutes && end1Minutes >= end2Minutes)
   );
 }
+
+/**
+ * 指定された時間が休憩時間内かどうかを判定する
+ *
+ * @param time - "HH:MM" 形式の時間文字列
+ * @param breakStart - 休憩開始時刻（"HH:MM" 形式）
+ * @param breakEnd - 休憩終了時刻（"HH:MM" 形式）
+ * @returns 休憩時間内の場合true、それ以外はfalse
+ *
+ * @example
+ * ```typescript
+ * isBreakTime('12:30', '12:00', '13:00'); // => true
+ * isBreakTime('14:00', '12:00', '13:00'); // => false
+ * ```
+ */
+export function isBreakTime(
+  time: string,
+  breakStart: string,
+  breakEnd: string
+): boolean {
+  const timeMinutes = minutesSinceStartOfDay(time);
+  const breakStartMinutes = minutesSinceStartOfDay(breakStart);
+  const breakEndMinutes = minutesSinceStartOfDay(breakEnd);
+
+  return timeMinutes >= breakStartMinutes && timeMinutes < breakEndMinutes;
+}
+
+/**
+ * 営業時間内のタイムスロットを生成する
+ *
+ * @param openTime - 営業開始時刻（"HH:MM" 形式）
+ * @param closeTime - 営業終了時刻（"HH:MM" 形式）
+ * @param intervalMinutes - スロット間隔（分）。デフォルト30分
+ * @returns タイムスロットの配列（"HH:MM" 形式）
+ *
+ * @example
+ * ```typescript
+ * generateTimeSlots('09:00', '12:00', 30);
+ * // => ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30']
+ * ```
+ */
+export function generateTimeSlots(
+  openTime: string,
+  closeTime: string,
+  intervalMinutes: number = 30
+): string[] {
+  const startMinutes = minutesSinceStartOfDay(openTime);
+  const endMinutes = minutesSinceStartOfDay(closeTime);
+
+  const slots: string[] = [];
+  for (let minutes = startMinutes; minutes < endMinutes; minutes += intervalMinutes) {
+    slots.push(formatMinutesToTime(minutes));
+  }
+
+  return slots;
+}
