@@ -1,0 +1,274 @@
+name: Code Standards Check
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'reserve-app/src/**'
+      - 'reserve-app/features/**'
+
+jobs:
+  # =========================================
+  # Job 1: E2Eテストセレクタ規約チェック
+  # =========================================
+  test-selector-check:
+    name: E2E Test Selector Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for forbidden getByText usage in E2E tests
+        run: |
+          echo "🔍 E2Eテストで禁止されているセレクタパターンをチェック中..."
+
+          VIOLATIONS=""
+
+          # getByText の使用をチェック（Page Objectファイル内）
+          if grep -rn "getByText" reserve-app/src/__tests__/e2e/pages/ 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ Page Objectでの getByText 使用を検出\n"
+          fi
+
+          # :has-text() の使用をチェック（Page Objectファイル内）
+          if grep -rn ":has-text(" reserve-app/src/__tests__/e2e/pages/ 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ Page Objectでの :has-text() 使用を検出\n"
+          fi
+
+          # spec.ts内での直接的なテキストセレクタ使用をチェック
+          if grep -rn "page\.getByText\|page\.locator.*:has-text" reserve-app/src/__tests__/e2e/*.spec.ts 2>/dev/null | grep -v "// allowed:" ; then
+            VIOLATIONS="${VIOLATIONS}⚠️ E2Eテストでのテキストベースセレクタ使用を検出（data-testid推奨）\n"
+          fi
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "============================================"
+            echo "⚠️ 規約違反の可能性があります"
+            echo "============================================"
+            echo -e "$VIOLATIONS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. data-testid属性をコンポーネントに追加"
+            echo "  2. Page Objectで [data-testid=\"...\"] セレクタを使用"
+            echo "  3. 参考: .cursor/rules/開発プロセスルール.mdc"
+            echo ""
+            echo "⚠️ 警告として扱います（現在は既存コードに違反があるため）"
+            # 現在は警告のみ。既存コード修正後に exit 1 に変更
+            # exit 1
+          else
+            echo "✅ テストセレクタ規約に違反はありません"
+          fi
+
+  # =========================================
+  # Job 2: APIバリデーション規約チェック
+  # =========================================
+  api-validation-check:
+    name: API Validation Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Zod validation in new API routes
+        run: |
+          echo "🔍 新規APIルートでのZodバリデーション使用をチェック中..."
+
+          # PRで追加・変更されたAPIファイルを取得
+          API_FILES=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/app/api/**/*.ts' 2>/dev/null || echo "")
+
+          if [ -z "$API_FILES" ]; then
+            echo "✅ APIファイルの変更はありません"
+            exit 0
+          fi
+
+          MISSING_VALIDATION=""
+
+          for file in $API_FILES; do
+            if [ -f "$file" ]; then
+              # POST/PUT/PATCHメソッドがあるがsafeParse/.parse()がない場合
+              if grep -q "export async function POST\|export async function PUT\|export async function PATCH" "$file"; then
+                if ! grep -q "safeParse\|\.parse(" "$file"; then
+                  MISSING_VALIDATION="${MISSING_VALIDATION}❌ $file: Zodバリデーションが見つかりません\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_VALIDATION" ]; then
+            echo "============================================"
+            echo "⚠️ APIバリデーション規約違反の可能性"
+            echo "============================================"
+            echo -e "$MISSING_VALIDATION"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. Zodスキーマを定義（src/lib/validations.ts）"
+            echo "  2. APIルートでsafeParseを使用"
+            echo "  3. 参考: documents/コード品質チェックリスト.md"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # 現在は警告のみ
+            # exit 1
+          else
+            echo "✅ 変更されたAPIルートにはZodバリデーションが含まれています"
+          fi
+
+  # =========================================
+  # Job 3: Gherkinシナリオ存在チェック
+  # =========================================
+  gherkin-check:
+    name: Gherkin Scenario Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Gherkin scenarios for new E2E tests
+        run: |
+          echo "🔍 新規E2Eテストに対応するGherkinシナリオをチェック中..."
+
+          # 新しいspec.tsファイルを取得
+          NEW_SPECS=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/__tests__/e2e/*.spec.ts' 2>/dev/null || echo "")
+
+          if [ -z "$NEW_SPECS" ]; then
+            echo "✅ 新規E2Eテストファイルはありません"
+            exit 0
+          fi
+
+          MISSING_GHERKIN=""
+
+          for spec in $NEW_SPECS; do
+            if [ -f "$spec" ]; then
+              # spec名からfeatureファイル名を推測
+              SPEC_NAME=$(basename "$spec" .spec.ts)
+
+              # featuresディレクトリ内を検索
+              if ! find reserve-app/features reserve-app/src/__tests__/e2e/features -name "*.feature" 2>/dev/null | xargs grep -l "$SPEC_NAME" > /dev/null 2>&1; then
+                # 完全一致のfeatureファイルを探す
+                if ! find reserve-app/features reserve-app/src/__tests__/e2e/features -name "${SPEC_NAME}.feature" 2>/dev/null | head -1 | grep -q .; then
+                  MISSING_GHERKIN="${MISSING_GHERKIN}⚠️ $spec: 対応するGherkinシナリオが見つかりません\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_GHERKIN" ]; then
+            echo "============================================"
+            echo "⚠️ Gherkinシナリオが不足している可能性"
+            echo "============================================"
+            echo -e "$MISSING_GHERKIN"
+            echo ""
+            echo "📖 ATDD/BDD開発プロセス:"
+            echo "  1. まずGherkinシナリオを作成（features/ディレクトリ）"
+            echo "  2. 次にE2Eテストを実装"
+            echo "  3. 参考: documents/development/開発プロセス設計.md"
+          else
+            echo "✅ E2Eテストに対応するGherkinシナリオが存在します"
+          fi
+
+  # =========================================
+  # Job 4: data-testid属性チェック
+  # =========================================
+  testid-check:
+    name: data-testid Attribute Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for data-testid in interactive elements
+        run: |
+          echo "🔍 新規コンポーネントでのdata-testid使用をチェック中..."
+
+          # 変更されたTSXファイルを取得
+          CHANGED_TSX=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/**/*.tsx' 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED_TSX" ]; then
+            echo "✅ TSXファイルの変更はありません"
+            exit 0
+          fi
+
+          WARNINGS=""
+
+          for file in $CHANGED_TSX; do
+            if [ -f "$file" ]; then
+              # button, input, select要素があるがdata-testidがない場合をチェック
+              BUTTONS=$(grep -c "<button" "$file" 2>/dev/null || echo "0")
+              INPUTS=$(grep -c "<input" "$file" 2>/dev/null || echo "0")
+              SELECTS=$(grep -c "<select" "$file" 2>/dev/null || echo "0")
+              TESTIDS=$(grep -c "data-testid" "$file" 2>/dev/null || echo "0")
+
+              INTERACTIVE=$((BUTTONS + INPUTS + SELECTS))
+
+              if [ "$INTERACTIVE" -gt 0 ] && [ "$TESTIDS" -eq 0 ]; then
+                WARNINGS="${WARNINGS}⚠️ $file: インタラクティブ要素($INTERACTIVE個)にdata-testidがありません\n"
+              fi
+            fi
+          done
+
+          if [ -n "$WARNINGS" ]; then
+            echo "============================================"
+            echo "⚠️ data-testid属性の追加を推奨"
+            echo "============================================"
+            echo -e "$WARNINGS"
+            echo ""
+            echo "📖 命名規則:"
+            echo "  - {page}-{element}: 基本形式"
+            echo "  - {action}-{page}: ボタン等のアクション"
+            echo "  - 例: register-email, submit-booking"
+          else
+            echo "✅ 変更されたコンポーネントにはdata-testidが含まれています"
+          fi
+
+  # =========================================
+  # Job 5: tenant_idフィルタチェック
+  # =========================================
+  tenant-filter-check:
+    name: Tenant ID Filter Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for tenant_id filtering in API routes
+        run: |
+          echo "🔍 APIルートでのtenant_idフィルタリングをチェック中..."
+
+          # 変更されたAPIファイルを取得
+          API_FILES=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/app/api/**/*.ts' 2>/dev/null || echo "")
+
+          if [ -z "$API_FILES" ]; then
+            echo "✅ APIファイルの変更はありません"
+            exit 0
+          fi
+
+          MISSING_TENANT=""
+
+          for file in $API_FILES; do
+            if [ -f "$file" ]; then
+              # Prismaクエリがあるがtenant_id/tenantIdがない場合
+              if grep -q "prisma\." "$file"; then
+                if ! grep -q "tenant_id\|tenantId" "$file"; then
+                  MISSING_TENANT="${MISSING_TENANT}❌ $file: tenant_idフィルタが見つかりません\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_TENANT" ]; then
+            echo "============================================"
+            echo "🚨 セキュリティ警告: tenant_idフィルタ不足"
+            echo "============================================"
+            echo -e "$MISSING_TENANT"
+            echo ""
+            echo "📖 マルチテナント設計の必須事項:"
+            echo "  - 全てのPrismaクエリにtenant_idフィルタを追加"
+            echo "  - 参考: documents/spec/データベース設計書.md"
+            echo ""
+            echo "⚠️ この警告は重要です。修正を検討してください。"
+            # exit 1  # 本番運用時は有効化
+          else
+            echo "✅ 変更されたAPIルートにはtenant_idフィルタが含まれています"
+          fi
