@@ -6,18 +6,28 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 /**
  * 認証付きfetchを提供するカスタムフック
  * Supabaseセッションからアクセストークンを取得し、リクエストヘッダーに含める
+ * テスト環境（NEXT_PUBLIC_SKIP_AUTH_IN_TEST=true）では認証をスキップする
  */
 export function useAuthFetch() {
   const authFetch = useCallback(async (url: string, options?: RequestInit) => {
-    const supabase = createSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const headers = new Headers(options?.headers);
 
-    if (!session?.access_token) {
-      throw new Error('認証が必要です。再度ログインしてください。');
+    // テスト環境では認証をスキップ
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH_IN_TEST === 'true';
+
+    if (!skipAuth) {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error('認証が必要です。再度ログインしてください。');
+      }
+
+      headers.set('Authorization', `Bearer ${session.access_token}`);
     }
 
-    const headers = new Headers(options?.headers);
-    headers.set('Authorization', `Bearer ${session.access_token}`);
     if (!headers.has('Content-Type') && options?.body) {
       headers.set('Content-Type', 'application/json');
     }

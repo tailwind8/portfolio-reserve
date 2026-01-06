@@ -11,6 +11,7 @@ env:
   NEXT_PUBLIC_TENANT_ID: demo-booking
   NEXT_PUBLIC_SENTRY_DSN: ""
   SKIP_AUTH_IN_TEST: "true"
+  NEXT_PUBLIC_SKIP_AUTH_IN_TEST: "true"
 
 jobs:
   # =========================================
