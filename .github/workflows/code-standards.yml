@@ -3,9 +3,8 @@ name: Code Standards Check
 on:
   pull_request:
     branches: [main, master]
-    paths:
-      - 'reserve-app/src/**'
-      - 'reserve-app/features/**'
+  push:
+    branches: [main, master]
 
 jobs:
   # =========================================
@@ -271,4 +270,339 @@ jobs:
             # exit 1  # 本番運用時は有効化
           else
             echo "✅ 変更されたAPIルートにはtenant_idフィルタが含まれています"
+          fi
+
+  # =========================================
+  # Job 6: npm auditセキュリティチェック
+  # =========================================
+  security-audit:
+    name: Security Audit (npm audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "🔍 依存パッケージのセキュリティ脆弱性をチェック中..."
+
+          # high以上の脆弱性をチェック
+          if npm audit --audit-level=high; then
+            echo "✅ 重大なセキュリティ脆弱性はありません"
+          else
+            echo "============================================"
+            echo "🚨 セキュリティ警告: 脆弱性が検出されました"
+            echo "============================================"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. npm audit fix で自動修正を試す"
+            echo "  2. 修正できない場合はパッケージのアップデートを検討"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1  # 本番運用時は有効化
+          fi
+
+  # =========================================
+  # Job 7: 危険なパターンのチェック
+  # =========================================
+  dangerous-patterns-check:
+    name: Dangerous Patterns Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for dangerous patterns
+        run: |
+          echo "🔍 危険なコードパターンをチェック中..."
+
+          VIOLATIONS=""
+
+          # dangerouslySetInnerHTML のチェック
+          if grep -rn "dangerouslySetInnerHTML" reserve-app/src/ --include="*.tsx" --include="*.ts" 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}⚠️ dangerouslySetInnerHTML使用を検出（XSSリスク）\n"
+          fi
+
+          # $queryRawUnsafe のチェック
+          if grep -rn '\$queryRawUnsafe\|\$executeRawUnsafe' reserve-app/src/ --include="*.ts" 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ $queryRawUnsafe使用を検出（SQLインジェクションリスク）\n"
+          fi
+
+          # eval/new Function のチェック
+          if grep -rn "eval(\|new Function(" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ eval/new Function使用を検出（コードインジェクションリスク）\n"
+          fi
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "============================================"
+            echo "🚨 危険なパターンが検出されました"
+            echo "============================================"
+            echo -e "$VIOLATIONS"
+            echo ""
+            echo "📖 参考: .claude/skills/typescript-security-checker/references/security-checklist.md"
+            echo ""
+            echo "⚠️ 警告として扱います（レビューで確認が必要）"
+            # exit 1
+          else
+            echo "✅ 危険なパターンは検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 8: シークレット漏洩チェック（CIで失敗）
+  # =========================================
+  secrets-check:
+    name: Secrets Leak Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "🔍 ハードコードされたシークレットをチェック中..."
+
+          SECRETS_FOUND=""
+
+          # APIキーパターン
+          if grep -rn "sk_live_\|pk_live_\|sk-[a-zA-Z0-9]\{20,\}" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            SECRETS_FOUND="${SECRETS_FOUND}❌ APIキーがハードコードされています\n"
+          fi
+
+          # JWT/トークンパターン
+          if grep -rn "eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "test\|spec\|mock"; then
+            SECRETS_FOUND="${SECRETS_FOUND}❌ JWTトークンがハードコードされている可能性があります\n"
+          fi
+
+          # データベースURL（認証情報付き）
+          if grep -rn "postgresql://.*:.*@\|mysql://.*:.*@\|mongodb://.*:.*@" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v ".example\|.test"; then
+            SECRETS_FOUND="${SECRETS_FOUND}❌ データベースURLがハードコードされています\n"
+          fi
+
+          if [ -n "$SECRETS_FOUND" ]; then
+            echo "============================================"
+            echo "🚨 シークレット漏洩の可能性！"
+            echo "============================================"
+            echo -e "$SECRETS_FOUND"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. シークレットを環境変数に移動"
+            echo "  2. .env.exampleにはプレースホルダーのみ記載"
+            echo "  3. git履歴からもシークレットを削除"
+            echo ""
+            exit 1  # シークレット漏洩はCIを失敗させる
+          else
+            echo "✅ ハードコードされたシークレットは検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 9: コード品質チェック
+  # =========================================
+  code-quality-check:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for code quality issues
+        run: |
+          echo "🔍 コード品質をチェック中..."
+
+          WARNINGS=""
+
+          # any型の使用チェック（変更されたファイルのみ）
+          CHANGED_TS=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/**/*.ts' 'reserve-app/src/**/*.tsx' 2>/dev/null || echo "")
+
+          if [ -n "$CHANGED_TS" ]; then
+            for file in $CHANGED_TS; do
+              if [ -f "$file" ]; then
+                if grep -n ": any\|: any\[\]\|as any" "$file" 2>/dev/null; then
+                  WARNINGS="${WARNINGS}⚠️ $file: any型の使用を検出\n"
+                fi
+              fi
+            done
+          fi
+
+          # console.logの使用チェック（テスト以外）
+          if [ -n "$CHANGED_TS" ]; then
+            for file in $CHANGED_TS; do
+              if [ -f "$file" ] && [[ ! "$file" =~ (test|spec|__tests__) ]]; then
+                if grep -n "console\.log\|console\.debug" "$file" 2>/dev/null; then
+                  WARNINGS="${WARNINGS}⚠️ $file: console.log/debugの使用を検出\n"
+                fi
+              fi
+            done
+          fi
+
+          if [ -n "$WARNINGS" ]; then
+            echo "============================================"
+            echo "⚠️ コード品質の改善が推奨されます"
+            echo "============================================"
+            echo -e "$WARNINGS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - any型 → unknown型 + 型ガードに変更"
+            echo "  - console.log → 削除またはロガーに置換"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ コード品質に問題はありません"
+          fi
+
+  # =========================================
+  # Job 10: 日本語運用チェック
+  # =========================================
+  japanese-check:
+    name: Japanese Language Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR title for Japanese
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "🔍 PRタイトルの日本語チェック中..."
+
+          # PRタイトルに日本語が含まれているかチェック
+          if echo "$PR_TITLE" | grep -P '[\p{Hiragana}\p{Katakana}\p{Han}]' > /dev/null 2>&1; then
+            echo "✅ PRタイトルに日本語が含まれています"
+          else
+            echo "============================================"
+            echo "⚠️ PRタイトルに日本語が含まれていません"
+            echo "============================================"
+            echo "現在のタイトル: $PR_TITLE"
+            echo ""
+            echo "📖 日本語運用ルール:"
+            echo "  - PRタイトルは日本語で記述"
+            echo "  - 例: [FEATURE] ユーザー登録機能を実装"
+            echo "  - 参考: .cursor/rules/日本語運用ルール.md"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          fi
+
+      - name: Check commit messages for Japanese
+        run: |
+          echo "🔍 コミットメッセージの日本語チェック中..."
+
+          # PR内のコミットメッセージを取得
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null || echo "")
+
+          if [ -z "$COMMITS" ]; then
+            echo "✅ チェックするコミットがありません"
+            exit 0
+          fi
+
+          NON_JAPANESE=""
+          while IFS= read -r line; do
+            # 日本語を含まないコミットをチェック
+            if ! echo "$line" | grep -P '[\p{Hiragana}\p{Katakana}\p{Han}]' > /dev/null 2>&1; then
+              NON_JAPANESE="${NON_JAPANESE}  - $line\n"
+            fi
+          done <<< "$COMMITS"
+
+          if [ -n "$NON_JAPANESE" ]; then
+            echo "============================================"
+            echo "⚠️ 日本語を含まないコミットがあります"
+            echo "============================================"
+            echo -e "$NON_JAPANESE"
+            echo ""
+            echo "📖 日本語運用ルール:"
+            echo "  - コミットメッセージは日本語で記述"
+            echo "  - 例: feat: ユーザー登録機能を実装"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ 全てのコミットメッセージに日本語が含まれています"
+          fi
+
+  # =========================================
+  # Job 11: テストカバレッジしきい値チェック
+  # =========================================
+  coverage-threshold:
+    name: Coverage Threshold Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run tests with coverage
+        run: |
+          echo "🔍 テストカバレッジをチェック中..."
+
+          # カバレッジ付きでテスト実行
+          npm run test:coverage -- --passWithNoTests || true
+
+          # カバレッジサマリーを表示
+          if [ -f coverage/coverage-summary.json ]; then
+            echo ""
+            echo "📊 カバレッジサマリー:"
+            cat coverage/coverage-summary.json | jq '.total'
+
+            # しきい値チェック（Lines: 70%, Branches: 60%, Functions: 70%）
+            LINES=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+            BRANCHES=$(cat coverage/coverage-summary.json | jq '.total.branches.pct')
+            FUNCTIONS=$(cat coverage/coverage-summary.json | jq '.total.functions.pct')
+
+            echo ""
+            echo "Lines: ${LINES}% (目標: 70%)"
+            echo "Branches: ${BRANCHES}% (目標: 60%)"
+            echo "Functions: ${FUNCTIONS}% (目標: 70%)"
+
+            # しきい値を下回っている場合は警告
+            if (( $(echo "$LINES < 70" | bc -l) )) || \
+               (( $(echo "$BRANCHES < 60" | bc -l) )) || \
+               (( $(echo "$FUNCTIONS < 70" | bc -l) )); then
+              echo ""
+              echo "⚠️ カバレッジがしきい値を下回っています"
+              echo "⚠️ 警告として扱います"
+              # exit 1
+            else
+              echo ""
+              echo "✅ カバレッジはしきい値を満たしています"
+            fi
+          else
+            echo "⚠️ カバレッジレポートが見つかりません"
           fi
