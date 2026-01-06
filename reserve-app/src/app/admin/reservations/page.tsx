@@ -5,6 +5,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 import { useAuthFetch, extractErrorMessage } from '@/hooks/useAuthFetch';
+import { isBreakTime } from '@/lib/time-utils';
 import {
   AddReservationModal,
   EditReservationModal,
@@ -259,20 +260,6 @@ export default function AdminReservationsPage() {
 
     return slots;
   }, []);
-
-  // 休憩時間かどうかを判定
-  const isBreakTime = (time: string): boolean => {
-    const [hour, minute] = time.split(':').map(Number);
-    const timeMinutes = hour * 60 + minute;
-
-    const [breakStartHour, breakStartMinute] = BREAK_TIME_START.split(':').map(Number);
-    const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
-
-    const [breakEndHour, breakEndMinute] = BREAK_TIME_END.split(':').map(Number);
-    const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
-
-    return timeMinutes >= breakStartMinutes && timeMinutes < breakEndMinutes;
-  };
 
   // 定休日かどうかを判定（日曜日を定休日とする）
   const isClosedDay = (date: Date): boolean => {
@@ -706,7 +693,7 @@ export default function AdminReservationsPage() {
                           }
 
                           // 休憩時間の場合
-                          if (isBreakTime(time)) {
+                          if (isBreakTime(time, BREAK_TIME_START, BREAK_TIME_END)) {
                             return (
                               <td
                                 key={dayIndex}

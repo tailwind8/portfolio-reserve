@@ -1,0 +1,278 @@
+---
+alwaysApply: true
+---
+## 📦 このプロジェクトの技術スタックとContext7 ID
+
+### 主要ライブラリ
+
+| ライブラリ | プロジェクトバージョン | Context7 ID | 備考 |
+|----------|---------------------|------------|------|
+| **Next.js** | 16.1.1 | `/vercel/next.js` | Server Actions, PPR対応 |
+| **React** | 19.2.3 | `/facebook/react` | Suspense, use hook対応 |
+| **Supabase JS** | 2.89.0 | `/supabase/supabase-js` | v2系 |
+| **Prisma** | 7.2.0 | `/prisma/prisma` | v7系 |
+| **Playwright** | 1.57.0 | `/microsoft/playwright` | E2Eテスト |
+| **Tailwind CSS** | 4.x | `/tailwindlabs/tailwindcss` | v4系 |
+| **Zod** | 4.2.1 | `/colinhacks/zod` | バリデーション |
+| **Resend** | 6.6.0 | `/resend/resend-node` | メール送信 |
+
+### 公式ドキュメント全体
+
+| サイト | Context7 ID |
+|--------|------------|
+| Supabase公式 | `/websites/supabase_com-docs` |
+| Next.js公式 | `/websites/nextjs_org-docs` |
+| React公式 | `/websites/react_dev` |
+
+---
+
+## 🔍 使用例
+
+### Supabase認証の実装
+
+**質問例:**
+```
+Supabase v2系でメール・パスワード認証を実装する方法を教えて。
+signUpとsignInWithPasswordの使い方を含めて。
+```
+
+**期待される回答:**
+- `auth.signUp()` の使用方法
+- `auth.signInWithPassword()` の使用方法
+- エラーハンドリング
+- セッション管理
+
+### Next.js 16のServer Actions
+
+**質問例:**
+```
+Next.js 16でServer Actionsを使ってフォームデータを処理する方法を教えて。
+'use server'ディレクティブの使い方も含めて。
+```
+
+**期待される回答:**
+- Server Actionsの基本構文
+- フォームとの連携
+- エラーハンドリング
+- リダイレクト処理
+
+### Prisma 7のスキーマ定義
+
+**質問例:**
+```
+Prisma 7でリレーションを持つテーブルスキーマを定義する方法を教えて。
+1対多、多対多の例を含めて。
+```
+
+**期待される回答:**
+- スキーマ構文
+- リレーション定義
+- マイグレーション実行方法
+
+### Playwright-BDDのGherkin
+
+**質問例:**
+```
+PlaywrightでGherkin形式のE2Eテストを書く方法を教えて。
+Given-When-Thenパターンの例を含めて。
+```
+
+**期待される回答:**
+- Gherkin構文
+- ステップ定義
+- Page Objectパターンとの連携
+
+---
+
+## ⚠️ 重要な注意事項
+
+### 1. バージョン互換性の確認
+
+Context7のドキュメントは最新版に近いですが、プロジェクトのバージョンと完全一致しない場合があります。
+
+**対処方法:**
+1. Context7で実装方法を取得
+2. `reserve-app/package.json`でバージョンを確認
+3. メジャーバージョンが一致していれば互換性は高い
+4. 必要に応じて公式ドキュメントで差分を確認
+
+**例:**
+- プロジェクト: `@supabase/supabase-js@2.89.0`
+- Context7: `/supabase/supabase-js` (v2.58.0)
+- → v2系同士なので互換性高い ✅
+
+### 2. 実装前の確認手順
+
+```bash
+# 1. プロジェクトのバージョンを確認
+cd reserve-app
+cat package.json | grep "ライブラリ名"
+
+# 2. Context7でドキュメント取得
+# AIエージェントに質問
+
+# 3. 実装
+
+# 4. テスト実行
+npm test
+npm run test:e2e
+```
+
+### 3. 非推奨APIの確認
+
+Context7が古いバージョンのドキュメントを返す場合、非推奨APIが含まれる可能性があります。
+
+**確認方法:**
+- 公式ドキュメントでDeprecation警告を確認
+- TypeScriptの型エラーに注意
+- リントエラーを確認
+
+---
+
+## 📚 Context7の活用が特に有効な場面
+
+### 🔐 認証・認可
+
+- Supabase Authの実装
+- セッション管理
+- ミドルウェアでの認証チェック
+
+**推奨Context7 ID:**
+- `/supabase/supabase-js`
+- `/websites/supabase_com-docs`
+
+### 💾 データベース操作
+
+- Prismaクライアントの使用
+- リレーションクエリ
+- トランザクション処理
+
+**推奨Context7 ID:**
+- `/prisma/prisma`
+- `/websites/prisma_io-docs`
+
+### 🎨 UIコンポーネント
+
+- Tailwind CSSのユーティリティクラス
+- レスポンシブデザイン
+- ダークモード対応
+
+**推奨Context7 ID:**
+- `/tailwindlabs/tailwindcss`
+- `/websites/tailwindcss_com-docs`
+
+### 🧪 テスト実装
+
+- Playwrightのセレクタ
+- Page Objectパターン
+- Gherkin構文
+
+**推奨Context7 ID:**
+- `/microsoft/playwright`
+- `/websites/playwright_dev-docs`
+
+### ✉️ メール送信
+
+- Resend APIの使用
+- テンプレート作成
+- エラーハンドリング
+
+**推奨Context7 ID:**
+- `/resend/resend-node`
+
+---
+
+## 🚀 ベストプラクティス
+
+### 1. 具体的に質問する
+
+**❌ 悪い例:**
+```
+Supabaseの使い方を教えて
+```
+
+**✅ 良い例:**
+```
+Supabase v2系でメール・パスワード認証を実装する方法を教えて。
+signUp、signInWithPassword、getSessionの使い方を含めて。
+```
+
+### 2. プロジェクトのバージョンを明記する
+
+**✅ 良い例:**
+```
+Next.js 16でServer Actionsを使ってフォームデータを処理する方法を教えて。
+```
+
+### 3. コード例を要求する
+
+**✅ 良い例:**
+```
+Prisma 7で1対多のリレーションを定義する具体的なコード例を教えて。
+```
+
+### 4. エラーハンドリングも含める
+
+**✅ 良い例:**
+```
+Supabase Authでログインエラーをハンドリングする方法を、
+TypeScriptのコード例で教えて。
+```
+
+---
+
+## 📝 実装時のチェックリスト
+
+実装前:
+- [ ] Context7でライブラリIDを確認
+- [ ] プロジェクトのバージョンと互換性を確認
+- [ ] 具体的な質問を準備
+
+実装中:
+- [ ] Context7から取得したコードをプロジェクトに適用
+- [ ] TypeScriptの型エラーを確認
+- [ ] リントエラーを確認
+
+実装後:
+- [ ] 単体テストを実行 (`npm test`)
+- [ ] E2Eテストを実行 (`npm run test:e2e`)
+- [ ] ビルドエラーがないか確認 (`npm run build:ci`)
+
+---
+
+## 🔗 関連ドキュメント
+
+- `CLAUDE.md` - プロジェクト全体のマスタードキュメント
+- `.cursor/rules/ドキュメント索引.md` - ドキュメント一覧
+- `reserve-app/package.json` - 依存関係とバージョン
+- `reserve-app/README.md` - セットアップ手順
+
+---
+
+## 💡 トラブルシューティング
+
+### Q: Context7が古いバージョンのドキュメントを返す
+
+**A**: 公式ドキュメントサイト全体のContext7 IDを使用してください。
+
+```
+例: /websites/supabase_com-docs
+```
+
+### Q: 取得したコードがTypeScriptエラーになる
+
+**A**:
+1. プロジェクトのバージョンを確認
+2. 公式ドキュメントで該当APIのシグネチャを確認
+3. 必要に応じて型定義を調整
+
+### Q: 実装例がNext.js 15以前のものだった
+
+**A**:
+1. Next.js 16公式ドキュメント (`/websites/nextjs_org-docs`) を使用
+2. 「Next.js 16」を明記して質問
+3. App Routerの新機能を確認
+
+---
+
+**このガイドを活用して、最新ドキュメントに基づいた正確な実装を行ってください。**

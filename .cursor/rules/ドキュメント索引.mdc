@@ -1,0 +1,300 @@
+---
+alwaysApply: true
+---
+## 🔴 最優先で読むべきドキュメント
+
+### 1. 開発プロセスルール（このディレクトリ内）
+**ファイル**: `.cursor/rules/開発プロセスルール.md`
+
+**内容**:
+- ✅ スペックファースト開発（Gherkin → E2E → 実装）
+- ✅ テストファーストの厳守
+- ✅ Page Objectパターン
+- ✅ data-testid属性の必須化
+- ✅ リファクタリング時のルール
+
+**⚠️ これを読まずに開発を始めないでください**
+
+### 2. プロジェクト概要
+**ファイル**: `documents/basic/プロジェクト概要.md`
+
+**内容**:
+- システムの目的と概要
+- 技術スタック全体
+- 主要機能一覧
+- マルチテナント設計
+- 開発プロセス
+
+### 3. CLAUDE.md（プロジェクトルート）
+**ファイル**: `CLAUDE.md`
+
+**内容**:
+- AIエージェント向けクイックリファレンス
+- 重要ドキュメントへのリンク
+- 典型的な開発フロー
+- コマンドリファレンス
+- Context7活用方法とバージョン一覧
+
+### 4. Context7活用ガイド（このディレクトリ内）
+**ファイル**: `.cursor/rules/08-context7-guide.md`
+
+**内容**:
+- ✅ プロジェクトの全技術スタックバージョン
+- ✅ Context7 IDの一覧（Supabase、Next.js、React、Prismaなど）
+- ✅ 具体的な質問例とベストプラクティス
+- ✅ バージョン互換性の確認方法
+- ✅ トラブルシューティング
+
+**⚠️ Supabase、Next.js、Reactなどの実装前に必ず確認してください**
+
+---
+
+## 📁 ドキュメント体系
+
+```
+documents/
+├── README.md                    ⭐ ドキュメント全体のナビゲーション
+├── basic/                       # 基本仕様書
+│   ├── プロジェクト概要.md      # システム全体の概要
+│   ├── 機能一覧とページ設計.md  # 全機能とUI設計
+│   └── proposal.md              # プロジェクト提案書
+├── spec/                        # 詳細仕様書
+│   └── データベース設計書.md    # DB設計、ER図、テーブル定義
+├── architecture/                # アーキテクチャ設計
+│   └── システムアーキテクチャ.md # システム構成、技術選定
+├── development/                 # 開発プロセス
+│   ├── 開発プロセス設計.md      # ATDD/BDD開発フロー
+│   └── 開発プロセス改善提案.md  # プロセス改善
+├── api/                        # API設計
+│   └── API設計書.md            # RESTful API仕様
+├── deployment/                  # デプロイ
+│   ├── CI-CD運用ガイド.md      # GitHub Actions
+│   └── Vercel環境変数設定.md   # Vercel設定
+└── runbook/                    # 手順書
+    ├── 開発開始ガイド.md        # 環境構築
+    └── ATDD-BDD環境セットアップ.md
+```
+
+---
+
+## 🎯 作業種別ごとの必読ドキュメント
+
+### 新機能開発の場合
+
+**必読**:
+1. `.cursor/rules/開発プロセスルール.md` ⭐ 最重要
+2. `documents/basic/機能一覧とページ設計.md`
+3. `documents/spec/データベース設計書.md`
+4. `documents/api/API設計書.md`
+
+**手順**:
+1. Gherkinシナリオ作成
+2. Page Object作成
+3. E2Eテスト実装（Red）
+4. 最小実装（Green）
+5. リファクタリング
+
+### バグ修正の場合
+
+**必読**:
+1. `.cursor/rules/開発プロセスルール.md`
+2. 既存のE2Eテスト（`reserve-app/src/__tests__/e2e/`）
+
+**手順**:
+1. 既存のE2Eテストを確認
+2. バグを再現するテストを追加（Red）
+3. バグ修正（Green）
+4. リファクタリング
+
+### リファクタリングの場合
+
+**必読**:
+1. `.cursor/rules/開発プロセスルール.md` の「リファクタリングのルール」セクション
+
+**重要な原則**:
+- ✅ テストが全てGreen状態で開始
+- ✅ 外部振る舞いを変えない
+- ✅ **テストは1行も変更しない**
+- ✅ リファクタリング後もテストがGreen
+
+### データベース変更の場合
+
+**必読**:
+1. `documents/spec/データベース設計書.md`
+2. `reserve-app/prisma/schema.prisma`
+
+**重要**:
+- マルチテナント設計を維持（全テーブルに`tenant_id`）
+- マイグレーション実行後、Prisma Clientを再生成
+
+### API追加・変更の場合
+
+**必読**:
+1. `documents/api/API設計書.md`
+2. `documents/architecture/システムアーキテクチャ.md`
+
+**重要**:
+- RESTful原則に従う
+- Zodバリデーション必須
+- エラーハンドリング実装
+
+---
+
+## 🚨 禁止事項（絶対に守る）
+
+### 1. テストを後回しにしない
+❌ 実装 → テスト（NG）
+✅ Gherkin → E2Eテスト → 実装（OK）
+
+### 2. テキストセレクタを使わない
+❌ `page.click('button:has-text("予約する")')`（NG）
+✅ `page.click('[data-testid="submit-booking"]')`（OK）
+
+### 3. リファクタ時にテストを修正しない
+❌ 外部振る舞いが変わらないのにテストを修正（NG）
+✅ テストは変更せず、実装のみ改善（OK）
+
+### 4. tenant_idフィルタを忘れない
+❌ `prisma.restaurantUser.findMany({ where: { email: '...' } })`（NG）
+✅ `prisma.restaurantUser.findMany({ where: { tenantId: TENANT_ID, email: '...' } })`（OK）
+
+### 5. any型を使わない
+❌ `const data: any = ...`（NG）
+✅ `const data: unknown = ...` または適切な型（OK）
+
+---
+
+## 🔍 タスク別クイックリファレンス
+
+| やりたいこと | 参照ドキュメント |
+|------------|----------------|
+| プロジェクト全体を理解したい | `documents/basic/プロジェクト概要.md` |
+| どんな機能があるか知りたい | `documents/basic/機能一覧とページ設計.md` |
+| 開発ルールを確認したい | `.cursor/rules/開発プロセスルール.md` |
+| **Supabase/Next.js/Reactの最新ドキュメントを取得したい** | **`.cursor/rules/08-context7-guide.md`** |
+| **プロジェクトの技術スタックバージョンを確認したい** | **`CLAUDE.md` の「Context7で最新ドキュメントを取得」セクション** |
+| DBテーブル構造を確認したい | `documents/spec/データベース設計書.md` |
+| APIエンドポイントを確認したい | `documents/api/API設計書.md` |
+| システム全体構成を知りたい | `documents/architecture/システムアーキテクチャ.md` |
+| 開発環境を構築したい | `documents/runbook/開発開始ガイド.md` |
+| CI/CDの運用方法を知りたい | `documents/deployment/CI-CD運用ガイド.md` |
+
+---
+
+## 📊 データベース設計の要点
+
+### マルチテナント設計
+
+**全テーブルの必須カラム**:
+- `id` (UUID, PK)
+- `tenant_id` (VARCHAR, デフォルト: 'demo-booking')
+- `created_at` (TIMESTAMP)
+- `updated_at` (TIMESTAMP)
+
+**テーブル一覧**:
+- `booking_users` - ユーザー
+- `booking_staff` - スタッフ
+- `booking_menus` - メニュー
+- `booking_reservations` - 予約
+- `booking_settings` - 店舗設定
+
+**詳細**: `documents/spec/データベース設計書.md`
+
+---
+
+## 🔌 API設計の要点
+
+### 主要エンドポイント
+
+| エンドポイント | メソッド | 説明 |
+|-------------|---------|------|
+| `/api/auth/register` | POST | ユーザー登録 |
+| `/api/auth/login` | POST | ログイン |
+| `/api/reservations` | GET, POST | 予約一覧・作成 |
+| `/api/reservations/:id` | GET, PATCH, DELETE | 予約詳細・更新・削除 |
+| `/api/menus` | GET, POST | メニュー一覧・作成 |
+| `/api/staff` | GET, POST | スタッフ一覧・作成 |
+
+**詳細**: `documents/api/API設計書.md`
+
+---
+
+## 🧪 テスト戦略
+
+### テストピラミッド
+
+```
+        /\
+       /E2E\         E2Eテスト（10%） - Playwright
+      /------\
+     /Integration\   統合テスト（30%） - RTL
+    /------------\
+   /  Unit Tests  \  単体テスト（60%） - Jest
+  /----------------\
+```
+
+### カバレッジ目標
+- Lines: 80%以上
+- Branches: 70%以上
+- Functions: 80%以上
+- Statements: 80%以上
+
+---
+
+## ⚡ よく使うコマンド
+
+```bash
+# 開発サーバー起動
+npm run dev
+
+# テスト実行
+npm test                    # 単体テスト
+npm run test:e2e           # E2Eテスト（全て）
+npm run test:e2e:smoke     # E2Eテスト（スモーク）
+npm run test:coverage      # カバレッジ
+
+# 品質チェック
+npm run lint
+DATABASE_URL="postgresql://dummy" npm run build:ci
+
+# Prisma
+npm run prisma:generate    # Client生成
+npm run prisma:migrate     # マイグレーション
+npm run prisma:studio      # GUIツール
+```
+
+---
+
+## 💡 開発時のヒント
+
+### 1. 既存のコードを参考にする
+
+**E2Eテスト例**:
+- `reserve-app/src/__tests__/e2e/auth.spec.ts`
+- `reserve-app/src/__tests__/e2e/home.spec.ts`
+
+**Page Object例**:
+- `reserve-app/src/__tests__/e2e/pages/`
+
+### 2. ドキュメントが古い場合
+
+最新の情報はコードベース（`reserve-app/`）とPrismaスキーマ（`reserve-app/prisma/schema.prisma`）を参照してください。
+
+### 3. 疑問があるとき
+
+1. `documents/README.md` で関連ドキュメントを探す
+2. `.cursor/rules/開発プロセスルール.md` を再確認
+3. 既存のテストコードを参考にする
+
+---
+
+## 📞 サポート
+
+- **ドキュメント索引**: `documents/README.md`
+- **AIガイド**: `CLAUDE.md`
+- **GitHub Issues**: プロジェクトリポジトリ
+
+---
+
+**このドキュメントは、AIエージェントが迷わず正しい開発プロセスを実行できるようにナビゲートします。**
+**作業開始前に必ず関連ドキュメントを確認してください。**

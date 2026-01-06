@@ -35,7 +35,7 @@ export default function BlockedTimesPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // アクセストークンを取得するヘルパー
-  const getAuthHeaders = useCallback(async () => {
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
     // テスト環境では認証をスキップ
     const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH_IN_TEST === 'true';
 

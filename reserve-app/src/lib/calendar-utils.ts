@@ -1,7 +1,7 @@
 /**
  * カレンダー処理ユーティリティ
  *
- * このモジュールは、週間カレンダー表示で使用される共通ロジックを提供します。
+ * このモジュールは、週間カレンダー表示に使用される共通ロジックを提供します。
  *
  * @module calendar-utils
  */
@@ -10,13 +10,12 @@
  * 指定された週の開始日から7日分の日付配列を生成する
  *
  * @param weekStart - 週の開始日（通常は月曜日）
- * @returns 7日分のDate配列
+ * @returns 7日分のDateオブジェクト配列
  *
  * @example
  * ```typescript
- * const weekStart = new Date('2026-01-06'); // 月曜日
- * const dates = getWeekDates(weekStart);
- * // => [Mon Jan 06, Tue Jan 07, ..., Sun Jan 12]
+ * const dates = getWeekDates(new Date('2026-01-06'));
+ * // => [2026-01-06, 2026-01-07, ..., 2026-01-12]
  * ```
  */
 export function getWeekDates(weekStart: Date): Date[] {
@@ -28,30 +27,35 @@ export function getWeekDates(weekStart: Date): Date[] {
 }
 
 /**
- * 週の範囲を表すテキストを生成する
+ * 週の日付範囲をテキスト形式で生成する（例: "2026/01/06 - 2026/01/12"）
  *
  * @param weekStart - 週の開始日
- * @returns 範囲テキスト（例: "2026年1月6日 〜 1月12日"）
+ * @returns 日付範囲を表す文字列
  *
  * @example
  * ```typescript
- * const weekStart = new Date('2026-01-06');
- * getWeekRangeText(weekStart);
- * // => "2026年1月6日 〜 1月12日"
+ * getWeekRangeText(new Date('2026-01-06')); // => "2026/01/06 - 2026/01/12"
  * ```
  */
 export function getWeekRangeText(weekStart: Date): string {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
 
-  return `${weekStart.getFullYear()}年${weekStart.getMonth() + 1}月${weekStart.getDate()}日 〜 ${weekEnd.getMonth() + 1}月${weekEnd.getDate()}日`;
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  };
+
+  return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
 }
 
 /**
  * 指定された日付が定休日（日曜日）かどうかを判定する
  *
  * @param date - 判定する日付
- * @returns 定休日の場合true、それ以外はfalse
+ * @returns 日曜日の場合true
  *
  * @example
  * ```typescript
@@ -64,29 +68,34 @@ export function isClosedDay(date: Date): boolean {
 }
 
 /**
- * 日付を "YYYY-MM-DD" 形式の文字列にフォーマットする
+ * 日付をYYYY-MM-DD形式の文字列に変換する
  *
- * @param date - フォーマットする日付
- * @returns "YYYY-MM-DD" 形式の文字列
+ * @param date - 変換する日付
+ * @returns YYYY-MM-DD形式の文字列
  *
  * @example
  * ```typescript
- * formatDateToString(new Date('2026-01-06'));
- * // => "2026-01-06"
+ * formatDateToString(new Date('2026-01-06')); // => "2026-01-06"
  * ```
  */
 export function formatDateToString(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
 /**
- * 曜日の日本語表示を取得する
+ * 曜日の日本語名を取得する
  *
- * @param date - 曜日を取得する日付
- * @returns 日本語の曜日（例: "月", "火"）
+ * @param date - 対象の日付
+ * @returns 曜日の日本語名（月、火、水、木、金、土、日）
+ *
+ * @example
+ * ```typescript
+ * getDayOfWeekJa(new Date('2026-01-06')); // 月曜日 => "月"
+ * getDayOfWeekJa(new Date('2026-01-11')); // 土曜日 => "土"
+ * ```
  */
 export function getDayOfWeekJa(date: Date): string {
   const days = ['日', '月', '火', '水', '木', '金', '土'];

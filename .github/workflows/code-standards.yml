@@ -1,0 +1,892 @@
+name: Code Standards Check
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  # =========================================
+  # Job 1: E2Eテストセレクタ規約チェック
+  # =========================================
+  test-selector-check:
+    name: E2E Test Selector Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for forbidden getByText usage in E2E tests
+        run: |
+          echo "🔍 E2Eテストで禁止されているセレクタパターンをチェック中..."
+
+          VIOLATIONS=""
+
+          # getByText の使用をチェック（Page Objectファイル内）
+          if grep -rn "getByText" reserve-app/src/__tests__/e2e/pages/ 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ Page Objectでの getByText 使用を検出\n"
+          fi
+
+          # :has-text() の使用をチェック（Page Objectファイル内）
+          if grep -rn ":has-text(" reserve-app/src/__tests__/e2e/pages/ 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ Page Objectでの :has-text() 使用を検出\n"
+          fi
+
+          # spec.ts内での直接的なテキストセレクタ使用をチェック
+          if grep -rn "page\.getByText\|page\.locator.*:has-text" reserve-app/src/__tests__/e2e/*.spec.ts 2>/dev/null | grep -v "// allowed:" ; then
+            VIOLATIONS="${VIOLATIONS}⚠️ E2Eテストでのテキストベースセレクタ使用を検出（data-testid推奨）\n"
+          fi
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "============================================"
+            echo "⚠️ 規約違反の可能性があります"
+            echo "============================================"
+            echo -e "$VIOLATIONS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. data-testid属性をコンポーネントに追加"
+            echo "  2. Page Objectで [data-testid=\"...\"] セレクタを使用"
+            echo "  3. 参考: .cursor/rules/開発プロセスルール.mdc"
+            echo ""
+            echo "⚠️ 警告として扱います（現在は既存コードに違反があるため）"
+            # 現在は警告のみ。既存コード修正後に exit 1 に変更
+            # exit 1
+          else
+            echo "✅ テストセレクタ規約に違反はありません"
+          fi
+
+  # =========================================
+  # Job 2: APIバリデーション規約チェック
+  # =========================================
+  api-validation-check:
+    name: API Validation Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Zod validation in new API routes
+        run: |
+          echo "🔍 新規APIルートでのZodバリデーション使用をチェック中..."
+
+          # PRで追加・変更されたAPIファイルを取得
+          API_FILES=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/app/api/**/*.ts' 2>/dev/null || echo "")
+
+          if [ -z "$API_FILES" ]; then
+            echo "✅ APIファイルの変更はありません"
+            exit 0
+          fi
+
+          MISSING_VALIDATION=""
+
+          for file in $API_FILES; do
+            if [ -f "$file" ]; then
+              # POST/PUT/PATCHメソッドがあるがsafeParse/.parse()がない場合
+              if grep -q "export async function POST\|export async function PUT\|export async function PATCH" "$file"; then
+                if ! grep -q "safeParse\|\.parse(" "$file"; then
+                  MISSING_VALIDATION="${MISSING_VALIDATION}❌ $file: Zodバリデーションが見つかりません\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_VALIDATION" ]; then
+            echo "============================================"
+            echo "⚠️ APIバリデーション規約違反の可能性"
+            echo "============================================"
+            echo -e "$MISSING_VALIDATION"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. Zodスキーマを定義（src/lib/validations.ts）"
+            echo "  2. APIルートでsafeParseを使用"
+            echo "  3. 参考: documents/コード品質チェックリスト.md"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # 現在は警告のみ
+            # exit 1
+          else
+            echo "✅ 変更されたAPIルートにはZodバリデーションが含まれています"
+          fi
+
+  # =========================================
+  # Job 3: Gherkinシナリオ存在チェック
+  # =========================================
+  gherkin-check:
+    name: Gherkin Scenario Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for Gherkin scenarios for new E2E tests
+        run: |
+          echo "🔍 新規E2Eテストに対応するGherkinシナリオをチェック中..."
+
+          # 新しいspec.tsファイルを取得
+          NEW_SPECS=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/__tests__/e2e/*.spec.ts' 2>/dev/null || echo "")
+
+          if [ -z "$NEW_SPECS" ]; then
+            echo "✅ 新規E2Eテストファイルはありません"
+            exit 0
+          fi
+
+          MISSING_GHERKIN=""
+
+          for spec in $NEW_SPECS; do
+            if [ -f "$spec" ]; then
+              # spec名からfeatureファイル名を推測
+              SPEC_NAME=$(basename "$spec" .spec.ts)
+
+              # featuresディレクトリ内を検索
+              if ! find reserve-app/features reserve-app/src/__tests__/e2e/features -name "*.feature" 2>/dev/null | xargs grep -l "$SPEC_NAME" > /dev/null 2>&1; then
+                # 完全一致のfeatureファイルを探す
+                if ! find reserve-app/features reserve-app/src/__tests__/e2e/features -name "${SPEC_NAME}.feature" 2>/dev/null | head -1 | grep -q .; then
+                  MISSING_GHERKIN="${MISSING_GHERKIN}⚠️ $spec: 対応するGherkinシナリオが見つかりません\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_GHERKIN" ]; then
+            echo "============================================"
+            echo "⚠️ Gherkinシナリオが不足している可能性"
+            echo "============================================"
+            echo -e "$MISSING_GHERKIN"
+            echo ""
+            echo "📖 ATDD/BDD開発プロセス:"
+            echo "  1. まずGherkinシナリオを作成（features/ディレクトリ）"
+            echo "  2. 次にE2Eテストを実装"
+            echo "  3. 参考: documents/development/開発プロセス設計.md"
+          else
+            echo "✅ E2Eテストに対応するGherkinシナリオが存在します"
+          fi
+
+  # =========================================
+  # Job 4: data-testid属性チェック
+  # =========================================
+  testid-check:
+    name: data-testid Attribute Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for data-testid in interactive elements
+        run: |
+          echo "🔍 新規コンポーネントでのdata-testid使用をチェック中..."
+
+          # 変更されたTSXファイルを取得
+          CHANGED_TSX=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/**/*.tsx' 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED_TSX" ]; then
+            echo "✅ TSXファイルの変更はありません"
+            exit 0
+          fi
+
+          WARNINGS=""
+
+          for file in $CHANGED_TSX; do
+            if [ -f "$file" ]; then
+              # button, input, select要素があるがdata-testidがない場合をチェック
+              BUTTONS=$(grep -c "<button" "$file" 2>/dev/null || echo "0")
+              INPUTS=$(grep -c "<input" "$file" 2>/dev/null || echo "0")
+              SELECTS=$(grep -c "<select" "$file" 2>/dev/null || echo "0")
+              TESTIDS=$(grep -c "data-testid" "$file" 2>/dev/null || echo "0")
+
+              INTERACTIVE=$((BUTTONS + INPUTS + SELECTS))
+
+              if [ "$INTERACTIVE" -gt 0 ] && [ "$TESTIDS" -eq 0 ]; then
+                WARNINGS="${WARNINGS}⚠️ $file: インタラクティブ要素($INTERACTIVE個)にdata-testidがありません\n"
+              fi
+            fi
+          done
+
+          if [ -n "$WARNINGS" ]; then
+            echo "============================================"
+            echo "⚠️ data-testid属性の追加を推奨"
+            echo "============================================"
+            echo -e "$WARNINGS"
+            echo ""
+            echo "📖 命名規則:"
+            echo "  - {page}-{element}: 基本形式"
+            echo "  - {action}-{page}: ボタン等のアクション"
+            echo "  - 例: register-email, submit-booking"
+          else
+            echo "✅ 変更されたコンポーネントにはdata-testidが含まれています"
+          fi
+
+  # =========================================
+  # Job 5: tenant_idフィルタチェック
+  # =========================================
+  tenant-filter-check:
+    name: Tenant ID Filter Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for tenant_id filtering in API routes
+        run: |
+          echo "🔍 APIルートでのtenant_idフィルタリングをチェック中..."
+
+          # 変更されたAPIファイルを取得
+          API_FILES=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/app/api/**/*.ts' 2>/dev/null || echo "")
+
+          if [ -z "$API_FILES" ]; then
+            echo "✅ APIファイルの変更はありません"
+            exit 0
+          fi
+
+          MISSING_TENANT=""
+
+          for file in $API_FILES; do
+            if [ -f "$file" ]; then
+              # Prismaクエリがあるがtenant_id/tenantIdがない場合
+              if grep -q "prisma\." "$file"; then
+                if ! grep -q "tenant_id\|tenantId" "$file"; then
+                  MISSING_TENANT="${MISSING_TENANT}❌ $file: tenant_idフィルタが見つかりません\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_TENANT" ]; then
+            echo "============================================"
+            echo "🚨 セキュリティ警告: tenant_idフィルタ不足"
+            echo "============================================"
+            echo -e "$MISSING_TENANT"
+            echo ""
+            echo "📖 マルチテナント設計の必須事項:"
+            echo "  - 全てのPrismaクエリにtenant_idフィルタを追加"
+            echo "  - 参考: documents/spec/データベース設計書.md"
+            echo ""
+            echo "⚠️ この警告は重要です。修正を検討してください。"
+            # exit 1  # 本番運用時は有効化
+          else
+            echo "✅ 変更されたAPIルートにはtenant_idフィルタが含まれています"
+          fi
+
+  # =========================================
+  # Job 6: npm auditセキュリティチェック
+  # =========================================
+  security-audit:
+    name: Security Audit (npm audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "🔍 依存パッケージのセキュリティ脆弱性をチェック中..."
+
+          # high以上の脆弱性をチェック
+          if npm audit --audit-level=high; then
+            echo "✅ 重大なセキュリティ脆弱性はありません"
+          else
+            echo "============================================"
+            echo "🚨 セキュリティ警告: 脆弱性が検出されました"
+            echo "============================================"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. npm audit fix で自動修正を試す"
+            echo "  2. 修正できない場合はパッケージのアップデートを検討"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1  # 本番運用時は有効化
+          fi
+
+  # =========================================
+  # Job 7: 危険なパターンのチェック
+  # =========================================
+  dangerous-patterns-check:
+    name: Dangerous Patterns Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for dangerous patterns
+        run: |
+          echo "🔍 危険なコードパターンをチェック中..."
+
+          VIOLATIONS=""
+
+          # dangerouslySetInnerHTML のチェック
+          if grep -rn "dangerouslySetInnerHTML" reserve-app/src/ --include="*.tsx" --include="*.ts" 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}⚠️ dangerouslySetInnerHTML使用を検出（XSSリスク）\n"
+          fi
+
+          # $queryRawUnsafe のチェック
+          if grep -rn '\$queryRawUnsafe\|\$executeRawUnsafe' reserve-app/src/ --include="*.ts" 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ $queryRawUnsafe使用を検出（SQLインジェクションリスク）\n"
+          fi
+
+          # eval/new Function のチェック
+          if grep -rn "eval(\|new Function(" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            VIOLATIONS="${VIOLATIONS}❌ eval/new Function使用を検出（コードインジェクションリスク）\n"
+          fi
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "============================================"
+            echo "🚨 危険なパターンが検出されました"
+            echo "============================================"
+            echo -e "$VIOLATIONS"
+            echo ""
+            echo "📖 参考: .claude/skills/typescript-security-checker/references/security-checklist.md"
+            echo ""
+            echo "⚠️ 警告として扱います（レビューで確認が必要）"
+            # exit 1
+          else
+            echo "✅ 危険なパターンは検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 8: シークレット漏洩チェック（CIで失敗）
+  # =========================================
+  secrets-check:
+    name: Secrets Leak Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "🔍 ハードコードされたシークレットをチェック中..."
+
+          SECRETS_FOUND=""
+
+          # APIキーパターン
+          if grep -rn "sk_live_\|pk_live_\|sk-[a-zA-Z0-9]\{20,\}" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            SECRETS_FOUND="${SECRETS_FOUND}❌ APIキーがハードコードされています\n"
+          fi
+
+          # JWT/トークンパターン
+          if grep -rn "eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "test\|spec\|mock"; then
+            SECRETS_FOUND="${SECRETS_FOUND}❌ JWTトークンがハードコードされている可能性があります\n"
+          fi
+
+          # データベースURL（認証情報付き）
+          if grep -rn "postgresql://.*:.*@\|mysql://.*:.*@\|mongodb://.*:.*@" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v ".example\|.test"; then
+            SECRETS_FOUND="${SECRETS_FOUND}❌ データベースURLがハードコードされています\n"
+          fi
+
+          if [ -n "$SECRETS_FOUND" ]; then
+            echo "============================================"
+            echo "🚨 シークレット漏洩の可能性！"
+            echo "============================================"
+            echo -e "$SECRETS_FOUND"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  1. シークレットを環境変数に移動"
+            echo "  2. .env.exampleにはプレースホルダーのみ記載"
+            echo "  3. git履歴からもシークレットを削除"
+            echo ""
+            exit 1  # シークレット漏洩はCIを失敗させる
+          else
+            echo "✅ ハードコードされたシークレットは検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 9: コード品質チェック
+  # =========================================
+  code-quality-check:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for code quality issues
+        run: |
+          echo "🔍 コード品質をチェック中..."
+
+          WARNINGS=""
+
+          # any型の使用チェック（変更されたファイルのみ）
+          CHANGED_TS=$(git diff --name-only origin/main...HEAD -- 'reserve-app/src/**/*.ts' 'reserve-app/src/**/*.tsx' 2>/dev/null || echo "")
+
+          if [ -n "$CHANGED_TS" ]; then
+            for file in $CHANGED_TS; do
+              if [ -f "$file" ]; then
+                if grep -n ": any\|: any\[\]\|as any" "$file" 2>/dev/null; then
+                  WARNINGS="${WARNINGS}⚠️ $file: any型の使用を検出\n"
+                fi
+              fi
+            done
+          fi
+
+          # console.logの使用チェック（テスト以外）
+          if [ -n "$CHANGED_TS" ]; then
+            for file in $CHANGED_TS; do
+              if [ -f "$file" ] && [[ ! "$file" =~ (test|spec|__tests__) ]]; then
+                if grep -n "console\.log\|console\.debug" "$file" 2>/dev/null; then
+                  WARNINGS="${WARNINGS}⚠️ $file: console.log/debugの使用を検出\n"
+                fi
+              fi
+            done
+          fi
+
+          if [ -n "$WARNINGS" ]; then
+            echo "============================================"
+            echo "⚠️ コード品質の改善が推奨されます"
+            echo "============================================"
+            echo -e "$WARNINGS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - any型 → unknown型 + 型ガードに変更"
+            echo "  - console.log → 削除またはロガーに置換"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ コード品質に問題はありません"
+          fi
+
+  # =========================================
+  # Job 10: 日本語運用チェック
+  # =========================================
+  japanese-check:
+    name: Japanese Language Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR title for Japanese
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "🔍 PRタイトルの日本語チェック中..."
+
+          # PRタイトルに日本語が含まれているかチェック
+          if echo "$PR_TITLE" | grep -P '[\p{Hiragana}\p{Katakana}\p{Han}]' > /dev/null 2>&1; then
+            echo "✅ PRタイトルに日本語が含まれています"
+          else
+            echo "============================================"
+            echo "⚠️ PRタイトルに日本語が含まれていません"
+            echo "============================================"
+            echo "現在のタイトル: $PR_TITLE"
+            echo ""
+            echo "📖 日本語運用ルール:"
+            echo "  - PRタイトルは日本語で記述"
+            echo "  - 例: [FEATURE] ユーザー登録機能を実装"
+            echo "  - 参考: .cursor/rules/日本語運用ルール.md"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          fi
+
+      - name: Check commit messages for Japanese
+        run: |
+          echo "🔍 コミットメッセージの日本語チェック中..."
+
+          # PR内のコミットメッセージを取得
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null || echo "")
+
+          if [ -z "$COMMITS" ]; then
+            echo "✅ チェックするコミットがありません"
+            exit 0
+          fi
+
+          NON_JAPANESE=""
+          while IFS= read -r line; do
+            # 日本語を含まないコミットをチェック
+            if ! echo "$line" | grep -P '[\p{Hiragana}\p{Katakana}\p{Han}]' > /dev/null 2>&1; then
+              NON_JAPANESE="${NON_JAPANESE}  - $line\n"
+            fi
+          done <<< "$COMMITS"
+
+          if [ -n "$NON_JAPANESE" ]; then
+            echo "============================================"
+            echo "⚠️ 日本語を含まないコミットがあります"
+            echo "============================================"
+            echo -e "$NON_JAPANESE"
+            echo ""
+            echo "📖 日本語運用ルール:"
+            echo "  - コミットメッセージは日本語で記述"
+            echo "  - 例: feat: ユーザー登録機能を実装"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ 全てのコミットメッセージに日本語が含まれています"
+          fi
+
+  # =========================================
+  # Job 11: テストカバレッジしきい値チェック
+  # =========================================
+  coverage-threshold:
+    name: Coverage Threshold Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run tests with coverage
+        run: |
+          echo "🔍 テストカバレッジをチェック中..."
+
+          # カバレッジ付きでテスト実行
+          npm run test:coverage -- --passWithNoTests || true
+
+          # カバレッジサマリーを表示
+          if [ -f coverage/coverage-summary.json ]; then
+            echo ""
+            echo "📊 カバレッジサマリー:"
+            cat coverage/coverage-summary.json | jq '.total'
+
+            # しきい値チェック（Lines: 70%, Branches: 60%, Functions: 70%）
+            LINES=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+            BRANCHES=$(cat coverage/coverage-summary.json | jq '.total.branches.pct')
+            FUNCTIONS=$(cat coverage/coverage-summary.json | jq '.total.functions.pct')
+
+            echo ""
+            echo "Lines: ${LINES}% (目標: 70%)"
+            echo "Branches: ${BRANCHES}% (目標: 60%)"
+            echo "Functions: ${FUNCTIONS}% (目標: 70%)"
+
+            # しきい値を下回っている場合は警告
+            if (( $(echo "$LINES < 70" | bc -l) )) || \
+               (( $(echo "$BRANCHES < 60" | bc -l) )) || \
+               (( $(echo "$FUNCTIONS < 70" | bc -l) )); then
+              echo ""
+              echo "⚠️ カバレッジがしきい値を下回っています"
+              echo "⚠️ 警告として扱います"
+              # exit 1
+            else
+              echo ""
+              echo "✅ カバレッジはしきい値を満たしています"
+            fi
+          else
+            echo "⚠️ カバレッジレポートが見つかりません"
+          fi
+
+  # =========================================
+  # Job 12: TODO/FIXMEチェック
+  # =========================================
+  todo-check:
+    name: TODO/FIXME Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for TODO/FIXME in production code
+        run: |
+          echo "🔍 本番コード内のTODO/FIXMEをチェック中..."
+
+          # テストファイル以外のTODO/FIXMEを検出
+          TODOS=$(grep -rn "TODO\|FIXME\|HACK\|XXX" reserve-app/src/ \
+            --include="*.ts" --include="*.tsx" \
+            --exclude-dir="__tests__" \
+            --exclude="*.spec.ts" --exclude="*.test.ts" 2>/dev/null || echo "")
+
+          if [ -n "$TODOS" ]; then
+            echo "============================================"
+            echo "⚠️ 本番コードにTODO/FIXMEがあります"
+            echo "============================================"
+            echo "$TODOS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - TODOを解決するか、Issueに登録して削除"
+            echo "  - FIXMEは優先的に修正"
+            echo ""
+            TODO_COUNT=$(echo "$TODOS" | wc -l)
+            echo "検出数: $TODO_COUNT 件"
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ 本番コードにTODO/FIXMEはありません"
+          fi
+
+  # =========================================
+  # Job 13: 複雑度チェック
+  # =========================================
+  complexity-check:
+    name: Code Complexity Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code complexity with ESLint
+        run: |
+          echo "🔍 コード複雑度をチェック中..."
+
+          # ESLintで複雑度チェック（complexity: 15を超えたら警告）
+          npx eslint src/ \
+            --rule 'complexity: ["warn", 15]' \
+            --rule 'max-depth: ["warn", 4]' \
+            --rule 'max-params: ["warn", 5]' \
+            --rule 'max-lines-per-function: ["warn", { "max": 60, "skipBlankLines": true, "skipComments": true }]' \
+            --format stylish \
+            --no-error-on-unmatched-pattern || true
+
+          echo ""
+          echo "📖 複雑度の目安:"
+          echo "  - サイクロマティック複雑度: 10以下推奨（警告: 15以上）"
+          echo "  - ネスト深度: 3以下推奨（警告: 4以上）"
+          echo "  - パラメータ数: 4以下推奨（警告: 5以上）"
+          echo "  - 関数行数: 50行以下推奨（警告: 60行以上）"
+          echo ""
+          echo "✅ 複雑度チェック完了（警告のみ）"
+
+  # =========================================
+  # Job 14: エラーメッセージ漏洩チェック
+  # =========================================
+  error-leak-check:
+    name: Error Message Leak Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for error message leaks
+        run: |
+          echo "🔍 エラーメッセージ漏洩をチェック中..."
+
+          LEAKS=""
+
+          # error.messageを直接レスポンスに含めていないか
+          if grep -rn "error\.message\|error\.stack" reserve-app/src/app/api/ --include="*.ts" 2>/dev/null | grep -v "console\.\|log\.\|logger\." | grep "Response\|json\|NextResponse"; then
+            LEAKS="${LEAKS}⚠️ error.message/stackをレスポンスに含めている可能性\n"
+          fi
+
+          # catchブロックでerrorを直接返していないか
+          if grep -rn "catch.*error.*{" -A 3 reserve-app/src/app/api/ --include="*.ts" 2>/dev/null | grep "json.*error\b" | grep -v "error:" | grep -v "'error'\|\"error\""; then
+            LEAKS="${LEAKS}⚠️ catchブロックでerrorオブジェクトを直接返している可能性\n"
+          fi
+
+          if [ -n "$LEAKS" ]; then
+            echo "============================================"
+            echo "⚠️ エラーメッセージ漏洩の可能性"
+            echo "============================================"
+            echo -e "$LEAKS"
+            echo ""
+            echo "📖 安全なパターン:"
+            echo "  catch (error) {"
+            echo "    console.error('Internal error:', error);"
+            echo "    return Response.json({ error: 'An error occurred' }, { status: 500 });"
+            echo "  }"
+            echo ""
+            echo "⚠️ 警告として扱います（手動確認推奨）"
+            # exit 1
+          else
+            echo "✅ 明らかなエラーメッセージ漏洩は検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 15: クライアント環境変数チェック
+  # =========================================
+  client-env-check:
+    name: Client Environment Variable Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for non-public env vars in client code
+        run: |
+          echo "🔍 クライアントコードでの非公開環境変数使用をチェック中..."
+
+          VIOLATIONS=""
+
+          # 'use client'ファイルでprocess.env.を使用しているかチェック
+          for file in $(grep -rl "'use client'\|\"use client\"" reserve-app/src/ --include="*.tsx" --include="*.ts" 2>/dev/null); do
+            # NEXT_PUBLIC_以外のprocess.env.を検出
+            if grep -n "process\.env\." "$file" 2>/dev/null | grep -v "NEXT_PUBLIC_" | grep -v "NODE_ENV"; then
+              VIOLATIONS="${VIOLATIONS}❌ $file: 非公開環境変数をクライアントで使用\n"
+            fi
+          done
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "============================================"
+            echo "🚨 セキュリティ警告: 非公開環境変数のクライアント使用"
+            echo "============================================"
+            echo -e "$VIOLATIONS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - 秘密鍵はサーバーサイドのみで使用"
+            echo "  - クライアントで必要な場合はNEXT_PUBLIC_プレフィックスを使用"
+            echo "  - 参考: .claude/skills/typescript-security-checker/references/security-checklist.md"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ クライアントコードでの非公開環境変数使用は検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 16: コマンドインジェクションチェック
+  # =========================================
+  command-injection-check:
+    name: Command Injection Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for child_process usage
+        run: |
+          echo "🔍 コマンドインジェクションリスクをチェック中..."
+
+          RISKS=""
+
+          # child_process.exec/execSync の使用をチェック
+          if grep -rn "child_process\|require('child_process')\|from 'child_process'" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            RISKS="${RISKS}❌ child_processモジュールの使用を検出\n"
+          fi
+
+          # exec/execSync の直接使用をチェック
+          if grep -rn "exec(\|execSync(\|spawn(\|spawnSync(" reserve-app/src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            RISKS="${RISKS}❌ シェルコマンド実行関数の使用を検出\n"
+          fi
+
+          if [ -n "$RISKS" ]; then
+            echo "============================================"
+            echo "🚨 コマンドインジェクションリスク"
+            echo "============================================"
+            echo -e "$RISKS"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - child_processの使用を避ける"
+            echo "  - 必要な場合はexecFileでパラメータ化"
+            echo "  - ユーザー入力をシェルコマンドに含めない"
+            echo ""
+            echo "⚠️ 警告として扱います（手動確認必須）"
+            # exit 1
+          else
+            echo "✅ コマンドインジェクションリスクは検出されませんでした"
+          fi
+
+  # =========================================
+  # Job 17: セキュリティヘッダーチェック
+  # =========================================
+  security-headers-check:
+    name: Security Headers Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for security headers in next.config
+        run: |
+          echo "🔍 セキュリティヘッダー設定をチェック中..."
+
+          MISSING=""
+          CONFIG_FILE=""
+
+          # next.config.ts または next.config.js を探す
+          if [ -f "reserve-app/next.config.ts" ]; then
+            CONFIG_FILE="reserve-app/next.config.ts"
+          elif [ -f "reserve-app/next.config.js" ]; then
+            CONFIG_FILE="reserve-app/next.config.js"
+          elif [ -f "reserve-app/next.config.mjs" ]; then
+            CONFIG_FILE="reserve-app/next.config.mjs"
+          fi
+
+          if [ -z "$CONFIG_FILE" ]; then
+            echo "⚠️ next.configファイルが見つかりません"
+            exit 0
+          fi
+
+          echo "チェック対象: $CONFIG_FILE"
+
+          # 必須セキュリティヘッダーの存在確認
+          if ! grep -q "X-Frame-Options" "$CONFIG_FILE" 2>/dev/null; then
+            MISSING="${MISSING}  - X-Frame-Options（クリックジャッキング対策）\n"
+          fi
+
+          if ! grep -q "X-Content-Type-Options" "$CONFIG_FILE" 2>/dev/null; then
+            MISSING="${MISSING}  - X-Content-Type-Options（MIMEスニッフィング対策）\n"
+          fi
+
+          if ! grep -q "Strict-Transport-Security\|HSTS" "$CONFIG_FILE" 2>/dev/null; then
+            MISSING="${MISSING}  - Strict-Transport-Security（HTTPS強制）\n"
+          fi
+
+          if ! grep -q "Content-Security-Policy\|CSP" "$CONFIG_FILE" 2>/dev/null; then
+            MISSING="${MISSING}  - Content-Security-Policy（XSS対策）\n"
+          fi
+
+          if ! grep -q "Referrer-Policy" "$CONFIG_FILE" 2>/dev/null; then
+            MISSING="${MISSING}  - Referrer-Policy（リファラー制御）\n"
+          fi
+
+          if [ -n "$MISSING" ]; then
+            echo "============================================"
+            echo "⚠️ セキュリティヘッダーが不足しています"
+            echo "============================================"
+            echo -e "$MISSING"
+            echo ""
+            echo "📖 参考: documents/spec/セキュリティ設計書.md"
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ 必須セキュリティヘッダーが設定されています"
+          fi
