@@ -4,61 +4,21 @@ import { useEffect, useState } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
-
-interface Staff {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role?: string;
-  isActive: boolean;
-  _count?: {
-    reservations: number;
-  };
-}
-
-interface StaffFormData {
-  name: string;
-  email: string;
-  phone?: string;
-  role?: string;
-}
-
-// シフト設定の型定義
-type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
-
-interface ShiftData {
-  dayOfWeek: DayOfWeek;
-  startTime: string;
-  endTime: string;
-  isActive: boolean;
-}
-
-interface ShiftFormData {
-  [key: string]: {
-    enabled: boolean;
-    startTime: string;
-    endTime: string;
-  };
-}
-
-interface VacationFormData {
-  startDate: string;
-  endDate: string;
-  reason: string;
-}
-
-const DAY_OF_WEEK_MAP: { [key: string]: DayOfWeek } = {
-  '月曜日': 'MONDAY',
-  '火曜日': 'TUESDAY',
-  '水曜日': 'WEDNESDAY',
-  '木曜日': 'THURSDAY',
-  '金曜日': 'FRIDAY',
-  '土曜日': 'SATURDAY',
-  '日曜日': 'SUNDAY',
-};
-
-const DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
+import {
+  AddStaffModal,
+  EditStaffModal,
+  DeleteStaffDialog,
+  ShiftSettingModal,
+  DAY_OF_WEEK_MAP,
+  DAYS,
+} from '@/components/admin/staff';
+import type {
+  Staff,
+  StaffFormData,
+  ShiftData,
+  ShiftFormData,
+  VacationFormData,
+} from '@/components/admin/staff';
 
 export default function AdminStaffPage() {
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -522,373 +482,49 @@ export default function AdminStaffPage() {
 
       {/* スタッフ追加モーダル */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md" data-testid="add-staff-modal">
-            <h2 data-testid="add-modal-title" className="mb-4 text-xl font-semibold">スタッフを追加</h2>
-            <form onSubmit={submitAddStaff}>
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">名前 *</label>
-                <input
-                  type="text"
-                  data-testid="add-modal-name-input"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">メールアドレス *</label>
-                <input
-                  type="email"
-                  data-testid="add-modal-email-input"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">電話番号</label>
-                <input
-                  type="tel"
-                  data-testid="add-modal-phone-input"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              {error && (
-                <div data-testid="add-modal-validation-error" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  data-testid="add-modal-cancel-button"
-                  onClick={closeModals}
-                  variant="outline"
-                  size="md"
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  type="submit"
-                  data-testid="add-modal-submit-button"
-                  variant="primary"
-                  size="md"
-                >
-                  追加
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
+        <AddStaffModal
+          formData={formData}
+          error={error}
+          onFormChange={setFormData}
+          onSubmit={submitAddStaff}
+          onClose={closeModals}
+        />
       )}
 
       {/* スタッフ編集モーダル */}
       {showEditModal && selectedStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md" data-testid="edit-staff-modal">
-            <h2 data-testid="edit-modal-title" className="mb-4 text-xl font-semibold">スタッフを編集</h2>
-            <form onSubmit={submitEditStaff}>
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">名前</label>
-                <input
-                  type="text"
-                  data-testid="edit-modal-name-input"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">メールアドレス</label>
-                <input
-                  type="email"
-                  data-testid="edit-modal-email-input"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">電話番号</label>
-                <input
-                  type="tel"
-                  data-testid="edit-modal-phone-input"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  data-testid="edit-modal-cancel-button"
-                  onClick={closeModals}
-                  variant="outline"
-                  size="md"
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  type="submit"
-                  data-testid="edit-modal-submit-button"
-                  variant="primary"
-                  size="md"
-                >
-                  保存
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
+        <EditStaffModal
+          formData={formData}
+          onFormChange={setFormData}
+          onSubmit={submitEditStaff}
+          onClose={closeModals}
+        />
       )}
 
       {/* 削除確認ダイアログ */}
       {showDeleteDialog && selectedStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md" data-testid="delete-confirmation-dialog">
-            <h2 data-testid="delete-dialog-title" className="mb-4 text-xl font-semibold text-red-600">
-              スタッフを削除しますか？
-            </h2>
-            <p data-testid="delete-dialog-message" className="mb-6 text-gray-700">
-              {selectedStaff.name}を削除します。この操作は取り消せません。
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <Button
-                data-testid="delete-dialog-cancel-button"
-                onClick={closeModals}
-                variant="outline"
-                size="md"
-              >
-                キャンセル
-              </Button>
-              <Button
-                data-testid="delete-dialog-confirm-button"
-                onClick={confirmDelete}
-                variant="primary"
-                size="md"
-                className="bg-red-600 hover:bg-red-700"
-              >
-                削除
-              </Button>
-            </div>
-          </Card>
-        </div>
+        <DeleteStaffDialog
+          staff={selectedStaff}
+          onConfirm={confirmDelete}
+          onClose={closeModals}
+        />
       )}
 
       {/* シフト設定モーダル */}
       {showShiftModal && selectedStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="shift-setting-modal">
-            <h2 data-testid="shift-modal-title" className="mb-4 text-xl font-semibold">
-              シフト設定 - {selectedStaff.name}
-            </h2>
-
-            {/* タブ */}
-            <div className="mb-6 flex gap-2 border-b border-gray-200">
-              <button
-                onClick={() => setActiveTab('shift')}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 'shift'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                シフト設定
-              </button>
-              <button
-                data-testid="vacation-tab"
-                onClick={() => setActiveTab('vacation')}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 'vacation'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                休暇設定
-              </button>
-            </div>
-
-            {/* シフト設定タブ */}
-            {activeTab === 'shift' && (
-              <form onSubmit={submitShiftSetting}>
-                <div className="space-y-4">
-                  {DAYS.map((day) => (
-                    <div key={day} className="flex items-center gap-4 rounded-lg border border-gray-200 p-4">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          data-testid="shift-day-checkbox"
-                          data-day={day}
-                          checked={shiftFormData[day]?.enabled || false}
-                          onChange={(e) =>
-                            setShiftFormData({
-                              ...shiftFormData,
-                              [day]: {
-                                ...shiftFormData[day],
-                                enabled: e.target.checked,
-                              },
-                            })
-                          }
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <label className="ml-2 w-16 text-sm font-medium text-gray-700">{day}</label>
-                      </div>
-
-                      <div className="flex flex-1 items-center gap-2">
-                        <input
-                          type="time"
-                          data-testid="shift-start-time"
-                          data-day={day}
-                          value={shiftFormData[day]?.startTime || '09:00'}
-                          onChange={(e) =>
-                            setShiftFormData({
-                              ...shiftFormData,
-                              [day]: {
-                                ...shiftFormData[day],
-                                startTime: e.target.value,
-                              },
-                            })
-                          }
-                          disabled={!shiftFormData[day]?.enabled}
-                          className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
-                        />
-                        <span className="text-gray-500">〜</span>
-                        <input
-                          type="time"
-                          data-testid="shift-end-time"
-                          data-day={day}
-                          value={shiftFormData[day]?.endTime || '18:00'}
-                          onChange={(e) =>
-                            setShiftFormData({
-                              ...shiftFormData,
-                              [day]: {
-                                ...shiftFormData[day],
-                                endTime: e.target.value,
-                              },
-                            })
-                          }
-                          disabled={!shiftFormData[day]?.enabled}
-                          className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {error && (
-                  <div data-testid="shift-modal-validation-error" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
-                    {error}
-                  </div>
-                )}
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <Button
-                    type="button"
-                    data-testid="shift-modal-cancel-button"
-                    onClick={closeModals}
-                    variant="outline"
-                    size="md"
-                  >
-                    キャンセル
-                  </Button>
-                  <Button
-                    type="submit"
-                    data-testid="shift-modal-submit-button"
-                    variant="primary"
-                    size="md"
-                  >
-                    保存
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {/* 休暇設定タブ */}
-            {activeTab === 'vacation' && (
-              <form onSubmit={submitVacationSetting}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">開始日</label>
-                    <input
-                      type="date"
-                      data-testid="vacation-start-date"
-                      value={vacationFormData.startDate}
-                      onChange={(e) =>
-                        setVacationFormData({ ...vacationFormData, startDate: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">終了日</label>
-                    <input
-                      type="date"
-                      data-testid="vacation-end-date"
-                      value={vacationFormData.endDate}
-                      onChange={(e) =>
-                        setVacationFormData({ ...vacationFormData, endDate: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">理由（任意）</label>
-                    <textarea
-                      value={vacationFormData.reason}
-                      onChange={(e) =>
-                        setVacationFormData({ ...vacationFormData, reason: e.target.value })
-                      }
-                      rows={3}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
-                    {error}
-                  </div>
-                )}
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <Button
-                    type="button"
-                    onClick={closeModals}
-                    variant="outline"
-                    size="md"
-                  >
-                    キャンセル
-                  </Button>
-                  <Button
-                    type="submit"
-                    data-testid="shift-modal-submit-button"
-                    variant="primary"
-                    size="md"
-                  >
-                    保存
-                  </Button>
-                </div>
-              </form>
-            )}
-          </Card>
-        </div>
+        <ShiftSettingModal
+          staff={selectedStaff}
+          activeTab={activeTab}
+          shiftFormData={shiftFormData}
+          vacationFormData={vacationFormData}
+          error={error}
+          onTabChange={setActiveTab}
+          onShiftFormChange={setShiftFormData}
+          onVacationFormChange={setVacationFormData}
+          onShiftSubmit={submitShiftSetting}
+          onVacationSubmit={submitVacationSetting}
+          onClose={closeModals}
+        />
       )}
     </div>
   );

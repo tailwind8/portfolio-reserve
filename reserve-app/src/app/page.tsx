@@ -7,6 +7,8 @@ import Footer from '@/components/Footer';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { isBreakTime, generateTimeSlots } from '@/lib/time-utils';
+import { getWeekDates, getWeekRangeText } from '@/lib/calendar-utils';
 import type { Menu, Staff, TimeSlot } from '@/types/api';
 
 function BookingContent() {
@@ -190,56 +192,6 @@ function BookingContent() {
 
     fetchWeeklySlots();
   }, [currentWeekStart, selectedMenuId, selectedStaffId, viewMode]);
-
-  // 週間カレンダー用ヘルパー関数
-
-  // 週の範囲テキストを生成（例: "2026/01/06 - 2026/01/12"）
-  function getWeekRangeText(weekStart: Date): string {
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    return `${weekStart.getFullYear()}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')}/${weekStart.getDate().toString().padStart(2, '0')} - ${weekEnd.getFullYear()}/${(weekEnd.getMonth() + 1).toString().padStart(2, '0')}/${weekEnd.getDate().toString().padStart(2, '0')}`;
-  }
-
-  // 7日分の日付配列を生成
-  function getWeekDates(weekStart: Date): Date[] {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + i);
-      return date;
-    });
-  }
-
-  // 休憩時間かどうかを判定
-  function isBreakTime(time: string): boolean {
-    const [hour, minute] = time.split(':').map(Number);
-    const timeMinutes = hour * 60 + minute;
-
-    const [breakStartHour, breakStartMinute] = breakTimeStart.split(':').map(Number);
-    const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
-
-    const [breakEndHour, breakEndMinute] = breakTimeEnd.split(':').map(Number);
-    const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
-
-    return timeMinutes >= breakStartMinutes && timeMinutes < breakEndMinutes;
-  }
-
-  // 時間スロットを生成（30分刻み）
-  function generateTimeSlots(openTime: string, closeTime: string): string[] {
-    const [openHour, openMinute] = openTime.split(':').map(Number);
-    const [closeHour, closeMinute] = closeTime.split(':').map(Number);
-
-    const slots: string[] = [];
-    const startMinutes = openHour * 60 + openMinute;
-    const endMinutes = closeHour * 60 + closeMinute;
-
-    for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-      const hour = Math.floor(minutes / 60);
-      const minute = minutes % 60;
-      slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-    }
-
-    return slots;
-  }
 
   // Calendar utilities
   const year = currentDate.getFullYear();
@@ -607,7 +559,7 @@ function BookingContent() {
                                   <td className="border p-2 text-sm font-medium text-gray-700">{time}</td>
                                   {getWeekDates(currentWeekStart).map((date, dayIndex) => {
                                     // 休憩時間の場合は専用セルを表示
-                                    if (isBreakTime(time)) {
+                                    if (isBreakTime(time, breakTimeStart, breakTimeEnd)) {
                                       return (
                                         <td key={dayIndex} className="border p-1 bg-gray-200" data-testid="break-time-block" data-time={time}>
                                           <div className="text-xs text-gray-500 text-center py-3">
