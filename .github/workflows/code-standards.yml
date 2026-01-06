@@ -890,3 +890,301 @@ jobs:
           else
             echo "✅ 必須セキュリティヘッダーが設定されています"
           fi
+
+  # =========================================
+  # Job 18: 認証・認可チェック
+  # =========================================
+  auth-check:
+    name: Authentication Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for authentication in API routes
+        run: |
+          echo "🔍 APIルートの認証・認可をチェック中..."
+
+          MISSING_AUTH=""
+
+          # 公開APIとして許可されているパス
+          PUBLIC_PATHS="health|public|webhook"
+
+          # APIルートを取得
+          API_FILES=$(find reserve-app/src/app/api -name "route.ts" 2>/dev/null || echo "")
+
+          if [ -z "$API_FILES" ]; then
+            echo "✅ APIルートファイルがありません"
+            exit 0
+          fi
+
+          for file in $API_FILES; do
+            # 公開APIはスキップ
+            if echo "$file" | grep -qE "$PUBLIC_PATHS"; then
+              continue
+            fi
+
+            # 認証関連のコードがあるかチェック
+            if ! grep -qE "getServerSession|auth\(|withAuth|getSession|verifyToken|authenticate|checkAuth|requireAuth|getUser" "$file"; then
+              # POST/PUT/PATCH/DELETEメソッドがある場合のみ警告
+              if grep -qE "export async function (POST|PUT|PATCH|DELETE)" "$file"; then
+                MISSING_AUTH="${MISSING_AUTH}❌ $file: 認証チェックが見つかりません\n"
+              fi
+            fi
+          done
+
+          if [ -n "$MISSING_AUTH" ]; then
+            echo "============================================"
+            echo "🚨 セキュリティ警告: 認証チェック不足の可能性"
+            echo "============================================"
+            echo -e "$MISSING_AUTH"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - getServerSession()で認証状態を確認"
+            echo "  - 未認証の場合は401を返す"
+            echo "  - 権限がない場合は403を返す"
+            echo ""
+            echo "📖 例:"
+            echo "  const session = await getServerSession(authOptions);"
+            echo "  if (!session) {"
+            echo "    return Response.json({ error: 'Unauthorized' }, { status: 401 });"
+            echo "  }"
+            echo ""
+            echo "⚠️ 警告として扱います（手動確認推奨）"
+            # exit 1
+          else
+            echo "✅ APIルートに認証チェックが含まれています"
+          fi
+
+  # =========================================
+  # Job 19: ライセンス検証チェック
+  # =========================================
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check for problematic licenses
+        run: |
+          echo "🔍 依存パッケージのライセンスをチェック中..."
+
+          # ライセンス一覧を取得
+          license-checker --json > /tmp/licenses.json 2>/dev/null || true
+
+          # 禁止ライセンスのリスト（GPL系は商用利用で問題になる可能性）
+          PROHIBITED_LICENSES="GPL-2.0|GPL-3.0|AGPL-1.0|AGPL-3.0|SSPL|BUSL"
+
+          # 禁止ライセンスを含むパッケージを検出
+          VIOLATIONS=$(license-checker --summary 2>/dev/null | grep -iE "$PROHIBITED_LICENSES" || echo "")
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "============================================"
+            echo "🚨 ライセンス警告: 問題のあるライセンスを検出"
+            echo "============================================"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "📖 問題のあるライセンス:"
+            echo "  - GPL-2.0/GPL-3.0: コピーレフト（派生物も同じライセンス必須）"
+            echo "  - AGPL-3.0: ネットワーク経由でもソース公開義務"
+            echo "  - SSPL/BUSL: 商用利用に制限あり"
+            echo ""
+            echo "📖 対応方法:"
+            echo "  - 代替パッケージを検討"
+            echo "  - ライセンス条件を確認し、問題がなければ許可リストに追加"
+            echo ""
+            echo "⚠️ 警告として扱います"
+            # exit 1
+          else
+            echo "✅ 問題のあるライセンスは検出されませんでした"
+          fi
+
+          # ライセンスサマリーを表示
+          echo ""
+          echo "📊 ライセンスサマリー:"
+          license-checker --summary 2>/dev/null | head -20 || true
+
+  # =========================================
+  # Job 20: バンドルサイズチェック
+  # =========================================
+  bundle-size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build and analyze bundle size
+        run: |
+          echo "🔍 バンドルサイズをチェック中..."
+
+          # ビルド実行
+          npm run build:ci 2>&1 | tee /tmp/build-output.txt
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+
+      - name: Check bundle size thresholds
+        run: |
+          # .next/analyze が存在する場合はそちらを使用
+          # なければ .next/static のサイズをチェック
+
+          echo ""
+          echo "📊 バンドルサイズ分析:"
+
+          # JavaScriptファイルのサイズを取得
+          if [ -d ".next/static" ]; then
+            JS_SIZE=$(find .next/static -name "*.js" -exec du -cb {} + 2>/dev/null | tail -1 | cut -f1 || echo "0")
+            JS_SIZE_MB=$(echo "scale=2; $JS_SIZE / 1048576" | bc)
+
+            echo "JavaScript合計: ${JS_SIZE_MB} MB"
+
+            # しきい値チェック（5MB以上で警告）
+            if (( $(echo "$JS_SIZE_MB > 5" | bc -l) )); then
+              echo ""
+              echo "============================================"
+              echo "⚠️ バンドルサイズ警告: ${JS_SIZE_MB} MB (しきい値: 5 MB)"
+              echo "============================================"
+              echo ""
+              echo "📖 最適化方法:"
+              echo "  - dynamic import で遅延読み込み"
+              echo "  - 不要な依存関係を削除"
+              echo "  - Tree shakingの確認"
+              echo "  - 画像の最適化（next/image使用）"
+              echo ""
+              echo "⚠️ 警告として扱います"
+              # exit 1
+            else
+              echo "✅ バンドルサイズは許容範囲内です"
+            fi
+
+            # 大きなチャンクを表示
+            echo ""
+            echo "📦 大きなファイル (上位5件):"
+            find .next/static -name "*.js" -exec du -h {} + 2>/dev/null | sort -rh | head -5 || true
+          else
+            echo "⚠️ .next/static ディレクトリが見つかりません"
+          fi
+
+  # =========================================
+  # Job 21: アクセシビリティチェック
+  # =========================================
+  accessibility-check:
+    name: Accessibility Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: reserve_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/reserve_test
+
+      - name: Seed test database
+        run: npx tsx prisma/seed.ts
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/reserve_test
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run accessibility tests
+        run: |
+          echo "🔍 アクセシビリティをチェック中..."
+
+          # axe-coreを使ったa11yテストを実行
+          # 既存のa11yテストがあれば実行、なければスキップ
+          if [ -f "src/__tests__/e2e/accessibility.spec.ts" ]; then
+            npx playwright test accessibility --reporter=list || true
+          else
+            echo "⚠️ accessibility.spec.ts が見つかりません"
+            echo ""
+            echo "📖 a11yテストの作成方法:"
+            echo "  1. @axe-core/playwright をインストール"
+            echo "  2. src/__tests__/e2e/accessibility.spec.ts を作成"
+            echo ""
+            echo "📖 テスト例:"
+            echo "  import { test, expect } from '@playwright/test';"
+            echo "  import AxeBuilder from '@axe-core/playwright';"
+            echo ""
+            echo "  test('ホームページのa11yチェック', async ({ page }) => {"
+            echo "    await page.goto('/');"
+            echo "    const results = await new AxeBuilder({ page }).analyze();"
+            echo "    expect(results.violations).toEqual([]);"
+            echo "  });"
+            echo ""
+            echo "⚠️ a11yテストファイルを作成することを推奨します"
+          fi
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/reserve_test
+          SKIP_AUTH_IN_TEST: "true"
+          NEXT_PUBLIC_SKIP_AUTH_IN_TEST: "true"
+          NEXT_PUBLIC_TENANT_ID: demo-booking
