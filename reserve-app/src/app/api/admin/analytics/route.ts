@@ -27,7 +27,7 @@ import { requireAdminApiAuth } from '@/lib/admin-api-auth';
  */
 export async function GET(request: NextRequest) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { searchParams } = new URL(request.url);

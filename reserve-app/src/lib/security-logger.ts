@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 /**
  * セキュリティイベントの種類
  */
-export type SecurityEventType =
+type SecurityEventType =
   | 'LOGIN_SUCCESS' // ログイン成功
   | 'LOGIN_FAILED' // ログイン失敗
   | 'USER_REGISTER' // ユーザー登録

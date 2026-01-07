@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { prisma } from './prisma';
 import { errorResponse } from './api-response';
 
-export type AdminRole = 'ADMIN' | 'SUPER_ADMIN';
+type AdminRole = 'ADMIN' | 'SUPER_ADMIN';
 
 export interface AdminAuthContext {
   userId: string;
@@ -26,8 +26,8 @@ function getTenantId(): string {
 
 function getBearerToken(request: NextRequest): string | null {
   const authorization = request.headers.get('authorization');
-  if (!authorization) return null;
-  if (!authorization.startsWith('Bearer ')) return null;
+  if (!authorization) {return null;}
+  if (!authorization.startsWith('Bearer ')) {return null;}
   const token = authorization.slice('Bearer '.length).trim();
   return token || null;
 }

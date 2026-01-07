@@ -14,7 +14,7 @@ import { requireFeatureFlag } from '@/lib/api-feature-flag';
 export async function GET(request: NextRequest) {
   return requireFeatureFlag('enableRepeatRateAnalysis', async () => {
     const admin = await requireAdminApiAuth(request);
-    if (admin instanceof Response) return admin;
+    if (admin instanceof Response) {return admin;}
 
     try {
       const { searchParams } = new URL(request.url);

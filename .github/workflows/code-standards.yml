@@ -1188,3 +1188,84 @@ jobs:
           SKIP_AUTH_IN_TEST: "true"
           NEXT_PUBLIC_SKIP_AUTH_IN_TEST: "true"
           NEXT_PUBLIC_TENANT_ID: demo-booking
+
+  # =========================================
+  # Job 22: 重複コードチェック (jscpd)
+  # =========================================
+  duplicate-code-check:
+    name: Duplicate Code Check (jscpd)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run jscpd (duplicate code detection)
+        run: |
+          echo "🔍 重複コードをチェック中..."
+
+          # jscpdを実行（5%以上の重複で警告）
+          npx jscpd src/ --threshold 5 || true
+
+          echo ""
+          echo "📖 重複コードの改善方法:"
+          echo "  - 共通部分を関数・コンポーネントに抽出"
+          echo "  - ユーティリティ関数を作成"
+          echo "  - 設定値は定数として定義"
+          echo ""
+          echo "⚠️ 警告として扱います"
+
+  # =========================================
+  # Job 23: デッドコードチェック (Knip)
+  # =========================================
+  dead-code-check:
+    name: Dead Code Check (Knip)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reserve-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: reserve-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Knip (dead code detection)
+        run: |
+          echo "🔍 デッドコード（未使用コード）をチェック中..."
+
+          # Knipを実行
+          npx knip || true
+
+          echo ""
+          echo "📖 デッドコードの改善方法:"
+          echo "  - 未使用のエクスポートを削除"
+          echo "  - 未使用の依存関係を削除"
+          echo "  - 未使用のファイルを削除"
+          echo ""
+          echo "⚠️ 警告として扱います"

@@ -12,7 +12,7 @@ const supabaseKey =
   'placeholder-anon-key';
 
 // Check if we're using placeholder values (build time or test environment)
-export const isPlaceholder = supabaseUrl === 'https://placeholder.supabase.co';
+const isPlaceholder = supabaseUrl === 'https://placeholder.supabase.co';
 
 // テスト環境かどうか（CIやE2Eテスト時）
 const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.SKIP_AUTH_IN_TEST === 'true';
@@ -54,7 +54,7 @@ function createSupabaseClient(): SupabaseClient {
 export const supabase = createSupabaseClient();
 
 // Runtime validation helper
-export function validateSupabaseConfig() {
+function validateSupabaseConfig() {
   if (isPlaceholder) {
     throw new Error(
       'Missing Supabase environment variables. Please check your .env file.\n' +
@@ -85,4 +85,3 @@ export function getSupabaseAdmin() {
   });
 }
 
-export default supabase;

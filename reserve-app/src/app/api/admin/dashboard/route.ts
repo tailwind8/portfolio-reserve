@@ -10,7 +10,7 @@ import { requireAdminApiAuth } from '@/lib/admin-api-auth';
  */
 export async function GET(request: NextRequest) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   // 管理者ダッシュボードの基本情報を返す
   return NextResponse.json({

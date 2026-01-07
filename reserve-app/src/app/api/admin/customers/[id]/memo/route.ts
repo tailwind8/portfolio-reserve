@@ -1,72 +1,48 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { getTenantId, validationErrorResponse, notFoundResponse } from '@/lib/api-utils';
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { requireAdminApiAuth } from '@/lib/admin-api-auth';
 
-/**
- * 顧客メモ更新用のバリデーションスキーマ
- */
 const updateMemoSchema = z.object({
   memo: z.string().max(500, 'メモは500文字以内で入力してください'),
 });
 
 /**
- * PATCH /api/admin/customers/[id]/memo
- * 顧客メモを更新
+ * PATCH /api/admin/customers/[id]/memo - 顧客メモを更新
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
-    // バリデーション
     const validation = updateMemoSchema.safeParse(body);
-
     if (!validation.success) {
-      return errorResponse(
-        'バリデーションエラー',
-        400,
-        'VALIDATION_ERROR',
-        validation.error.issues
-      );
+      return validationErrorResponse(validation.error.issues);
     }
 
     const { memo } = validation.data;
+    const tenantId = getTenantId();
 
-    // 顧客が存在するか確認
     const existingCustomer = await prisma.bookingUser.findUnique({
-      where: {
-        id,
-        tenantId,
-      },
+      where: { id, tenantId },
     });
 
     if (!existingCustomer) {
-      return errorResponse('顧客が見つかりません', 404, 'CUSTOMER_NOT_FOUND');
+      return notFoundResponse('顧客');
     }
 
-    // 顧客メモを更新
     const updatedCustomer = await prisma.bookingUser.update({
-      where: {
-        id,
-        tenantId,
-      },
-      data: {
-        memo: memo || '',
-      },
-      select: {
-        id: true,
-        memo: true,
-        updatedAt: true,
-      },
+      where: { id, tenantId },
+      data: { memo: memo || '' },
+      select: { id: true, memo: true, updatedAt: true },
     });
 
     return successResponse(updatedCustomer, 200);

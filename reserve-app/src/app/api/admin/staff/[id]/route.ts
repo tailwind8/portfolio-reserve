@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { getTenantId, validationErrorResponse, notFoundResponse } from '@/lib/api-utils';
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { requireAdminApiAuth } from '@/lib/admin-api-auth';
@@ -23,16 +24,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     const staff = await prisma.bookingStaff.findFirst({
       where: {
         id,
-        tenantId,
+        tenantId: getTenantId(),
       },
       select: {
         id: true,
@@ -52,7 +52,7 @@ export async function GET(
     });
 
     if (!staff) {
-      return errorResponse('スタッフが見つかりません', 404, 'NOT_FOUND');
+      return notFoundResponse('スタッフ');
     }
 
     return successResponse(staff, 200);
@@ -71,35 +71,27 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+    const tenantId = getTenantId();
 
     // バリデーション
     const validation = updateStaffSchema.safeParse(body);
 
     if (!validation.success) {
-      return errorResponse(
-        'バリデーションエラー',
-        400,
-        'VALIDATION_ERROR',
-        validation.error.issues
-      );
+      return validationErrorResponse(validation.error.issues);
     }
 
     // スタッフの存在確認
     const existingStaff = await prisma.bookingStaff.findFirst({
-      where: {
-        id,
-        tenantId,
-      },
+      where: { id, tenantId },
     });
 
     if (!existingStaff) {
-      return errorResponse('スタッフが見つかりません', 404, 'NOT_FOUND');
+      return notFoundResponse('スタッフ');
     }
 
     // メールアドレス変更時の重複チェック
@@ -108,9 +100,7 @@ export async function PATCH(
         where: {
           tenantId,
           email: validation.data.email,
-          id: {
-            not: id,
-          },
+          id: { not: id },
         },
       });
 
@@ -156,29 +146,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
 
     // スタッフの存在確認
     const staff = await prisma.bookingStaff.findFirst({
-      where: {
-        id,
-        tenantId,
-      },
+      where: { id, tenantId: getTenantId() },
       include: {
         _count: {
-          select: {
-            reservations: true,
-          },
+          select: { reservations: true },
         },
       },
     });
 
     if (!staff) {
-      return errorResponse('スタッフが見つかりません', 404, 'NOT_FOUND');
+      return notFoundResponse('スタッフ');
     }
 
     // 予約が存在する場合は削除不可

@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { getTenantId, validationErrorResponse, notFoundResponse } from '@/lib/api-utils';
 import { z } from 'zod';
 import { DayOfWeek } from '@prisma/client';
 import type { NextRequest } from 'next/server';
@@ -33,22 +34,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id: staffId } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+    const tenantId = getTenantId();
 
     // スタッフの存在確認
     const staff = await prisma.bookingStaff.findFirst({
-      where: {
-        id: staffId,
-        tenantId,
-      },
+      where: { id: staffId, tenantId },
     });
 
     if (!staff) {
-      return errorResponse('スタッフが見つかりません', 404, 'STAFF_NOT_FOUND');
+      return notFoundResponse('スタッフ');
     }
 
     // シフトを取得
@@ -100,23 +98,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id: staffId } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+    const tenantId = getTenantId();
 
     // バリデーション
     const validation = createShiftsSchema.safeParse(body);
 
     if (!validation.success) {
-      return errorResponse(
-        'バリデーションエラー',
-        400,
-        'VALIDATION_ERROR',
-        validation.error.issues
-      );
+      return validationErrorResponse(validation.error.issues);
     }
 
     const { shifts } = validation.data;
@@ -139,10 +132,7 @@ export async function POST(
     const result = await prisma.$transaction(async (tx) => {
       // 1. スタッフの存在確認
       const staff = await tx.bookingStaff.findFirst({
-        where: {
-          id: staffId,
-          tenantId,
-        },
+        where: { id: staffId, tenantId },
       });
 
       if (!staff) {
@@ -200,10 +190,8 @@ export async function POST(
     console.error('POST /api/admin/staff/[id]/shifts error:', error);
 
     // トランザクション内でスローされたエラーを処理
-    if (error instanceof Error) {
-      if (error.message === 'STAFF_NOT_FOUND') {
-        return errorResponse('スタッフが見つかりません', 404, 'STAFF_NOT_FOUND');
-      }
+    if (error instanceof Error && error.message === 'STAFF_NOT_FOUND') {
+      return notFoundResponse('スタッフ');
     }
 
     return errorResponse('シフトの設定に失敗しました', 500, 'INTERNAL_ERROR');

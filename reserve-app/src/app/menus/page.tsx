@@ -6,6 +6,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { AlertCard } from '@/components/AlertCard';
 import type { Menu } from '@/types/api';
 
 export default function MenusPage() {
@@ -57,23 +59,10 @@ export default function MenusPage() {
           </div>
 
           {/* Loading State */}
-          {loading && (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-            </div>
-          )}
+          {loading && <LoadingSpinner />}
 
           {/* Error State */}
-          {error && (
-            <Card className="border-red-200 bg-red-50">
-              <div className="flex items-center gap-3 text-red-700">
-                <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p>{error}</p>
-              </div>
-            </Card>
-          )}
+          {error && <AlertCard type="error" message={error} />}
 
           {/* Menu List by Category */}
           {!loading && !error && (

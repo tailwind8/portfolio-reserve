@@ -155,7 +155,7 @@ export default function AdminReservationsPage() {
 
   const submitEditReservation = async (formData: ReservationFormData) => {
     try {
-      if (!selectedReservation) return;
+      if (!selectedReservation) {return;}
 
       const response = await authFetch(`/api/admin/reservations/${selectedReservation.id}`, {
         method: 'PATCH',
@@ -179,7 +179,7 @@ export default function AdminReservationsPage() {
 
   const confirmDelete = async () => {
     try {
-      if (!selectedReservation) return;
+      if (!selectedReservation) {return;}
 
       const response = await authFetch(`/api/admin/reservations/${selectedReservation.id}`, {
         method: 'DELETE',
@@ -268,7 +268,7 @@ export default function AdminReservationsPage() {
 
   // タイムブロックの色を取得
   const getBlockColor = (reservation: Reservation | null): string => {
-    if (!reservation) return 'bg-green-100 text-green-800';
+    if (!reservation) {return 'bg-green-100 text-green-800';}
 
     switch (reservation.status) {
       case 'CONFIRMED':
@@ -287,9 +287,9 @@ export default function AdminReservationsPage() {
   // カレンダー表示用にフィルタリングされた予約
   const filteredReservationsCalendar = useMemo(() => {
     return reservations.filter((reservation) => {
-      if (staffFilterCalendar !== 'all' && reservation.staffId !== staffFilterCalendar) return false;
-      if (menuFilterCalendar !== 'all' && reservation.menuId !== menuFilterCalendar) return false;
-      if (statusFilterCalendar !== 'all' && reservation.status !== statusFilterCalendar.toUpperCase()) return false;
+      if (staffFilterCalendar !== 'all' && reservation.staffId !== staffFilterCalendar) {return false;}
+      if (menuFilterCalendar !== 'all' && reservation.menuId !== menuFilterCalendar) {return false;}
+      if (statusFilterCalendar !== 'all' && reservation.status !== statusFilterCalendar.toUpperCase()) {return false;}
       return true;
     });
   }, [reservations, staffFilterCalendar, menuFilterCalendar, statusFilterCalendar]);

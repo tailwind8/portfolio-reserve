@@ -19,7 +19,7 @@ export const availableSlotsQuerySchema = z.object({
   staffId: z.string().uuid('Invalid staff ID').nullable().optional(),
 });
 
-export type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>;
+type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>;
 
 /**
  * Request body for creating a reservation
@@ -47,7 +47,7 @@ export const createReservationSchema = z.object({
     .default(1),
 });
 
-export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+type CreateReservationInput = z.infer<typeof createReservationSchema>;
 
 /**
  * Request body for updating a reservation
@@ -59,7 +59,7 @@ export const updateReservationSchema = z.object({
     .string()
     .regex(dateRegex, 'Date must be in YYYY-MM-DD format')
     .refine((date) => {
-      if (!date) return true; // Skip validation if not provided
+      if (!date) {return true;} // Skip validation if not provided
       const selectedDate = new Date(date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -70,7 +70,7 @@ export const updateReservationSchema = z.object({
   notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
 });
 
-export type UpdateReservationInput = z.infer<typeof updateReservationSchema>;
+type UpdateReservationInput = z.infer<typeof updateReservationSchema>;
 
 /**
  * 認証関連のバリデーション
@@ -121,7 +121,7 @@ export const registerSchema = z
     path: ['passwordConfirm'],
   });
 
-export type RegisterInput = z.infer<typeof registerSchema>;
+type RegisterInput = z.infer<typeof registerSchema>;
 
 /**
  * ログインフォーム
@@ -135,7 +135,7 @@ export const loginSchema = z.object({
   remember: z.boolean().optional(),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
+type LoginInput = z.infer<typeof loginSchema>;
 
 /**
  * Request body for cancelling a reservation
@@ -144,7 +144,7 @@ export const cancelReservationSchema = z.object({
   cancellationReason: z.string().max(500, 'Reason must be 500 characters or less').optional(),
 });
 
-export type CancelReservationInput = z.infer<typeof cancelReservationSchema>;
+type CancelReservationInput = z.infer<typeof cancelReservationSchema>;
 
 /**
  * 管理者用の予約作成スキーマ
@@ -160,7 +160,7 @@ export const adminCreateReservationSchema = z.object({
   notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
 });
 
-export type AdminCreateReservationInput = z.infer<typeof adminCreateReservationSchema>;
+type AdminCreateReservationInput = z.infer<typeof adminCreateReservationSchema>;
 
 /**
  * 管理者用の予約更新スキーマ
@@ -177,7 +177,7 @@ export const adminUpdateReservationSchema = z.object({
   notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
 });
 
-export type AdminUpdateReservationInput = z.infer<typeof adminUpdateReservationSchema>;
+type AdminUpdateReservationInput = z.infer<typeof adminUpdateReservationSchema>;
 
 /**
  * 管理者用の予約一覧取得クエリパラメータ
@@ -191,12 +191,12 @@ export const adminReservationsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
-export type AdminReservationsQuery = z.infer<typeof adminReservationsQuerySchema>;
+type AdminReservationsQuery = z.infer<typeof adminReservationsQuerySchema>;
 
 /**
  * メニュー作成スキーマ（管理者用）
  */
-export const createMenuSchema = z.object({
+const createMenuSchema = z.object({
   name: z
     .string()
     .min(1, 'メニュー名を入力してください')
@@ -220,12 +220,12 @@ export const createMenuSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
-export type CreateMenuInput = z.infer<typeof createMenuSchema>;
+type CreateMenuInput = z.infer<typeof createMenuSchema>;
 
 /**
  * メニュー更新スキーマ（管理者用）
  */
-export const updateMenuSchema = z.object({
+const updateMenuSchema = z.object({
   name: z
     .string()
     .min(1, 'メニュー名を入力してください')
@@ -252,7 +252,7 @@ export const updateMenuSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export type UpdateMenuInput = z.infer<typeof updateMenuSchema>;
+type UpdateMenuInput = z.infer<typeof updateMenuSchema>;
 
 /**
  * 予約ステータス遷移のバリデーション

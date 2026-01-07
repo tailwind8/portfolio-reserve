@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { getTenantId, validationErrorResponse, notFoundResponse } from '@/lib/api-utils';
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { requireAdminApiAuth } from '@/lib/admin-api-auth';
@@ -26,22 +27,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id: staffId } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+    const tenantId = getTenantId();
 
     // スタッフの存在確認
     const staff = await prisma.bookingStaff.findFirst({
-      where: {
-        id: staffId,
-        tenantId,
-      },
+      where: { id: staffId, tenantId },
     });
 
     if (!staff) {
-      return errorResponse('スタッフが見つかりません', 404, 'STAFF_NOT_FOUND');
+      return notFoundResponse('スタッフ');
     }
 
     // 休暇を取得（未来の休暇のみ）
@@ -89,37 +87,29 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id: staffId } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+    const tenantId = getTenantId();
 
     // バリデーション
     const validation = createVacationSchema.safeParse(body);
 
     if (!validation.success) {
-      return errorResponse(
-        'バリデーションエラー',
-        400,
-        'VALIDATION_ERROR',
-        validation.error.issues
-      );
+      return validationErrorResponse(validation.error.issues);
     }
 
     const { startDate, endDate, reason } = validation.data;
 
     // スタッフの存在確認
     const staff = await prisma.bookingStaff.findFirst({
-      where: {
-        id: staffId,
-        tenantId,
-      },
+      where: { id: staffId, tenantId },
     });
 
     if (!staff) {
-      return errorResponse('スタッフが見つかりません', 404, 'STAFF_NOT_FOUND');
+      return notFoundResponse('スタッフ');
     }
 
     // 日付の妥当性チェック

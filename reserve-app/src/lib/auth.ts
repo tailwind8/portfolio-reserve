@@ -12,7 +12,7 @@ import { logSecurityEvent, getClientIp, getUserAgent } from './security-logger';
 /**
  * 現在のログインユーザー情報を取得
  */
-export async function getCurrentUser(): Promise<User | null> {
+async function getCurrentUser(): Promise<User | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -22,7 +22,7 @@ export async function getCurrentUser(): Promise<User | null> {
 /**
  * ログイン中かどうかを確認
  */
-export async function isAuthenticated(): Promise<boolean> {
+async function isAuthenticated(): Promise<boolean> {
   const user = await getCurrentUser();
   return user !== null;
 }
@@ -31,7 +31,7 @@ export async function isAuthenticated(): Promise<boolean> {
  * サーバーサイドでセッションを取得
  * API routeやServer Actionsで使用
  */
-export async function getServerSession() {
+async function getServerSession() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -41,7 +41,7 @@ export async function getServerSession() {
 /**
  * Supabase AuthのユーザーIDからPrismaのBookingUserを取得
  */
-export async function getBookingUserByAuthId(authId: string) {
+async function getBookingUserByAuthId(authId: string) {
   return await prisma.bookingUser.findUnique({
     where: { authId },
   });
@@ -51,7 +51,7 @@ export async function getBookingUserByAuthId(authId: string) {
  * Supabase AuthのユーザーIDから、または新規作成してBookingUserを取得
  * ログイン時に自動的にPrismaレコードを作成する場合に使用
  */
-export async function getOrCreateBookingUser(
+async function getOrCreateBookingUser(
   authId: string,
   email: string,
   name?: string,
@@ -83,8 +83,8 @@ export async function getOrCreateBookingUser(
  * 管理者権限チェック
  * 実装例: メールアドレスのドメインや特定のロールで判定
  */
-export async function isAdmin(user: User | null): Promise<boolean> {
-  if (!user) return false;
+async function isAdmin(user: User | null): Promise<boolean> {
+  if (!user) {return false;}
 
   // 例: 特定のメールアドレスを管理者とする
   const adminEmails = [
@@ -101,7 +101,7 @@ export async function isAdmin(user: User | null): Promise<boolean> {
  * APIルートで認証チェックを行うヘルパー
  * 認証されていない場合は401エラーを返す
  */
-export async function requireAuth() {
+async function requireAuth() {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('Unauthorized');
@@ -115,7 +115,7 @@ export async function requireAuth() {
  *
  * @returns Supabase AuthユーザーとPrismaのBookingUser、または両方null
  */
-export async function getAuthenticatedBookingUser(): Promise<{
+async function getAuthenticatedBookingUser(): Promise<{
   authUser: User | null;
   bookingUser: Awaited<ReturnType<typeof getOrCreateBookingUser>> | null;
 }> {
@@ -175,7 +175,7 @@ export async function requireAuthAndGetBookingUser() {
  * APIルートで管理者権限チェックを行うヘルパー
  * 管理者でない場合は403エラーを返す
  */
-export async function requireAdmin() {
+async function requireAdmin() {
   const user = await requireAuth();
   const adminCheck = await isAdmin(user);
   if (!adminCheck) {
@@ -194,7 +194,7 @@ export async function requireAdmin() {
  * @param request - NextRequest オブジェクト
  * @returns ユーザーIDまたは401エラーレスポンス
  */
-export function checkAuthHeader(
+function checkAuthHeader(
   request: NextRequest
 ): string | ReturnType<typeof errorResponse> {
   const userId = request.headers.get('x-user-id');
@@ -216,7 +216,7 @@ export function checkAuthHeader(
  * @param request - NextRequest オブジェクト
  * @returns 管理者のユーザーIDまたは401/403エラーレスポンス
  */
-export function checkAdminAuthHeader(
+function checkAdminAuthHeader(
   request: NextRequest
 ): string | ReturnType<typeof errorResponse> {
   // E2Eテスト環境では認証をスキップ（本番環境では無効）
@@ -262,7 +262,7 @@ export function checkAdminAuthHeader(
  * @param resourceUserId - リソースの所有者のユーザーID
  * @returns 権限がある場合はtrue、ない場合は403エラーレスポンス
  */
-export function checkResourceAccessHeader(
+function checkResourceAccessHeader(
   request: NextRequest,
   resourceUserId: string
 ): true | ReturnType<typeof errorResponse> {

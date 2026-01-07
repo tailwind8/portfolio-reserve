@@ -1,0 +1,2 @@
+#!/bin/sh
+cd reserve-app && npx lint-staged

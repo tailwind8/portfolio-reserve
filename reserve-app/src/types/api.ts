@@ -43,7 +43,7 @@ export interface AvailableSlots {
 /**
  * Reservation creation request
  */
-export interface CreateReservationRequest {
+interface CreateReservationRequest {
   menuId: string;
   staffId?: string | null; // オプショナル（指名なし可）
   reservedDate: string; // "2025-01-20" format
@@ -54,7 +54,7 @@ export interface CreateReservationRequest {
 /**
  * Reservation update request
  */
-export interface UpdateReservationRequest {
+interface UpdateReservationRequest {
   menuId?: string;
   staffId?: string;
   reservedDate?: string; // "2025-01-20" format

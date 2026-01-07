@@ -80,7 +80,7 @@ export const logoutRateLimit = createRateLimit(20, '1 m', 'ratelimit:logout');
  * 一般API用のレート制限
  * 100リクエスト/分/IP
  */
-export const generalRateLimit = createRateLimit(100, '1 m', 'ratelimit:general');
+const generalRateLimit = createRateLimit(100, '1 m', 'ratelimit:general');
 
 /**
  * レート制限チェックのヘルパー関数

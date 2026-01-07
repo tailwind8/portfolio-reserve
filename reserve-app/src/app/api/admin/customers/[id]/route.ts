@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { getTenantId, validationErrorResponse, notFoundResponse } from '@/lib/api-utils';
 import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { requireAdminApiAuth } from '@/lib/admin-api-auth';
@@ -21,18 +22,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
 
     // 顧客情報を取得
     const customer = await prisma.bookingUser.findUnique({
-      where: {
-        id,
-        tenantId,
-      },
+      where: { id, tenantId: getTenantId() },
       select: {
         id: true,
         name: true,
@@ -72,7 +69,7 @@ export async function GET(
     });
 
     if (!customer) {
-      return errorResponse('顧客が見つかりません', 404, 'CUSTOMER_NOT_FOUND');
+      return notFoundResponse('顧客');
     }
 
     type CustomerReservation = {
@@ -143,37 +140,28 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
     const body = await request.json();
-    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-restaurant';
 
     // バリデーション
     const validation = updateCustomerSchema.safeParse(body);
 
     if (!validation.success) {
-      return errorResponse(
-        'バリデーションエラー',
-        400,
-        'VALIDATION_ERROR',
-        validation.error.issues
-      );
+      return validationErrorResponse(validation.error.issues);
     }
 
     const { name, phone } = validation.data;
 
     // 顧客が存在するか確認
     const existingCustomer = await prisma.bookingUser.findUnique({
-      where: {
-        id,
-        tenantId,
-      },
+      where: { id, tenantId: getTenantId() },
     });
 
     if (!existingCustomer) {
-      return errorResponse('顧客が見つかりません', 404, 'CUSTOMER_NOT_FOUND');
+      return notFoundResponse('顧客');
     }
 
     // 顧客情報を更新

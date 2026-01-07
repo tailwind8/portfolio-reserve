@@ -5,7 +5,7 @@ export { default as ShiftSettingModal } from './ShiftSettingModal';
 export type {
   Staff,
   StaffFormData,
-  DayOfWeek,
+  
   ShiftData,
   ShiftFormData,
   VacationFormData,

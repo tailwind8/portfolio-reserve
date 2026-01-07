@@ -20,7 +20,13 @@
     "prisma:studio": "prisma studio",
     "prisma:push": "prisma db push",
     "prisma:format": "prisma format",
-    "prisma:seed": "npx dotenv-cli -e .env.local -- npx tsx prisma/seed.ts"
+    "prisma:seed": "npx dotenv-cli -e .env.local -- npx tsx prisma/seed.ts",
+    "lint:fix": "eslint --fix",
+    "jscpd": "jscpd src/",
+    "knip": "knip",
+    "knip:fix": "knip --fix",
+    "quality": "npm run lint && npm run knip && npm run jscpd",
+    "prepare": "cd .. && husky reserve-app/.husky && git config core.hooksPath reserve-app/.husky"
   },
   "prisma": {
     "seed": "npx dotenv-cli -e .env.local -- npx tsx prisma/seed.ts"
@@ -58,9 +64,14 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "eslint-plugin-sonarjs": "^3.0.5",
     "fast-check": "^3.23.1",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "jscpd": "^4.0.5",
+    "knip": "^5.80.0",
+    "lint-staged": "^16.2.7",
     "msw": "^2.12.7",
     "tailwindcss": "^4",
     "typescript": "5.9.3"

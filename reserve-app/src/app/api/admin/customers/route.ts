@@ -15,7 +15,7 @@ import { requireAdminApiAuth } from '@/lib/admin-api-auth';
  */
 export async function GET(request: NextRequest) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { searchParams } = new URL(request.url);
@@ -114,9 +114,9 @@ export async function GET(request: NextRequest) {
       });
     } else if (sortBy === 'lastVisitDate') {
       customersWithStats.sort((a, b) => {
-        if (!a.lastVisitDate && !b.lastVisitDate) return 0;
-        if (!a.lastVisitDate) return 1;
-        if (!b.lastVisitDate) return -1;
+        if (!a.lastVisitDate && !b.lastVisitDate) {return 0;}
+        if (!a.lastVisitDate) {return 1;}
+        if (!b.lastVisitDate) {return -1;}
         return sortOrder === 'asc'
           ? a.lastVisitDate.localeCompare(b.lastVisitDate)
           : b.lastVisitDate.localeCompare(a.lastVisitDate);

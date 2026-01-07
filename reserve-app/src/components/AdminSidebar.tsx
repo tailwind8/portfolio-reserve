@@ -156,8 +156,8 @@ export default function AdminSidebar() {
             {section.items
               .filter((item) => {
                 // 機能フラグに基づいてフィルタリング
-                if (!item.requiresFeature) return true; // 機能フラグ不要な項目は常に表示
-                if (!featureFlags) return false; // 機能フラグ読み込み中は非表示
+                if (!item.requiresFeature) {return true;} // 機能フラグ不要な項目は常に表示
+                if (!featureFlags) {return false;} // 機能フラグ読み込み中は非表示
                 return featureFlags[item.requiresFeature as keyof typeof featureFlags] === true;
               })
               .map((item) => {

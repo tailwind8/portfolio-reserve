@@ -219,7 +219,7 @@ export default function MenusPage() {
   };
 
   const confirmDelete = async () => {
-    if (!selectedMenu) return;
+    if (!selectedMenu) {return;}
 
     try {
       const response = await authFetch(`/api/admin/menus/${selectedMenu.id}`, {

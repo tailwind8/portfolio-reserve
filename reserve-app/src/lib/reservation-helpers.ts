@@ -283,3 +283,131 @@ export async function checkGeneralReservationConflicts(
     }
   }
 }
+
+/**
+ * 予約データの整形済みレスポンス型（管理者用）
+ */
+export interface FormattedReservation {
+  id: string;
+  reservedDate: string;
+  reservedTime: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  menuName: string;
+  menuPrice: number;
+  menuDuration?: number;
+  staffName: string;
+  staffRole?: string;
+  status: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  message?: string;
+}
+
+/**
+ * 予約データを整形してレスポンス用に変換（管理者用）
+ */
+export function formatReservationForAdmin(
+  reservation: {
+    id: string;
+    reservedDate: Date;
+    reservedTime: string;
+    status: string;
+    notes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    user?: { name: string | null; email: string; phone: string | null } | null;
+    menu?: { name: string; price: number; duration: number } | null;
+    staff?: { name: string; role: string | null } | null;
+  },
+  message?: string
+): FormattedReservation {
+  return {
+    id: reservation.id,
+    reservedDate: reservation.reservedDate.toISOString().split('T')[0],
+    reservedTime: reservation.reservedTime,
+    customerName: reservation.user?.name || '名前未設定',
+    customerEmail: reservation.user?.email || '',
+    customerPhone: reservation.user?.phone || '',
+    menuName: reservation.menu?.name || 'メニュー未設定',
+    menuPrice: reservation.menu?.price || 0,
+    menuDuration: reservation.menu?.duration,
+    staffName: reservation.staff?.name || 'スタッフ未設定',
+    staffRole: reservation.staff?.role || undefined,
+    status: reservation.status,
+    notes: reservation.notes || '',
+    createdAt: reservation.createdAt.toISOString(),
+    updatedAt: reservation.updatedAt.toISOString(),
+    ...(message && { message }),
+  };
+}
+
+/**
+ * ステータスに応じた成功メッセージを取得（管理者用）
+ */
+export function getStatusChangeMessage(status: string | undefined): string {
+  if (!status) {return '予約を更新しました';}
+
+  const messages: Record<string, string> = {
+    CONFIRMED: '予約を確定しました',
+    COMPLETED: '予約を完了しました',
+    CANCELLED: '予約をキャンセルしました',
+    NO_SHOW: '無断キャンセルとして記録しました',
+  };
+
+  return messages[status] || '予約を更新しました';
+}
+
+/**
+ * Prismaの予約データ取得用のincludeオブジェクト（管理者用詳細）
+ */
+export const reservationIncludeForAdmin = {
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+    },
+  },
+  menu: {
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      duration: true,
+    },
+  },
+  staff: {
+    select: {
+      id: true,
+      name: true,
+      role: true,
+    },
+  },
+} as const;
+
+/**
+ * 更新データの構築（undefined以外の値のみを含める）
+ */
+export function buildReservationUpdateData(params: {
+  menuId?: string;
+  staffId?: string;
+  reservedDate?: string;
+  reservedTime?: string;
+  notes?: string;
+  status?: string;
+}): Record<string, unknown> {
+  const updateData: Record<string, unknown> = {};
+
+  if (params.menuId !== undefined) {updateData.menuId = params.menuId;}
+  if (params.staffId !== undefined) {updateData.staffId = params.staffId;}
+  if (params.reservedDate !== undefined) {updateData.reservedDate = new Date(params.reservedDate);}
+  if (params.reservedTime !== undefined) {updateData.reservedTime = params.reservedTime;}
+  if (params.notes !== undefined) {updateData.notes = params.notes;}
+  if (params.status !== undefined) {updateData.status = params.status;}
+
+  return updateData;
+}

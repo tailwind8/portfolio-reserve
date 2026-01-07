@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/jscpd.json",
+  "threshold": 6,
+  "minLines": 5,
+  "minTokens": 50,
+  "mode": "mild",
+  "format": ["typescript", "tsx"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/*.d.ts",
+    "**/coverage/**",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "reporters": ["console"],
+  "gitignore": true
+}

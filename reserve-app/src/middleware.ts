@@ -14,13 +14,19 @@ const publicStatusCache = {
 const CACHE_TTL_MS = 10 * 1000; // 10秒
 
 /**
+ * E2Eテスト環境で認証をスキップするかどうか
+ */
+function shouldSkipAuthInTest(): boolean {
+  return process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_IN_TEST === 'true';
+}
+
+/**
  * システムの公開状態を取得
  * キャッシュヒット時は即座に返却、ミス時はAPIから取得
  */
 async function getPublicStatus(request: NextRequest): Promise<boolean> {
   const now = Date.now();
 
-  // キャッシュヒット
   if (publicStatusCache.value !== null && publicStatusCache.expiresAt > now) {
     return publicStatusCache.value;
   }
@@ -33,210 +39,159 @@ async function getPublicStatus(request: NextRequest): Promise<boolean> {
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(3000), // 3秒タイムアウト
+      signal: AbortSignal.timeout(3000),
     });
 
     const data = await response.json();
     const isPublic = data.isPublic ?? true;
 
-    // キャッシュ保存
     publicStatusCache.value = isPublic;
     publicStatusCache.expiresAt = now + CACHE_TTL_MS;
 
     return isPublic;
   } catch (error) {
     console.error('[Middleware] Failed to fetch public status:', error);
-    // エラー時はデフォルトで公開中（サービス継続優先）
     return true;
   }
 }
 
 /**
- * CSRF保護
- * POSTリクエストのoriginとhostを検証
+ * CSRF保護（変更を伴うリクエストのorigin検証）
  */
 function validateCSRF(request: NextRequest): NextResponse | null {
   const { pathname } = request.nextUrl;
 
-  // API routes以外はスキップ
   if (!pathname.startsWith('/api/')) {
     return null;
   }
 
-  // GETリクエストはスキップ
-  if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH' && request.method !== 'DELETE') {
+  const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+  if (!mutatingMethods.includes(request.method)) {
     return null;
   }
 
   const origin = request.headers.get('origin');
   const host = request.headers.get('host');
 
-  // originヘッダーが存在しない場合（例：サーバー間通信）はスキップ
   if (!origin) {
     return null;
   }
 
-  // originとhostが一致するかチェック
-  // 例: origin = "https://example.com", host = "example.com"
   const originHost = new URL(origin).host;
   if (originHost !== host) {
     console.warn('[CSRF] Blocked request from different origin:', { origin: originHost, host });
-    return NextResponse.json(
-      { error: 'CSRF validation failed' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'CSRF validation failed' }, { status: 403 });
   }
 
-  // 検証成功
   return null;
 }
 
 /**
- * 認証チェック
- * Supabaseのセッションcookieを確認
+ * 認証チェック（Supabaseセッションcookieを確認）
  */
 function checkAuthentication(request: NextRequest): boolean {
-  // Supabaseのセッションcookie名パターン
-  // sb-<project-ref>-auth-token または sb-<project-ref>-auth-token-code-verifier
-  const cookies = request.cookies;
-
-  // Supabaseのアクセストークンcookieを探す
-  // 一般的なパターン: sb-*-auth-token
-  let hasAuthToken = false;
-  cookies.getAll().forEach((cookie) => {
-    if (cookie.name.startsWith('sb-') && cookie.name.includes('auth-token') && cookie.value) {
-      hasAuthToken = true;
-    }
-  });
-
-  return hasAuthToken;
+  const cookies = request.cookies.getAll();
+  return cookies.some(
+    (cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token') && cookie.value
+  );
 }
+
+/**
+ * 認証が必要なパスへのアクセスを検証し、未認証時はリダイレクト
+ */
+function handleProtectedRoute(
+  request: NextRequest,
+  loginPath: string
+): NextResponse | null {
+  if (shouldSkipAuthInTest()) {
+    return null;
+  }
+
+  if (checkAuthentication(request)) {
+    return null;
+  }
+
+  const { pathname } = request.nextUrl;
+  const loginUrl = new URL(loginPath, request.url);
+  loginUrl.searchParams.set('redirect', pathname);
+  loginUrl.searchParams.set('message', 'ログインが必要です');
+  console.log(`[Auth] Unauthorized access to ${pathname}, redirecting to ${loginPath}`);
+  return NextResponse.redirect(loginUrl);
+}
+
+/** 公開状態チェックから除外するパス */
+const PUBLIC_STATUS_EXCLUDED_PATHS = [
+  '/api/',
+  '/_next/',
+  '/favicon.ico',
+  '/super-admin/',
+  '/admin/',
+  '/maintenance',
+  '/login',
+  '/admin/login',
+  '/super-admin/login',
+  '/register',
+];
+
+/** 一般ユーザー向け保護パス */
+const USER_PROTECTED_PATHS = ['/mypage', '/booking/confirm', '/reservations'];
 
 /**
  * ミドルウェア
  * 1. CSRF保護（POSTリクエスト時のorigin検証）
- * 2. 管理画面への認証チェック
- * 3. システム非公開時は一般ユーザーをメンテナンス画面にリダイレクト
+ * 2. オープンリダイレクト防止
+ * 3. 各種認証チェック
+ * 4. システム非公開時はメンテナンス画面にリダイレクト
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. CSRF保護チェック（最優先）
+  // 1. CSRF保護チェック
   const csrfResponse = validateCSRF(request);
   if (csrfResponse) {
     return csrfResponse;
   }
 
-  // 2. リダイレクトURLのバリデーション（オープンリダイレクト防止）
+  // 2. オープンリダイレクト防止
   const redirectParam = request.nextUrl.searchParams.get('redirect');
-  if (redirectParam) {
-    // 内部URLのみ許可（相対パスまたは同一オリジン）
-    if (!isSafeRedirect(redirectParam, [request.nextUrl.origin])) {
-      console.warn('[Security] Blocked open redirect attempt:', redirectParam);
-      // 危険なリダイレクトURLは無視してホームページへ
-      const safeUrl = new URL('/', request.url);
-      return NextResponse.redirect(safeUrl);
-    }
+  if (redirectParam && !isSafeRedirect(redirectParam, [request.nextUrl.origin])) {
+    console.warn('[Security] Blocked open redirect attempt:', redirectParam);
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // 3. スーパー管理者画面への認証チェック
-  if (pathname.startsWith('/super-admin/')) {
-    // ログインページは除外
-    if (!pathname.startsWith('/super-admin/login')) {
-      // E2Eテスト環境では認証をスキップ（本番環境では無効）
-      const skipAuthInTest = process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_IN_TEST === 'true';
-      if (!skipAuthInTest) {
-        const isAuthenticated = checkAuthentication(request);
-        if (!isAuthenticated) {
-          // 未ログイン時は/super-admin/loginへリダイレクト
-          const loginUrl = new URL('/super-admin/login', request.url);
-          loginUrl.searchParams.set('redirect', pathname);
-          loginUrl.searchParams.set('message', 'ログインが必要です');
-          console.log('[Auth] Unauthorized access to super admin page, redirecting to login');
-          return NextResponse.redirect(loginUrl);
-        }
-        // NOTE: SUPER_ADMINロールの検証はEdge RuntimeでPrismaが使えないため、
-        // 各ページコンポーネントまたはAPIルートで実装する必要があります。
-      }
-    }
+  if (pathname.startsWith('/super-admin/') && !pathname.startsWith('/super-admin/login')) {
+    const authResponse = handleProtectedRoute(request, '/super-admin/login');
+    if (authResponse) {return authResponse;}
+    // NOTE: SUPER_ADMINロールの検証はEdge RuntimeでPrismaが使えないため、
+    // 各ページコンポーネントまたはAPIルートで実装する必要があります。
   }
 
   // 4. 管理画面への認証チェック
-  if (pathname.startsWith('/admin/')) {
-    // ログインページは除外
-    if (!pathname.startsWith('/admin/login')) {
-      // E2Eテスト環境では認証をスキップ（本番環境では無効）
-      const skipAuthInTest = process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_IN_TEST === 'true';
-      if (!skipAuthInTest) {
-        const isAuthenticated = checkAuthentication(request);
-        if (!isAuthenticated) {
-          // 未ログイン時は/admin/loginへリダイレクト（元のURLをクエリパラメータに保存）
-          const loginUrl = new URL('/admin/login', request.url);
-          loginUrl.searchParams.set('redirect', pathname);
-          loginUrl.searchParams.set('message', 'ログインが必要です');
-          console.log('[Auth] Unauthorized access to admin page, redirecting to login');
-          return NextResponse.redirect(loginUrl);
-        }
-      }
-    }
+  if (pathname.startsWith('/admin/') && !pathname.startsWith('/admin/login')) {
+    const authResponse = handleProtectedRoute(request, '/admin/login');
+    if (authResponse) {return authResponse;}
   }
 
   // 5. 一般ユーザー向け保護ページへの認証チェック
-  const protectedPaths = ['/mypage', '/booking/confirm', '/reservations'];
-  const isProtectedPath = protectedPaths.some((path) => pathname.startsWith(path));
+  const isUserProtectedPath = USER_PROTECTED_PATHS.some((path) => pathname.startsWith(path));
+  if (isUserProtectedPath) {
+    const authResponse = handleProtectedRoute(request, '/login');
+    if (authResponse) {return authResponse;}
+  }
 
-  if (isProtectedPath) {
-    // E2Eテスト環境では認証をスキップ（本番環境では無効）
-    const skipAuthInTest = process.env.NODE_ENV !== 'production' && process.env.SKIP_AUTH_IN_TEST === 'true';
-    if (!skipAuthInTest) {
-      const isAuthenticated = checkAuthentication(request);
-      if (!isAuthenticated) {
-        // 未ログイン時は/loginへリダイレクト（元のURLをクエリパラメータに保存）
-        const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        loginUrl.searchParams.set('message', 'ログインが必要です');
-        console.log('[Auth] Unauthorized access to protected page, redirecting to login');
-        return NextResponse.redirect(loginUrl);
-      }
+  // 6. 公開状態チェック（除外パスはスキップ）
+  const isExcluded = PUBLIC_STATUS_EXCLUDED_PATHS.some((path) => pathname.startsWith(path));
+  if (!isExcluded) {
+    const isPublic = await getPublicStatus(request);
+    if (!isPublic) {
+      return NextResponse.redirect(new URL('/maintenance', request.url));
     }
   }
 
-  // 除外パス（これらのパスは公開状態チェックをスキップ）
-  const excludedPaths = [
-    '/api/',
-    '/_next/',
-    '/favicon.ico',
-    '/super-admin/', // スーパー管理者画面（認証済み）
-    '/admin/', // 管理画面（認証済み）
-    '/maintenance', // メンテナンスページ自体
-    '/login', // ログインページ
-    '/admin/login', // 管理者ログインページ
-    '/super-admin/login', // スーパー管理者ログインページ
-    '/register', // 登録ページ
-  ];
-
-  const isExcluded = excludedPaths.some((path) => pathname.startsWith(path));
-  if (isExcluded) {
-    return NextResponse.next();
-  }
-
-  // 6. 公開状態チェック
-  const isPublic = await getPublicStatus(request);
-
-  if (!isPublic) {
-    // 非公開時はメンテナンスページへリダイレクト
-    const maintenanceUrl = new URL('/maintenance', request.url);
-    return NextResponse.redirect(maintenanceUrl);
-  }
-
-  // 7. セキュリティヘッダーの追加（SameSite Cookie設定）
+  // 7. セキュリティヘッダーの追加
   const response = NextResponse.next();
-
-  // SameSite=Lax属性をCookieに設定（CSRF対策）
-  // ※ Next.jsのCookieは自動的にSameSite=Laxが設定されるため、
-  // ここでは明示的に設定する必要はありませんが、念のため記載
   response.headers.set('X-Content-Type-Options', 'nosniff');
-
   return response;
 }
 

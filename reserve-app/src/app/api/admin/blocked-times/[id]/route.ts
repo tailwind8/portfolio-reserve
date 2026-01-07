@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdminApiAuth } from '@/lib/admin-api-auth';
-
-const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'demo-booking';
+import { successResponse, errorResponse } from '@/lib/api-response';
+import { getTenantId } from '@/lib/api-utils';
 
 /**
  * PATCH /api/admin/blocked-times/[id]
@@ -13,7 +13,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
@@ -26,22 +26,13 @@ export async function PATCH(
       const end = new Date(endDateTime);
 
       if (end <= start) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: '終了日時は開始日時より後にしてください',
-          },
-          { status: 400 }
-        );
+        return errorResponse('終了日時は開始日時より後にしてください', 400, 'VALIDATION_ERROR');
       }
     }
 
     // 予約ブロックを更新
     const blockedTime = await prisma.bookingBlockedTimeSlot.update({
-      where: {
-        id,
-        tenantId: TENANT_ID,
-      },
+      where: { id, tenantId: getTenantId() },
       data: {
         ...(startDateTime && { startDateTime: new Date(startDateTime) }),
         ...(endDateTime && { endDateTime: new Date(endDateTime) }),
@@ -50,20 +41,10 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: blockedTime,
-      message: '予約ブロックを更新しました',
-    });
+    return successResponse({ data: blockedTime, message: '予約ブロックを更新しました' });
   } catch (error) {
     console.error('Failed to update blocked time:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: '予約ブロックの更新に失敗しました',
-      },
-      { status: 500 }
-    );
+    return errorResponse('予約ブロックの更新に失敗しました', 500, 'INTERNAL_ERROR');
   }
 }
 
@@ -76,30 +57,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await requireAdminApiAuth(request);
-  if (admin instanceof Response) return admin;
+  if (admin instanceof Response) {return admin;}
 
   try {
     const { id } = await params;
 
     await prisma.bookingBlockedTimeSlot.delete({
-      where: {
-        id,
-        tenantId: TENANT_ID,
-      },
+      where: { id, tenantId: getTenantId() },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: '予約ブロックを削除しました',
-    });
+    return successResponse({ message: '予約ブロックを削除しました' });
   } catch (error) {
     console.error('Failed to delete blocked time:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: '予約ブロックの削除に失敗しました',
-      },
-      { status: 500 }
-    );
+    return errorResponse('予約ブロックの削除に失敗しました', 500, 'INTERNAL_ERROR');
   }
 }

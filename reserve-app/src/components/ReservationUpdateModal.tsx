@@ -12,7 +12,7 @@ const TIME_SLOTS = (() => {
   const slots: string[] = [];
   for (let hour = 9; hour <= 18; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
-      if (hour === 18 && minute > 0) break;
+      if (hour === 18 && minute > 0) {break;}
       slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
     }
   }
@@ -126,7 +126,7 @@ export default function ReservationUpdateModal({
 
   // 【パフォーマンス改善】日付選択をuseCallbackでメモ化
   const handleSelectDay = useCallback((day: number) => {
-    if (isPastDate(day)) return;
+    if (isPastDate(day)) {return;}
 
     setSelectedDay(day);
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

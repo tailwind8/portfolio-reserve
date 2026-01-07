@@ -169,7 +169,7 @@ export default function AdminStaffPage() {
     e.preventDefault();
 
     try {
-      if (!selectedStaff) return;
+      if (!selectedStaff) {return;}
 
       // 有効なシフトのみを抽出
       const shifts: ShiftData[] = [];
@@ -225,7 +225,7 @@ export default function AdminStaffPage() {
     e.preventDefault();
 
     try {
-      if (!selectedStaff) return;
+      if (!selectedStaff) {return;}
 
       if (!vacationFormData.startDate || !vacationFormData.endDate) {
         setError('休暇期間を入力してください');
@@ -291,7 +291,7 @@ export default function AdminStaffPage() {
     e.preventDefault();
 
     try {
-      if (!selectedStaff) return;
+      if (!selectedStaff) {return;}
 
       const response = await fetch(`/api/admin/staff/${selectedStaff.id}`, {
         method: 'PATCH',
@@ -316,7 +316,7 @@ export default function AdminStaffPage() {
 
   const confirmDelete = async () => {
     try {
-      if (!selectedStaff) return;
+      if (!selectedStaff) {return;}
 
       const response = await fetch(`/api/admin/staff/${selectedStaff.id}`, {
         method: 'DELETE',
