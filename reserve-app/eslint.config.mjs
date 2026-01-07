@@ -170,7 +170,7 @@ const eslintConfig = defineConfig([
 
   // Components - 全て警告レベル
   {
-    files: ["src/components/**/*.tsx"],
+    files: ["src/components/**/*.tsx", "src/components/**/*.ts"],
     rules: {
       'complexity': 'warn',
       'max-lines-per-function': 'warn',
