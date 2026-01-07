@@ -2,23 +2,24 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
-import Card from '@/components/Card';
 import Button from '@/components/Button';
 import { useAuthFetch, extractErrorMessage } from '@/hooks/useAuthFetch';
-import { isBreakTime } from '@/lib/time-utils';
 import {
   AddReservationModal,
   EditReservationModal,
   DeleteReservationDialog as DeleteConfirmationDialog,
   ReservationDetailModal,
+  ReservationViewTabs,
+  ReservationListFilter,
+  ReservationTable,
+  ReservationCalendarFilter,
+  WeeklyCalendar,
+  generateTimeSlots,
+  formatWeekTitle,
+  generateWeekDates,
+  formatDateString,
 } from '@/components/admin/reservations';
-import type { Reservation, ReservationFormData } from '@/components/admin/reservations';
-
-// 営業時間設定
-const OPENING_TIME = '09:00';
-const CLOSING_TIME = '20:00';
-const BREAK_TIME_START = '12:00';
-const BREAK_TIME_END = '13:00';
+import type { Reservation, ReservationFormData, ViewMode, UniqueItem } from '@/components/admin/reservations';
 
 export default function AdminReservationsPage() {
   const { authFetch } = useAuthFetch();
@@ -28,7 +29,7 @@ export default function AdminReservationsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // 表示モード（一覧 or カレンダー）
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   // モーダル・ダイアログの状態
   const [showAddModal, setShowAddModal] = useState(false);
@@ -53,13 +54,12 @@ export default function AdminReservationsPage() {
 
   // 週間カレンダー用state
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    // 2026-01-06（月曜日）を基準とする
     const baseDate = new Date('2026-01-06');
     baseDate.setHours(0, 0, 0, 0);
     return baseDate;
   });
 
-  // LocalStorageから表示モードを読み込む（初回のみ）
+  // LocalStorageから表示モードを読み込む
   useEffect(() => {
     const savedMode = localStorage.getItem('adminReservationsViewMode');
     if (savedMode === 'calendar' || savedMode === 'list') {
@@ -79,7 +79,6 @@ export default function AdminReservationsPage() {
       const result = await response.json();
 
       if (result.success) {
-        // APIレスポンスは { data: [...], pagination: {...} } の構造
         setReservations(result.data?.data || []);
       } else {
         setError(extractErrorMessage(result.error) || 'データの取得に失敗しました');
@@ -96,6 +95,7 @@ export default function AdminReservationsPage() {
     fetchReservations();
   }, [fetchReservations]);
 
+  // モーダル操作ハンドラー
   const handleAddReservation = () => {
     setPrefilledDate('');
     setPrefilledTime('');
@@ -127,6 +127,7 @@ export default function AdminReservationsPage() {
     setPrefilledTime('');
   };
 
+  // CRUD操作
   const submitAddReservation = async (formData: ReservationFormData) => {
     try {
       if (!formData.customer || !formData.menu || !formData.staff || !formData.date || !formData.time) {
@@ -155,7 +156,7 @@ export default function AdminReservationsPage() {
 
   const submitEditReservation = async (formData: ReservationFormData) => {
     try {
-      if (!selectedReservation) {return;}
+      if (!selectedReservation) { return; }
 
       const response = await authFetch(`/api/admin/reservations/${selectedReservation.id}`, {
         method: 'PATCH',
@@ -179,7 +180,7 @@ export default function AdminReservationsPage() {
 
   const confirmDelete = async () => {
     try {
-      if (!selectedReservation) {return;}
+      if (!selectedReservation) { return; }
 
       const response = await authFetch(`/api/admin/reservations/${selectedReservation.id}`, {
         method: 'DELETE',
@@ -200,139 +201,11 @@ export default function AdminReservationsPage() {
     }
   };
 
-  const statusBadge = (status: Reservation['status']) => {
-    const styles = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      CONFIRMED: 'bg-green-100 text-green-800',
-      CANCELLED: 'bg-red-100 text-red-800',
-      COMPLETED: 'bg-blue-100 text-blue-800',
-      NO_SHOW: 'bg-gray-100 text-gray-800',
-    };
-    const labels = {
-      PENDING: '保留',
-      CONFIRMED: '確定',
-      CANCELLED: 'キャンセル',
-      COMPLETED: '完了',
-      NO_SHOW: '無断キャンセル',
-    };
-    return (
-      <span
-        data-testid="reservation-status"
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}
-      >
-        {labels[status]}
-      </span>
-    );
-  };
+  // カレンダー関連
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
+  const weekTitle = useMemo(() => formatWeekTitle(currentWeekStart), [currentWeekStart]);
+  const weekDates = useMemo(() => generateWeekDates(currentWeekStart), [currentWeekStart]);
 
-  // 週間カレンダー用ヘルパー関数
-
-  // 週の範囲テキストを生成
-  const weekTitle = useMemo(() => {
-    const weekEnd = new Date(currentWeekStart);
-    weekEnd.setDate(currentWeekStart.getDate() + 6);
-    return `${currentWeekStart.getFullYear()}年${currentWeekStart.getMonth() + 1}月${currentWeekStart.getDate()}日 〜 ${weekEnd.getMonth() + 1}月${weekEnd.getDate()}日`;
-  }, [currentWeekStart]);
-
-  // 7日分の日付配列を生成
-  const weekDates = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(currentWeekStart);
-      date.setDate(currentWeekStart.getDate() + i);
-      return date;
-    });
-  }, [currentWeekStart]);
-
-  // 時間スロットを生成（30分刻み）
-  const timeSlots = useMemo(() => {
-    const [openHour, openMinute] = OPENING_TIME.split(':').map(Number);
-    const [closeHour, closeMinute] = CLOSING_TIME.split(':').map(Number);
-
-    const slots: string[] = [];
-    const startMinutes = openHour * 60 + openMinute;
-    const endMinutes = closeHour * 60 + closeMinute;
-
-    for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-      const hour = Math.floor(minutes / 60);
-      const minute = minutes % 60;
-      slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-    }
-
-    return slots;
-  }, []);
-
-  // 定休日かどうかを判定（日曜日を定休日とする）
-  const isClosedDay = (date: Date): boolean => {
-    return date.getDay() === 0; // 0 = 日曜日
-  };
-
-  // タイムブロックの色を取得
-  const getBlockColor = (reservation: Reservation | null): string => {
-    if (!reservation) {return 'bg-green-100 text-green-800';}
-
-    switch (reservation.status) {
-      case 'CONFIRMED':
-        return 'bg-blue-100 text-blue-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
-      case 'COMPLETED':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // カレンダー表示用にフィルタリングされた予約
-  const filteredReservationsCalendar = useMemo(() => {
-    return reservations.filter((reservation) => {
-      if (staffFilterCalendar !== 'all' && reservation.staffId !== staffFilterCalendar) {return false;}
-      if (menuFilterCalendar !== 'all' && reservation.menuId !== menuFilterCalendar) {return false;}
-      if (statusFilterCalendar !== 'all' && reservation.status !== statusFilterCalendar.toUpperCase()) {return false;}
-      return true;
-    });
-  }, [reservations, staffFilterCalendar, menuFilterCalendar, statusFilterCalendar]);
-
-  // 一覧表示用にフィルタリングされた予約
-  const filteredReservations = reservations.filter((reservation) => {
-    if (statusFilter !== 'all' && reservation.status !== statusFilter.toUpperCase()) {
-      return false;
-    }
-
-    if (searchQuery && !reservation.customerName.includes(searchQuery)) {
-      return false;
-    }
-
-    if (dateRangeFilter === 'this-week') {
-      // TODO: 今週の予約のみフィルタリング実装
-    }
-
-    return true;
-  });
-
-  // スタッフとメニューのユニークリストを取得（フィルター用）
-  const uniqueStaff = useMemo(() => {
-    const staffMap = new Map<string, string>();
-    reservations.forEach((r) => {
-      if (r.staffId && r.staffName) {
-        staffMap.set(r.staffId, r.staffName);
-      }
-    });
-    return Array.from(staffMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [reservations]);
-
-  const uniqueMenus = useMemo(() => {
-    const menuMap = new Map<string, string>();
-    reservations.forEach((r) => {
-      if (r.menuId && r.menuName) {
-        menuMap.set(r.menuId, r.menuName);
-      }
-    });
-    return Array.from(menuMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [reservations]);
-
-  // 週のナビゲーション
   const handlePrevWeek = () => {
     const newWeekStart = new Date(currentWeekStart);
     newWeekStart.setDate(currentWeekStart.getDate() - 7);
@@ -345,26 +218,66 @@ export default function AdminReservationsPage() {
     setCurrentWeekStart(newWeekStart);
   };
 
-  // タイムブロッククリック処理
-  const handleTimeBlockClick = (date: Date, time: string) => {
-    const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+  // フィルタリング
+  const filteredReservationsCalendar = useMemo(() => {
+    return reservations.filter((reservation) => {
+      if (staffFilterCalendar !== 'all' && reservation.staffId !== staffFilterCalendar) { return false; }
+      if (menuFilterCalendar !== 'all' && reservation.menuId !== menuFilterCalendar) { return false; }
+      if (statusFilterCalendar !== 'all' && reservation.status !== statusFilterCalendar.toUpperCase()) { return false; }
+      return true;
+    });
+  }, [reservations, staffFilterCalendar, menuFilterCalendar, statusFilterCalendar]);
 
-    // その日時に予約があるかチェック
+  const filteredReservations = useMemo(() => {
+    return reservations.filter((reservation) => {
+      if (statusFilter !== 'all' && reservation.status !== statusFilter.toUpperCase()) {
+        return false;
+      }
+      if (searchQuery && !reservation.customerName.includes(searchQuery)) {
+        return false;
+      }
+      return true;
+    });
+  }, [reservations, statusFilter, searchQuery]);
+
+  const uniqueStaff: UniqueItem[] = useMemo(() => {
+    const staffMap = new Map<string, string>();
+    reservations.forEach((r) => {
+      if (r.staffId && r.staffName) {
+        staffMap.set(r.staffId, r.staffName);
+      }
+    });
+    return Array.from(staffMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [reservations]);
+
+  const uniqueMenus: UniqueItem[] = useMemo(() => {
+    const menuMap = new Map<string, string>();
+    reservations.forEach((r) => {
+      if (r.menuId && r.menuName) {
+        menuMap.set(r.menuId, r.menuName);
+      }
+    });
+    return Array.from(menuMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [reservations]);
+
+  // タイムブロッククリック
+  const handleTimeBlockClick = (date: Date, time: string) => {
+    const dateStr = formatDateString(date);
+
     const reservation = filteredReservationsCalendar.find(
       (r) => r.reservedDate === dateStr && r.reservedTime === time
     );
 
     if (reservation) {
-      // 予約詳細モーダルを表示
       handleShowDetail(reservation);
     } else {
-      // 空き時間 → 新規予約モーダルを表示（日時を自動入力）
       setPrefilledDate(dateStr);
       setPrefilledTime(time);
       setShowAddModal(true);
     }
   };
 
+  // ローディング表示
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-50">
@@ -380,6 +293,7 @@ export default function AdminReservationsPage() {
     );
   }
 
+  // エラー表示
   if (error) {
     return (
       <div className="flex min-h-screen bg-gray-50">
@@ -422,327 +336,54 @@ export default function AdminReservationsPage() {
         )}
 
         {/* 表示切り替えタブ */}
-        <div className="mb-6 flex gap-2 border-b">
-          <button
-            data-testid="list-view-tab"
-            onClick={() => setViewMode('list')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              viewMode === 'list'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            一覧表示
-          </button>
-          <button
-            data-testid="calendar-view-tab"
-            onClick={() => setViewMode('calendar')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              viewMode === 'calendar'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            カレンダー表示
-          </button>
-        </div>
+        <ReservationViewTabs viewMode={viewMode} onViewModeChange={setViewMode} />
 
         {/* 一覧表示 */}
         {viewMode === 'list' && (
           <>
-            {/* フィルター・検索 */}
-            <Card className="mb-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">ステータス</label>
-                  <select
-                    data-testid="status-filter"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">すべて</option>
-                    <option value="confirmed">確定</option>
-                    <option value="pending">保留</option>
-                    <option value="cancelled">キャンセル</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">日付範囲</label>
-                  <select
-                    data-testid="date-range-filter"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={dateRangeFilter}
-                    onChange={(e) => setDateRangeFilter(e.target.value)}
-                  >
-                    <option value="all">すべて</option>
-                    <option value="this-week">今週</option>
-                    <option value="this-month">今月</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">顧客名で検索</label>
-                  <input
-                    type="text"
-                    data-testid="search-box"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    placeholder="顧客名を入力..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* 予約一覧テーブル */}
-            <Card>
-              {filteredReservations.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p data-testid="empty-message" className="text-gray-500">
-                    予約がありません
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table data-testid="reservations-table" className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-700">予約日時</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-700">顧客名</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-700">メニュー</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-700">スタッフ</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-700">ステータス</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-700">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {filteredReservations.map((reservation) => (
-                        <tr key={reservation.id} data-testid="reservation-row" className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <div data-testid="reservation-date" className="text-sm font-medium text-gray-900">
-                              {reservation.reservedDate}
-                            </div>
-                            <div data-testid="reservation-time" className="text-sm text-gray-500">
-                              {reservation.reservedTime}
-                            </div>
-                          </td>
-                          <td data-testid="reservation-customer" className="px-4 py-3 text-sm text-gray-900">
-                            {reservation.customerName}
-                          </td>
-                          <td data-testid="reservation-menu" className="px-4 py-3 text-sm text-gray-900">
-                            {reservation.menuName}
-                          </td>
-                          <td data-testid="reservation-staff" className="px-4 py-3 text-sm text-gray-900">
-                            {reservation.staffName}
-                          </td>
-                          <td className="px-4 py-3">{statusBadge(reservation.status)}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2">
-                              <Button
-                                data-testid="edit-button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditReservation(reservation)}
-                              >
-                                編集
-                              </Button>
-                              <Button
-                                data-testid="delete-button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteReservation(reservation)}
-                              >
-                                削除
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Card>
+            <ReservationListFilter
+              statusFilter={statusFilter}
+              dateRangeFilter={dateRangeFilter}
+              searchQuery={searchQuery}
+              onStatusChange={setStatusFilter}
+              onDateRangeChange={setDateRangeFilter}
+              onSearchChange={setSearchQuery}
+            />
+            <ReservationTable
+              reservations={filteredReservations}
+              onShowDetail={handleShowDetail}
+              onEdit={handleEditReservation}
+              onDelete={handleDeleteReservation}
+            />
           </>
         )}
 
         {/* カレンダー表示 */}
         {viewMode === 'calendar' && (
-          <div data-testid="weekly-calendar">
-            {/* 週ナビゲーション */}
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900" data-testid="week-title">
-                {weekTitle}
-              </h2>
-              <div className="flex gap-2">
-                <button
-                  data-testid="prev-week-button"
-                  onClick={handlePrevWeek}
-                  className="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
-                >
-                  ← 前週
-                </button>
-                <button
-                  data-testid="next-week-button"
-                  onClick={handleNextWeek}
-                  className="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
-                >
-                  次週 →
-                </button>
-              </div>
-            </div>
-
-            {/* フィルター */}
-            <Card className="mb-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">スタッフ</label>
-                  <select
-                    data-testid="staff-filter"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={staffFilterCalendar}
-                    onChange={(e) => setStaffFilterCalendar(e.target.value)}
-                  >
-                    <option value="all">全スタッフ</option>
-                    {uniqueStaff.map((staff) => (
-                      <option key={staff.id} value={staff.id}>
-                        {staff.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">メニュー</label>
-                  <select
-                    data-testid="menu-filter"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={menuFilterCalendar}
-                    onChange={(e) => setMenuFilterCalendar(e.target.value)}
-                  >
-                    <option value="all">全メニュー</option>
-                    {uniqueMenus.map((menu) => (
-                      <option key={menu.id} value={menu.id}>
-                        {menu.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">ステータス</label>
-                  <select
-                    data-testid="status-filter-calendar"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={statusFilterCalendar}
-                    onChange={(e) => setStatusFilterCalendar(e.target.value)}
-                  >
-                    <option value="all">全ステータス</option>
-                    <option value="confirmed">確定済み</option>
-                    <option value="pending">保留中</option>
-                    <option value="cancelled">キャンセル済み</option>
-                    <option value="completed">完了</option>
-                  </select>
-                </div>
-              </div>
-            </Card>
-
-            {/* 週間カレンダーグリッド */}
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="border p-2 text-sm font-semibold text-gray-600">時間</th>
-                      {['月', '火', '水', '木', '金', '土', '日'].map((day, index) => {
-                        const date = weekDates[index];
-                        return (
-                          <th key={day} className="border p-2 text-sm font-semibold text-gray-600">
-                            {day}
-                            <br />
-                            <span className="text-xs text-gray-500">
-                              {date.getMonth() + 1}/{date.getDate()}
-                            </span>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {timeSlots.map((time) => (
-                      <tr key={time}>
-                        <td className="border p-2 text-sm font-medium text-gray-700">{time}</td>
-                        {weekDates.map((date, dayIndex) => {
-                          const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-
-                          // 定休日の場合
-                          if (isClosedDay(date)) {
-                            return (
-                              <td
-                                key={dayIndex}
-                                className="border p-1 bg-gray-100"
-                                data-testid="closed-block"
-                                data-day={dayIndex}
-                                data-time={time}
-                              >
-                                <div className="text-xs text-gray-400 text-center py-3">[休]</div>
-                              </td>
-                            );
-                          }
-
-                          // 休憩時間の場合
-                          if (isBreakTime(time, BREAK_TIME_START, BREAK_TIME_END)) {
-                            return (
-                              <td
-                                key={dayIndex}
-                                className="border p-1 bg-gray-100"
-                                data-testid="break-block"
-                                data-day={dayIndex}
-                                data-time={time}
-                              >
-                                <div className="text-xs text-gray-400 text-center py-3">休憩時間</div>
-                              </td>
-                            );
-                          }
-
-                          // 予約を検索
-                          const reservation = filteredReservationsCalendar.find(
-                            (r) => r.reservedDate === dateStr && r.reservedTime === time
-                          );
-
-                          return (
-                            <td key={dayIndex} className="border p-1">
-                              <button
-                                data-testid="time-block"
-                                data-day={dayIndex}
-                                data-time={time}
-                                onClick={() => handleTimeBlockClick(date, time)}
-                                className={`w-full rounded px-2 py-3 text-xs transition-colors cursor-pointer ${getBlockColor(reservation || null)}`}
-                              >
-                                {reservation ? (
-                                  <>
-                                    <div className="font-bold">{reservation.customerName}</div>
-                                    <div className="text-xs">{reservation.menuName}</div>
-                                  </>
-                                ) : (
-                                  <div className="text-green-700">[空]</div>
-                                )}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
+          <>
+            <ReservationCalendarFilter
+              staffFilter={staffFilterCalendar}
+              menuFilter={menuFilterCalendar}
+              statusFilter={statusFilterCalendar}
+              uniqueStaff={uniqueStaff}
+              uniqueMenus={uniqueMenus}
+              onStaffChange={setStaffFilterCalendar}
+              onMenuChange={setMenuFilterCalendar}
+              onStatusChange={setStatusFilterCalendar}
+            />
+            <WeeklyCalendar
+              weekDates={weekDates}
+              weekTitle={weekTitle}
+              timeSlots={timeSlots}
+              reservations={filteredReservationsCalendar}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+              onTimeBlockClick={handleTimeBlockClick}
+            />
+          </>
         )}
 
-        {/* 新規予約追加モーダル */}
+        {/* モーダル */}
         {showAddModal && (
           <AddReservationModal
             onClose={closeModals}
@@ -752,7 +393,6 @@ export default function AdminReservationsPage() {
           />
         )}
 
-        {/* 予約編集モーダル */}
         {showEditModal && selectedReservation && (
           <EditReservationModal
             reservation={selectedReservation}
@@ -761,7 +401,6 @@ export default function AdminReservationsPage() {
           />
         )}
 
-        {/* 削除確認ダイアログ */}
         {showDeleteDialog && selectedReservation && (
           <DeleteConfirmationDialog
             reservation={selectedReservation}
@@ -770,7 +409,6 @@ export default function AdminReservationsPage() {
           />
         )}
 
-        {/* 予約詳細モーダル */}
         {showDetailModal && selectedReservation && (
           <ReservationDetailModal
             reservation={selectedReservation}
@@ -780,7 +418,6 @@ export default function AdminReservationsPage() {
               setShowEditModal(true);
             }}
             onCancel={() => {
-              // キャンセル処理（ステータスをCANCELLEDに変更）
               submitEditReservation({
                 menu: selectedReservation.menuName,
                 staff: selectedReservation.staffName,

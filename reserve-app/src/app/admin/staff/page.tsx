@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import AdminSidebar from '@/components/AdminSidebar';
-import Card from '@/components/Card';
 import Button from '@/components/Button';
 import {
   AddStaffModal,
   EditStaffModal,
   DeleteStaffDialog,
   ShiftSettingModal,
+  StaffSearchBar,
+  StaffList,
   DAY_OF_WEEK_MAP,
   DAYS,
 } from '@/components/admin/staff';
@@ -128,7 +129,6 @@ export default function AdminStaffPage() {
   const handleShiftSetting = async (staffMember: Staff) => {
     setSelectedStaff(staffMember);
 
-    // 初期化
     const initialShiftData: ShiftFormData = {};
     DAYS.forEach(day => {
       initialShiftData[day] = {
@@ -138,7 +138,6 @@ export default function AdminStaffPage() {
       };
     });
 
-    // 既存のシフトを取得
     try {
       const response = await fetch(`/api/admin/staff/${staffMember.id}/shifts`);
       const result = await response.json();
@@ -165,19 +164,22 @@ export default function AdminStaffPage() {
     setShowShiftModal(true);
   };
 
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   const submitShiftSetting = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      if (!selectedStaff) {return;}
+      if (!selectedStaff) { return; }
 
-      // 有効なシフトのみを抽出
       const shifts: ShiftData[] = [];
       Object.entries(shiftFormData).forEach(([day, data]) => {
         if (data.enabled) {
           const dayOfWeek = DAY_OF_WEEK_MAP[day];
           if (dayOfWeek) {
-            // 時間の妥当性チェック
             const startMinutes = timeToMinutes(data.startTime);
             const endMinutes = timeToMinutes(data.endTime);
 
@@ -225,7 +227,7 @@ export default function AdminStaffPage() {
     e.preventDefault();
 
     try {
-      if (!selectedStaff) {return;}
+      if (!selectedStaff) { return; }
 
       if (!vacationFormData.startDate || !vacationFormData.endDate) {
         setError('休暇期間を入力してください');
@@ -250,11 +252,6 @@ export default function AdminStaffPage() {
       setError('休暇の設定に失敗しました');
       console.error('Submit vacation error:', err);
     }
-  };
-
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
   };
 
   const submitAddStaff = async (e: React.FormEvent) => {
@@ -291,7 +288,7 @@ export default function AdminStaffPage() {
     e.preventDefault();
 
     try {
-      if (!selectedStaff) {return;}
+      if (!selectedStaff) { return; }
 
       const response = await fetch(`/api/admin/staff/${selectedStaff.id}`, {
         method: 'PATCH',
@@ -316,7 +313,7 @@ export default function AdminStaffPage() {
 
   const confirmDelete = async () => {
     try {
-      if (!selectedStaff) {return;}
+      if (!selectedStaff) { return; }
 
       const response = await fetch(`/api/admin/staff/${selectedStaff.id}`, {
         method: 'DELETE',
@@ -384,103 +381,18 @@ export default function AdminStaffPage() {
         )}
 
         {/* 検索バー */}
-        <Card className="mb-6">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <label htmlFor="search" className="mb-2 block text-sm font-medium text-gray-700">
-                スタッフ検索
-              </label>
-              <input
-                id="search"
-                type="text"
-                data-testid="search-box"
-                placeholder="名前で検索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-          </div>
-        </Card>
+        <StaffSearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
         {/* スタッフ一覧 */}
-        <Card>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">スタッフ一覧</h2>
-
-          {staff.length === 0 ? (
-            <div data-testid="empty-message" className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
-              <p className="text-gray-500">スタッフが登録されていません</p>
-            </div>
-          ) : (
-            <div data-testid="staff-list" className="space-y-3">
-              {staff.map((staffMember) => {
-                const hasReservations = (staffMember._count?.reservations || 0) > 0;
-
-                return (
-                  <div
-                    key={staffMember.id}
-                    data-testid="staff-item"
-                    className="flex items-center justify-between rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-lg font-semibold text-blue-600">
-                        {staffMember.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p data-testid="staff-name" className="font-semibold text-gray-900">{staffMember.name}</p>
-                        <p data-testid="staff-email" className="text-sm text-gray-600">{staffMember.email}</p>
-                        {staffMember.phone && (
-                          <p data-testid="staff-phone" className="text-sm text-gray-600">{staffMember.phone}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span data-testid="staff-status" className="text-sm text-gray-600">
-                        勤務中
-                      </span>
-                      <div
-                        data-testid="staff-status-indicator"
-                        className="h-2 w-2 rounded-full bg-green-500"
-                      ></div>
-
-                      <Button
-                        data-testid="edit-button"
-                        onClick={() => handleEditStaff(staffMember)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        編集
-                      </Button>
-
-                      <Button
-                        data-testid="shift-button"
-                        onClick={() => handleShiftSetting(staffMember)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        シフト設定
-                      </Button>
-
-                      <Button
-                        data-testid="delete-button"
-                        onClick={() => handleDeleteStaff(staffMember)}
-                        variant="outline"
-                        size="sm"
-                        disabled={hasReservations}
-                      >
-                        削除
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+        <StaffList
+          staff={staff}
+          onEdit={handleEditStaff}
+          onDelete={handleDeleteStaff}
+          onShiftSetting={handleShiftSetting}
+        />
       </main>
 
-      {/* スタッフ追加モーダル */}
+      {/* モーダル */}
       {showAddModal && (
         <AddStaffModal
           formData={formData}
@@ -491,7 +403,6 @@ export default function AdminStaffPage() {
         />
       )}
 
-      {/* スタッフ編集モーダル */}
       {showEditModal && selectedStaff && (
         <EditStaffModal
           formData={formData}
@@ -501,7 +412,6 @@ export default function AdminStaffPage() {
         />
       )}
 
-      {/* 削除確認ダイアログ */}
       {showDeleteDialog && selectedStaff && (
         <DeleteStaffDialog
           staff={selectedStaff}
@@ -510,7 +420,6 @@ export default function AdminStaffPage() {
         />
       )}
 
-      {/* シフト設定モーダル */}
       {showShiftModal && selectedStaff && (
         <ShiftSettingModal
           staff={selectedStaff}

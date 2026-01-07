@@ -55,3 +55,26 @@ export const DAY_OF_WEEK_MAP: { [key: string]: DayOfWeek } = {
 };
 
 export const DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
+
+/**
+ * コンポーネント用Props型定義
+ */
+
+export interface StaffSearchBarProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+}
+
+export interface StaffListItemProps {
+  staff: Staff;
+  onEdit: () => void;
+  onDelete: () => void;
+  onShiftSetting: () => void;
+}
+
+export interface StaffListProps {
+  staff: Staff[];
+  onEdit: (staff: Staff) => void;
+  onDelete: (staff: Staff) => void;
+  onShiftSetting: (staff: Staff) => void;
+}
